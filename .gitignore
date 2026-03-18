@@ -1,0 +1,8 @@
+.env
+.env.local
+.env.production
+keys.txt
+New Text Document.txt
+node_modules/
+.DS_Store
+*.log
