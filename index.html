@@ -4,7 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zypflow — AI-Powered Customer Growth Platform</title>
-<meta name="description" content="Zypflow's AI agents answer every call, book every appointment, and follow up with every lead — 24/7. Built for dental, aesthetics, legal, and service businesses.">
+<meta name="description" content="Stop losing customers to missed calls. Zypflow's AI answers every call, books appointments, and follows up — 24/7. Built for UK dental, legal, trades, and aesthetics businesses.">
+<meta name="keywords" content="AI receptionist UK, missed calls, appointment booking, dental AI, trades AI, legal AI, aesthetics AI, customer growth platform">
+<meta name="author" content="Zypflow Ltd">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://zypflow.co.uk/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zypflow.co.uk/">
+<meta property="og:title" content="Zypflow — Never Miss Another Customer Call">
+<meta property="og:description" content="AI that answers every call, books every appointment, and follows up with every lead. 24/7. Built for UK service businesses.">
+<meta property="og:site_name" content="Zypflow">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Zypflow — Never Miss Another Customer Call">
+<meta name="twitter:description" content="AI that answers every call, books every appointment, and follows up with every lead. 24/7.">
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EHDT9J6054"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-EHDT9J6054');</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -221,6 +242,8 @@ footer ul a:hover{color:var(--accent-light)}
 .reveal.vis{opacity:1;transform:translateY(0)}
 
 /* RESPONSIVE */
+.ind-btn.active{background:var(--accent-glow)!important;color:var(--accent)!important;border-color:var(--accent)!important}
+.ind-btn:hover{border-color:var(--accent)!important;color:var(--accent)!important}
 @media(max-width:900px){
   .hero .container{grid-template-columns:1fr}
   .hero-visual{display:none}
@@ -250,7 +273,7 @@ footer ul a:hover{color:var(--accent-light)}
       <li><a href="#faq">FAQ</a></li>
     </ul>
     <div style="display:flex;align-items:center;gap:12px">
-      <a href="#cta" class="btn btn-primary btn-sm">Book a Demo</a>
+      <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Book a Demo</a>
       <button class="hamburger" onclick="document.getElementById('mob').classList.toggle('open')" aria-label="Menu">
         <span></span><span></span><span></span>
       </button>
@@ -269,21 +292,19 @@ footer ul a:hover{color:var(--accent-light)}
 <section class="hero">
   <div class="container">
     <div class="hero-content">
-      <span class="tag tag-accent">AI-powered &middot; No code required &middot; 14-day free trial</span>
-      <h1>Stop losing customers while you <em>sleep</em></h1>
-      <p>Zypflow's AI agents answer every call, book every appointment, and follow up with every lead — 24/7, 365. Your revenue grows on autopilot.</p>
+      <span class="tag tag-accent">AI-powered &middot; 14-day free trial &middot; No card needed</span>
+      <h1>Never miss a customer <em>call</em> again</h1>
+      <p>Your AI receptionist answers every call, books appointments, and follows up with leads. 24/7. While you focus on the work that matters.</p>
       <div class="hero-actions">
-        <a href="#cta" class="btn btn-primary">Start Free Trial</a>
-        <a href="#how" class="btn btn-ghost">See How It Works</a>
+        <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-primary" onclick="gtag('event','cta_click',{event_category:'hero',event_label:'book_demo'})">Get Your Free AI Audit</a>
+        <a href="#calculator" class="btn btn-ghost">See What You're Losing</a>
       </div>
       <div class="hero-proof">
-        <div class="hero-avatars">
-          <span style="background:#5b2dff">JM</span>
-          <span style="background:#10b981">SK</span>
-          <span style="background:#f97066">AR</span>
-          <span style="background:#f59e0b">TL</span>
+        <div class="hero-proof-text" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <span style="background:rgba(16,185,129,.1);color:#059669;padding:6px 14px;border-radius:var(--radius-pill);font-size:.76rem;font-weight:700">GDPR Compliant</span>
+          <span style="background:rgba(91,45,255,.08);color:var(--accent);padding:6px 14px;border-radius:var(--radius-pill);font-size:.76rem;font-weight:700">UK Data Storage</span>
+          <span style="background:rgba(245,158,11,.08);color:#b45309;padding:6px 14px;border-radius:var(--radius-pill);font-size:.76rem;font-weight:700">ICO Registered</span>
         </div>
-        <div class="hero-proof-text"><strong>200+ businesses</strong> already growing with Zypflow</div>
       </div>
     </div>
     <div class="hero-visual">
@@ -404,10 +425,20 @@ footer ul a:hover{color:var(--accent-light)}
 <section class="calculator" id="calculator">
   <div class="container">
     <div class="calc-wrap">
+      <div style="text-align:center;margin-bottom:28px">
+        <span class="sec-label">Revenue calculator</span>
+        <h2 class="sec-title" style="font-size:clamp(1.6rem,3vw,2.2rem)">How much revenue are you <em>losing?</em></h2>
+        <p style="font-size:.88rem;color:var(--muted);margin-bottom:18px">Select your industry for tailored estimates:</p>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="ind-btn active" data-ind="dental" onclick="setIndustry(this)" style="padding:8px 18px;border-radius:var(--radius-pill);border:1px solid rgba(91,45,255,.15);background:var(--accent-glow);color:var(--accent);font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s">Dental</button>
+          <button class="ind-btn" data-ind="legal" onclick="setIndustry(this)" style="padding:8px 18px;border-radius:var(--radius-pill);border:1px solid rgba(91,45,255,.1);background:transparent;color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s">Legal</button>
+          <button class="ind-btn" data-ind="trades" onclick="setIndustry(this)" style="padding:8px 18px;border-radius:var(--radius-pill);border:1px solid rgba(91,45,255,.1);background:transparent;color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s">Trades</button>
+          <button class="ind-btn" data-ind="aesthetics" onclick="setIndustry(this)" style="padding:8px 18px;border-radius:var(--radius-pill);border:1px solid rgba(91,45,255,.1);background:transparent;color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s">Aesthetics</button>
+          <button class="ind-btn" data-ind="physio" onclick="setIndustry(this)" style="padding:8px 18px;border-radius:var(--radius-pill);border:1px solid rgba(91,45,255,.1);background:transparent;color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s">Physio</button>
+        </div>
+      </div>
       <div class="calc-grid">
         <div>
-          <span class="sec-label">Revenue calculator</span>
-          <h2 class="sec-title" style="font-size:clamp(1.6rem,3vw,2.2rem)">How much revenue are you <em>losing?</em></h2>
           <div class="calc-input">
             <label>Missed calls per week: <strong id="mc-val">12</strong></label>
             <input type="range" min="2" max="50" value="12" id="mc" oninput="calcLost()">
@@ -428,7 +459,16 @@ footer ul a:hover{color:var(--accent-light)}
           <p style="font-size:.88rem;color:var(--muted);margin-bottom:4px">You're losing approximately</p>
           <div class="calc-big" id="lost-val">&pound;3,900</div>
           <p class="calc-sub">per month in missed revenue.<br>Zypflow recovers up to 40% of lost leads automatically.</p>
-          <a href="#cta" class="btn btn-primary">Stop Losing Revenue</a>
+          <!-- Lead capture form -->
+          <form onsubmit="submitLead(event)" style="text-align:left;margin-top:20px;background:var(--light);padding:24px;border-radius:var(--radius)">
+            <p style="font-size:.88rem;font-weight:700;color:var(--ink);margin-bottom:14px">Get your free AI audit:</p>
+            <input name="name" placeholder="Your name" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="business" placeholder="Business name" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="email" type="email" placeholder="Email address" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="phone" type="tel" placeholder="Phone (optional)" style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:12px;outline:none">
+            <button type="submit" class="btn btn-primary" style="width:100%">Get My Free Audit</button>
+            <p style="font-size:.72rem;color:var(--faint);margin-top:8px;text-align:center">No spam. We'll email your personalised audit within 24 hours.</p>
+          </form>
         </div>
       </div>
     </div>
@@ -500,52 +540,52 @@ footer ul a:hover{color:var(--accent-light)}
     <div class="price-grid">
       <div class="price-card reveal">
         <div class="price-tier">Starter</div>
-        <div class="price-amt">&pound;197<span>/mo</span></div>
-        <div class="price-desc">For solo practitioners getting started with AI automation.</div>
+        <div class="price-amt">&pound;149<span>/mo</span></div>
+        <div class="price-desc">For solo practitioners ready to stop missing calls.</div>
         <ul class="price-list">
-          <li>AI Receptionist (chat only)</li>
-          <li>500 AI conversations/mo</li>
-          <li>Basic lead scoring</li>
+          <li>AI Receptionist (chat + voice)</li>
+          <li>100 calls handled/mo</li>
+          <li>Appointment booking</li>
           <li>1 calendar integration</li>
-          <li>Email reminders</li>
+          <li>Email + SMS reminders</li>
           <li>50 review requests/mo</li>
-          <li>Basic analytics</li>
+          <li>Basic analytics dashboard</li>
         </ul>
-        <a href="#cta" class="btn btn-ghost btn-sm">Start Free Trial</a>
+        <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" onclick="gtag('event','cta_click',{event_category:'pricing',event_label:'starter'})">Start Free Trial</a>
       </div>
       <div class="price-card pop reveal">
         <div class="price-tier">Growth</div>
-        <div class="price-amt">&pound;397<span>/mo</span></div>
-        <div class="price-desc">For growing businesses automating every touchpoint.</div>
+        <div class="price-amt">&pound;299<span>/mo</span></div>
+        <div class="price-desc">For busy businesses that want every lead captured.</div>
         <ul class="price-list">
-          <li>AI Receptionist (chat + SMS)</li>
-          <li>2,000 AI conversations/mo</li>
-          <li>Advanced lead scoring + routing</li>
+          <li>Everything in Starter, plus:</li>
+          <li>Unlimited calls handled</li>
+          <li>SMS + WhatsApp follow-ups</li>
           <li>Up to 5 calendar integrations</li>
-          <li>Email + SMS reminders</li>
+          <li>Automated follow-up sequences</li>
           <li>200 review requests/mo</li>
           <li>Full dashboard + weekly reports</li>
-          <li>10 custom follow-up sequences</li>
-          <li>Your branding (white-label)</li>
+          <li>Human escalation routing</li>
+          <li>Priority support</li>
         </ul>
-        <a href="#cta" class="btn btn-primary btn-sm">Start Free Trial</a>
+        <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="gtag('event','cta_click',{event_category:'pricing',event_label:'growth'})">Start Free Trial</a>
       </div>
       <div class="price-card reveal">
-        <div class="price-tier">Enterprise</div>
-        <div class="price-amt">&pound;797<span>/mo</span></div>
-        <div class="price-desc">For multi-location businesses needing full AI power.</div>
+        <div class="price-tier">Scale</div>
+        <div class="price-amt">&pound;499<span>/mo</span></div>
+        <div class="price-desc">For multi-location businesses wanting full AI power.</div>
         <ul class="price-list">
-          <li>Full AI (chat + SMS + voice + WhatsApp)</li>
-          <li>Unlimited AI conversations</li>
-          <li>Custom scoring models</li>
-          <li>Unlimited calendars + locations</li>
-          <li>All notification channels</li>
+          <li>Everything in Growth, plus:</li>
+          <li>Custom AI voice + personality</li>
+          <li>Unlimited locations + calendars</li>
+          <li>Outbound re-engagement campaigns</li>
           <li>Unlimited review requests</li>
-          <li>AI insights + full API access</li>
+          <li>Advanced analytics + ROI tracking</li>
+          <li>API access + custom integrations</li>
           <li>Dedicated account manager</li>
-          <li>White-glove onboarding (3 sessions)</li>
+          <li>White-label option available</li>
         </ul>
-        <a href="#cta" class="btn btn-ghost btn-sm">Contact Sales</a>
+        <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" onclick="gtag('event','cta_click',{event_category:'pricing',event_label:'scale'})">Book a Demo</a>
       </div>
     </div>
   </div>
@@ -590,12 +630,12 @@ footer ul a:hover{color:var(--accent-light)}
 <!-- CTA -->
 <section class="cta-section" id="cta">
   <div class="container">
-    <h2>Ready to capture every <em>opportunity?</em></h2>
-    <p>Join hundreds of UK businesses already growing with Zypflow. Setup takes 15 minutes and your first 14 days are completely free.</p>
+    <h2>Stop losing money to <em>missed calls</em></h2>
+    <p>Book a free 30-minute AI audit. We'll show you exactly how many calls you're missing and how much revenue you're leaving on the table.</p>
     <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a href="#" class="btn btn-primary">Start Your Free Trial</a>
-      <a href="#" class="btn btn-ghost">Book a Demo Call</a>
+      <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-primary" onclick="gtag('event','cta_click',{event_category:'bottom_cta',event_label:'book_audit'})">Book Your Free AI Audit</a>
     </div>
+    <p style="color:rgba(255,255,255,.35);font-size:.78rem;margin-top:16px">No commitment. No card needed. Just a conversation about your business.</p>
   </div>
 </section>
 
@@ -642,35 +682,129 @@ footer ul a:hover{color:var(--accent-light)}
   </div>
 </footer>
 
-<script>
-// Nav scroll effect
-window.addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40);
-});
-// Reveal on scroll
-const obs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target)}});
-},{threshold:.12});
-document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
-// FAQ toggle
-function toggleFaq(el){
-  const item=el.parentElement;
-  const wasOpen=item.classList.contains('open');
-  document.querySelectorAll('.faq-item').forEach(i=>{ i.classList.remove('open'); i.querySelector('.faq-a').style.maxHeight=null; });
-  if(!wasOpen){ item.classList.add('open'); const a=item.querySelector('.faq-a'); a.style.maxHeight=a.scrollHeight+'px'; }
+<!-- Cookie Consent -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);color:rgba(255,255,255,.8);padding:16px 28px;z-index:9999;font-size:.84rem;display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+  <p style="margin:0;max-width:700px;line-height:1.5">We use cookies to improve your experience and analyse site traffic. By continuing, you agree to our <a href="#" style="color:var(--accent-light);text-decoration:underline">Cookie Policy</a>.</p>
+  <div style="display:flex;gap:8px">
+    <button onclick="acceptCookies()" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:var(--radius-pill);font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font)">Accept</button>
+    <button onclick="document.getElementById('cookie-banner').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);padding:10px 24px;border-radius:var(--radius-pill);font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font)">Decline</button>
+  </div>
+</div>
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"SoftwareApplication",
+  "name":"Zypflow",
+  "applicationCategory":"BusinessApplication",
+  "operatingSystem":"Web",
+  "description":"AI-powered customer growth platform for UK service businesses. AI receptionist, appointment booking, and automated follow-ups.",
+  "url":"https://zypflow.co.uk",
+  "offers":[
+    {"@type":"Offer","name":"Starter","price":"149","priceCurrency":"GBP","priceValidUntil":"2027-12-31"},
+    {"@type":"Offer","name":"Growth","price":"299","priceCurrency":"GBP","priceValidUntil":"2027-12-31"},
+    {"@type":"Offer","name":"Scale","price":"499","priceCurrency":"GBP","priceValidUntil":"2027-12-31"}
+  ],
+  "provider":{"@type":"Organization","name":"Zypflow Ltd","url":"https://zypflow.co.uk"}
 }
+</script>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"FAQPage",
+  "mainEntity":[
+    {"@type":"Question","name":"How long does setup take?","acceptedAnswer":{"@type":"Answer","text":"Most businesses are fully set up in 15-30 minutes. No developers needed."}},
+    {"@type":"Question","name":"Will the AI sound robotic?","acceptedAnswer":{"@type":"Answer","text":"No. Zypflow uses GPT-4o and Claude models trained for service business conversations. Customers routinely cannot tell they are speaking with AI."}},
+    {"@type":"Question","name":"Is my data GDPR compliant?","acceptedAnswer":{"@type":"Answer","text":"Yes. All data is encrypted, stored on UK/EU servers, and fully GDPR compliant. Your data is never used to train AI models."}},
+    {"@type":"Question","name":"Can I cancel anytime?","acceptedAnswer":{"@type":"Answer","text":"Yes. No contracts, no lock-in, no cancellation fees. Cancel with one click."}}
+  ]
+}
+</script>
+
+<script>
+// Nav scroll
+window.addEventListener('scroll',()=>{document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40)});
+
+// Reveal on scroll
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// FAQ
+function toggleFaq(el){
+  const item=el.parentElement,wasOpen=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i=>{i.classList.remove('open');i.querySelector('.faq-a').style.maxHeight=null});
+  if(!wasOpen){item.classList.add('open');const a=item.querySelector('.faq-a');a.style.maxHeight=a.scrollHeight+'px'}
+}
+
 // Calculator
 function calcLost(){
-  const mc=+document.getElementById('mc').value;
-  const jv=+document.getElementById('jv').value;
-  const cr=+document.getElementById('cr').value;
+  const mc=+document.getElementById('mc').value,jv=+document.getElementById('jv').value,cr=+document.getElementById('cr').value;
   document.getElementById('mc-val').textContent=mc;
   document.getElementById('jv-val').textContent='\u00A3'+jv.toLocaleString();
   document.getElementById('cr-val').textContent=cr+'%';
   const monthly=Math.round(mc*4.3*(cr/100)*jv);
   document.getElementById('lost-val').textContent='\u00A3'+monthly.toLocaleString();
+  // Track calculator usage
+  if(typeof gtag==='function')gtag('event','calculator_used',{event_category:'engagement',value:monthly});
 }
 calcLost();
+
+// Industry selector for calculator
+function setIndustry(el){
+  document.querySelectorAll('.ind-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const presets={dental:{mc:15,jv:350,cr:35},legal:{mc:10,jv:800,cr:25},trades:{mc:20,jv:250,cr:30},aesthetics:{mc:12,jv:400,cr:30},physio:{mc:10,jv:120,cr:40}};
+  const p=presets[el.dataset.ind];
+  if(p){document.getElementById('mc').value=p.mc;document.getElementById('jv').value=p.jv;document.getElementById('cr').value=p.cr;calcLost()}
+}
+
+// Cookie consent
+if(!localStorage.getItem('cookies_accepted')){document.getElementById('cookie-banner').style.display='flex'}
+function acceptCookies(){localStorage.setItem('cookies_accepted','true');document.getElementById('cookie-banner').style.display='none'}
+
+// Supabase lead capture
+const SUPABASE_URL='https://pzsgdqbpaogxcrsjjysf.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6c2dkcWJwYW9neGNyc2pqeXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDE4MzYsImV4cCI6MjA4ODgxNzgzNn0.ekUPRd1rIrzl80M2B6Eu3-DYQcQuG2SQNbvxDsuZHPg';
+
+async function submitLead(e){
+  e.preventDefault();
+  const form=e.target;
+  const btn=form.querySelector('button[type=submit]');
+  const origText=btn.textContent;
+  btn.textContent='Sending...';btn.disabled=true;
+  const data={
+    name:form.querySelector('[name=name]').value,
+    email:form.querySelector('[name=email]').value,
+    business:form.querySelector('[name=business]').value,
+    phone:form.querySelector('[name=phone]')?.value||'',
+    source:'website_audit_form',
+    created_at:new Date().toISOString()
+  };
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/leads',{
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify(data)
+    });
+    if(res.ok){
+      form.innerHTML='<div style="text-align:center;padding:20px"><h3 style="color:var(--teal);margin-bottom:8px">Thank you!</h3><p style="color:var(--muted);font-size:.92rem">We\'ll send your free AI audit within 24 hours.</p></div>';
+      if(typeof gtag==='function')gtag('event','lead_captured',{event_category:'conversion',event_label:data.source});
+    }else{
+      window.open('https://calendly.com/alex-zypflow/30min','_blank');
+      btn.textContent=origText;btn.disabled=false;
+    }
+  }catch{
+    window.open('https://calendly.com/alex-zypflow/30min','_blank');
+    btn.textContent=origText;btn.disabled=false;
+  }
+}
 </script>
+
+<!--Tawk.to Live Chat-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();
+(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src='https://embed.tawk.to/69baf07599b9951c39373421/1jk13rgho';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0)})();
+</script>
+
 </body>
 </html>

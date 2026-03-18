@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://zypflow.co.uk/sitemap.xml
