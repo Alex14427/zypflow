@@ -1,0 +1,50 @@
+https://calendly.com/alex-zypflow/30min, calendly
+
+instantly key- OGVmNWYwZTQtMzVlMC00MzU4LTk1YjAtOGQ5MTVkNzA4MDQzOndpUVV3TFhTbGRxUg==
+
+hunter.io key - f5749bb2464608e14ad341845351cb649306c893
+
+Aplify token key- apify_api_kadGEctF3089XyvUogGPvZCMg9MwWb4wrsTI
+
+user id for aplify- 3tbDtgfVjcJQm6fBy
+
+make.com token key- 209acf9e-4fca-42a6-8b22-ba29c3c6a2da
+
+back up code for stripe- kiih-eorn-anfx-fbar-lmwq
+
+publishable api key stripe- pk_live_51TCNALPLa1vjAWTnM5UPi2Uq6rtY9wMI02JX4xKc70xvPvVx55Q5kD36eKL3pULXRpWfwrC57xB5ms5neFytjTas00yvvMnZJp
+
+secret key stripe- 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
+
+open ai key- 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
+
+anthropic console key - alex-onboarding-api-key - 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
+
+
+
+tawk id-1jk13rgho
+chat link-https://tawk.to/chat/69baf07599b9951c39373421/1jk13rgho
+
+
+page key insight- AIzaSyCH8fOlyZKoAh2gT3P9sjJIEaon0pBximo
+
+console google- AIzaSyCbhb3hJZ20ZEu1_Hjm2ARUxq2GahAtOl4
+
+GA_MEASUREMENT_ID= G-EHDT9J6054
+
+
+cloudflare token- cfat_feDFHpGj3TN8xMgU4aJzTgpnCAXQGuY6zgldPfWYc5e0f1ac
+
+
+supabase-zypflow password-Alexisthegoat127
+
+project URL
+https://quarijsqejzilervrcub.supabase.co
+
+
+Publishable Key
+sb_publishable_AGTB1Gnm2HLfyi3bsYiZyA_jxP01Cq9
+
+Direct connection string- postgresql://postgres:[YOUR-PASSWORD]@db.quarijsqejzilervrcub.supabase.co:5432/postgres
+
+Anon Key (Legacy)- eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1YXJpanNxZWp6aWxlcnZyY3ViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NTg2MjQsImV4cCI6MjA4OTQzNDYyNH0.JpvlmyEPpeZD7c_LH5SD4IedRzjkwqrbWygvxUJybgg
