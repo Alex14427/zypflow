@@ -1,132 +1,125 @@
-# ZYPFLOW STATUS — Updated After Session 3 (Final)
+# ZYPFLOW STATUS — Updated After Full Build
 
-## COMPLETION: ~90%
+## COMPLETION: ~98%
 
-Everything that can be built programmatically is done. The remaining 10% requires manual actions in external dashboards (Vercel, Supabase, Twilio, Instantly.ai).
+All features built, integrated, and deployed. Remaining items are domain setup and production testing.
 
 ---
 
-## WHAT CLAUDE BUILT (ALL DONE)
+## WHAT'S BUILT (ALL DONE)
 
-### Landing Page (Session 1)
-- [x] index.html — SEO, analytics, trust badges, calculator, industry presets
-- [x] Pricing cards link to `/signup?plan=starter|growth|scale`
-- [x] Footer links to `/privacy` and `/terms`
-- [x] Google Analytics G-EHDT9J6054 with event tracking
-- [x] Tawk.to live chat widget
-- [x] Cookie consent banner (PECR/GDPR)
-- [x] JSON-LD structured data
-- [x] sitemap.xml + robots.txt (moved to public/)
+### Landing Page
+- [x] Full marketing landing page (hero, features, pricing, calculator, FAQ, testimonials)
+- [x] Served at root URL via middleware rewrite
+- [x] SEO, Google Analytics, Tawk.to live chat, cookie consent
+- [x] JSON-LD structured data, sitemap.xml, robots.txt
 
-### Next.js App (Session 2-3)
+### Next.js App (29 routes)
 - [x] Full project scaffold — Next.js 14, TypeScript strict, Tailwind, App Router
-- [x] All dependencies installed and building clean (21 routes)
-- [x] Vercel deployment fixes — env var fallbacks, framework detection, static files
+- [x] Vercel deployment with all env vars configured
 
-### Lib Files (Section 4)
-- [x] `src/lib/supabase.ts` — browser + admin clients (build-safe fallbacks)
-- [x] `src/lib/ratelimit.ts` — Upstash rate limiter (20 req/hr per IP)
-- [x] `src/lib/validators.ts` — Zod schemas (chat, sms, checkout)
-- [x] `src/lib/email.ts` — Resend utility + welcome email template
-- [x] `src/lib/scoring.ts` — Lead scorer (0-100)
-- [x] `src/lib/prompts.ts` — Industry-specific AI prompts (dental, aesthetics, physio, legal, home services)
-- [x] `src/lib/outreach-templates.ts` — Email outreach sequences for dental, aesthetics, general
+### Dashboard (Full-Featured)
+- [x] Sidebar navigation layout with responsive mobile menu
+- [x] **Overview** — stat cards (leads, bookings, conversations, reviews, conversion rate), recent leads, upcoming appointments
+- [x] **Leads** — filterable table with search, status management (new/contacted/booked/cold/lost), scoring
+- [x] **Bookings** — upcoming vs past tabs, status updates (confirmed/completed/cancelled/no_show)
+- [x] **Conversations** — split-pane message viewer with conversation list, chat/SMS channels
+- [x] **Reviews** — review tracking with stats (sent, completed, completion rate, avg rating)
+- [x] **Analytics** — 30-day lead chart, all-time totals, source breakdown, status breakdown
+- [x] **Settings** — business info editor, billing/subscription management, widget embed code, integrations status
 
-### AI Chat Engine (Section 5)
-- [x] `src/app/api/chat/route.ts` — GPT-4o primary + Claude fallback, lead extraction, conversation logging, Make.com webhook, CORS, rate limiting, industry-specific prompts
+### Authentication
+- [x] Login, signup, middleware-protected routes
+- [x] Supabase Auth with email/password
+- [x] Business creation on signup
+- [x] 7-step onboarding wizard
 
-### SMS Routes (Section 6)
-- [x] `src/app/api/sms/send/route.ts` — send via Twilio (with Zod validation + error handling)
-- [x] `src/app/api/sms/incoming/route.ts` — receive + STOP opt-out handling
+### Pricing Page
+- [x] Public pricing page at `/pricing` with 3 tiers (Starter/Growth/Scale)
+- [x] Stripe checkout integration with 14-day free trial
+- [x] Redirects to signup for unauthenticated users
 
-### Chat Widget (Section 7)
-- [x] `public/v1.js` — embeddable bubble + iframe script
-- [x] `src/app/widget/[businessId]/page.tsx` — chat UI with typing indicator
+### Stripe (Payments)
+- [x] 3 products and prices configured in Stripe
+- [x] Checkout session creation with trial period
+- [x] Webhook handler (checkout.completed, subscription.updated, subscription.deleted)
+- [x] Customer portal for subscription management (`/api/stripe/portal`)
+- [x] Welcome email on subscription activation
 
-### Booking & Stripe (Section 8)
-- [x] `src/app/api/booking/created/route.ts` — Cal.com webhook handler
-- [x] `src/app/api/stripe/checkout/route.ts` — 3 plans (Starter/Growth/Scale)
-- [x] `src/app/api/stripe/webhook/route.ts` — checkout + subscription lifecycle + welcome email
+### Twilio (SMS)
+- [x] Send SMS API (`/api/sms/send`) with Zod validation
+- [x] Incoming SMS webhook (`/api/sms/incoming`) with STOP opt-out
+- [x] US number `+18146322244` active and configured
+- [x] SMS used in appointment reminders and follow-up sequences
 
-### Auth & Analytics (Section 9)
-- [x] `src/middleware.ts` — protects /dashboard and /onboarding (Supabase v2 auth)
-- [x] `src/app/providers.tsx` — PostHog analytics provider
-- [x] `src/app/login/page.tsx` — login with Supabase Auth
-- [x] `src/app/signup/page.tsx` — signup + business creation + redirect to onboarding
+### Resend (Email)
+- [x] Email utility with branded HTML layout
+- [x] Welcome email template
+- [x] Booking confirmation email
+- [x] Lead notification email
+- [x] Used in reminders, review requests, and follow-up sequences
 
-### Onboarding Wizard (Section 12.3)
-- [x] `src/app/onboarding/page.tsx` — 7 screens with proper error handling
+### Cal.com (Booking)
+- [x] Webhook handler (`/api/booking/created`)
+- [x] Auto-creates lead + appointment on booking
+- [x] Sends booking confirmation email
+- [x] Fires Make.com webhook for appointment tracking
 
-### Dashboard
-- [x] `src/app/dashboard/page.tsx` — leads table, conversations, appointments, stats cards
+### AI Chat Engine
+- [x] GPT-4o primary with Claude fallback
+- [x] Industry-specific prompts (dental, aesthetics, physio, legal, home services)
+- [x] Lead extraction from conversations
+- [x] Lead scoring (0-100)
+- [x] Rate limiting (20 req/hr per IP)
+- [x] CORS for cross-origin widget embedding
 
-### Automation Routes (Section 10)
-- [x] `src/app/api/automations/reminders/route.ts` — 48h/24h/2h appointment reminders (SMS + email)
-- [x] `src/app/api/automations/review-request/route.ts` — Google review request after appointment
-- [x] `src/app/api/automations/follow-up/route.ts` — 3-step lead nurture sequence (Day 1/3/7)
+### Automation Routes
+- [x] Appointment reminders (48h/24h/2h) via SMS + email
+- [x] Review request after appointment completion
+- [x] 3-step lead follow-up nurture (Day 1/3/7)
+- [x] Make.com scenarios active for all three
 
-### Scraping Pipeline (Section 11)
-- [x] `src/app/api/scrape/route.ts` — Apify Google Maps scraper, deduplication, Supabase insert
-- [x] `src/app/api/scrape/cron/route.ts` — Vercel weekly cron (rotates industry/city combos)
+### Chat Widget
+- [x] Embeddable script (`/v1.js`)
+- [x] Chat UI with typing indicator
+- [x] One-line installation code
 
-### Error Tracking
-- [x] Sentry — `instrumentation.ts` + `instrumentation-client.ts` + `global-error.tsx`
+### Scraping Pipeline
+- [x] Apify Google Maps scraper integration
+- [x] Deduplication and Supabase storage
+- [x] Weekly cron job rotating industry/city combos
 
-### Database — LIVE
-- [x] Migration applied via MCP to project `pzsgdqbpaogxcrsjjysf`
-- [x] 7 tables created: businesses, leads, conversations, appointments, reviews, follow_ups, prospects
+### PostHog (Analytics)
+- [x] Client-side provider with pageview tracking
+- [x] Key: `phc_QHfTBjvWHmzaWjdpC1sDeL6dxMG0wG0s2VuUCtNHMy0`
+
+### Sentry (Error Tracking)
+- [x] Server-side instrumentation (Node.js + Edge)
+- [x] Client-side instrumentation with session replay
+- [x] Global error boundary component
+- [x] DSN configured
+
+### Database (Supabase)
+- [x] 7 tables: businesses, leads, conversations, appointments, reviews, follow_ups, prospects
 - [x] RLS policies active on all tables
 - [x] Indexes on all key columns
 
-### Infrastructure (Done via APIs)
-- [x] **Stripe**: 3 products, 3 prices, webhook endpoint, customer portal — all configured
-- [x] **Twilio**: Number `+18146322244` purchased, SMS webhook configured
-- [x] **Make.com**: 3 scenarios created, configured & ALL ACTIVE:
-  - Scenario 4892870: New Lead Notification — webhook trigger + Resend email notification to alex@zypflow.co.uk — **ACTIVE**
-  - Scenario 4892876: Appointment Reminders (hourly HTTP → `/api/automations/reminders`) — **ACTIVE**
-  - Scenario 4892877: Lead Follow-Up (daily HTTP → `/api/automations/follow-up`) — **ACTIVE**
-  - Webhook: `https://hook.eu1.make.com/51uslzyr7p7z4lvqtlosad9dtjlhrnbr` (new lead)
-  - Webhook: `https://hook.eu1.make.com/fwfwndbc7u9pnwca7cdonikste7mk954` (appointment completed)
-- [x] **Outreach templates**: 3-step email sequences for dental, aesthetics, general
-- [x] All env vars populated in `.env.local`
-- [x] Build passes clean — 21 routes, 0 errors
-
 ---
 
-## WHAT ALEX MUST DO (3 items — ~25 minutes total)
+## REMAINING (Manual Steps)
 
-### 1. Add Supabase Service Role Key (2 min)
-1. Go to https://supabase.com/dashboard → project `pzsgdqbpaogxcrsjjysf`
-2. **Settings → API** → copy the `service_role` key
-3. Paste into `.env.local` as `SUPABASE_SERVICE_ROLE_KEY=eyJ...`
+### 1. Custom Domain (Cloudflare)
+1. Add `app.zypflow.com` in Vercel project settings
+2. In Cloudflare DNS: CNAME `app` → `cname.vercel-dns.com`
+3. SSL will auto-provision
 
-### 2. Connect Zypflow to Vercel & Deploy (10 min)
-1. Go to https://vercel.com/new
-2. Import GitHub repo `Alex14427/zypflow`
-3. Framework: Next.js (auto-detected)
-4. Add ALL environment variables from `.env.local` (including the service_role key from step 1)
-5. Deploy
-6. Add custom domain: `app.zypflow.com` → CNAME → `cname.vercel-dns.com` in Cloudflare
-
-### 3. Upgrade Twilio & Get UK Number (10 min)
-Current number is US (`+18146322244`) on a trial account. To send SMS to UK customers:
+### 2. Upgrade Twilio for UK SMS (Optional)
+The US number (+18146322244) works now. For UK customers:
 1. Upgrade Twilio account (add billing info)
-2. Go to **Phone Numbers → Regulatory → Bundles** → create UK Mobile bundle
-3. Upload ID + address proof → wait for approval
-4. Buy UK mobile number → update `.env.local`: `TWILIO_PHONE_NUMBER=+44...`
-5. Set SMS webhook to `https://app.zypflow.com/api/sms/incoming`
+2. Create UK Mobile regulatory bundle
+3. Buy UK mobile number → update `TWILIO_PHONE_NUMBER` env var
 
-### 5. Set Up Instantly.ai Mailboxes (optional — for outreach)
-1. Add 3 mailboxes on zypflow.uk domain to Instantly.ai
-2. Enable warmup (2 weeks recommended)
-3. Create campaigns using templates in `src/lib/outreach-templates.ts`
-4. Import prospects from Supabase `prospects` table after running first scrape
-
----
-
-## NEXT SESSION PRIORITIES
-1. End-to-end testing after Vercel deploy (signup → onboarding → chat → lead capture → dashboard)
-2. Connect Resend to verified domain (zypflow.com) for transactional email delivery
-3. Fine-tune AI prompts based on real conversations
-4. Add admin panel for managing multiple businesses
-5. Set up Cloudflare WAF rules for API protection
+### 3. Verify Resend Domain
+1. Add zypflow.com to Resend dashboard
+2. Add DNS records (SPF, DKIM, DMARC) in Cloudflare
+3. Verify — then emails send from `hello@zypflow.com`

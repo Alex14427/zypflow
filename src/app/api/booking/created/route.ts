@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendBookingConfirmation } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   const { payload } = await req.json();
@@ -10,6 +11,10 @@ export async function POST(req: NextRequest) {
   const businessId = payload.metadata?.businessId;
 
   if (!businessId) return NextResponse.json({ error: 'No businessId' }, { status: 400 });
+
+  // Get business name for confirmation email
+  const { data: biz } = await supabaseAdmin.from('businesses')
+    .select('name').eq('id', businessId).single();
 
   let leadId = null;
   if (email) {
@@ -30,15 +35,36 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const service = payload.title || 'Consultation';
+  const startTime = new Date(payload.startTime);
+
   await supabaseAdmin.from('appointments').insert({
     business_id: businessId,
     lead_id: leadId,
-    service: payload.title || 'Consultation',
+    service,
     datetime: payload.startTime,
     duration_minutes: Math.round(
-      (new Date(payload.endTime).getTime() - new Date(payload.startTime).getTime()) / 60000
+      (new Date(payload.endTime).getTime() - startTime.getTime()) / 60000
     ),
+    status: 'confirmed',
   });
+
+  // Send booking confirmation email
+  if (email && name) {
+    await sendBookingConfirmation(email, name, service, startTime, biz?.name || 'our office');
+  }
+
+  // Fire Make.com webhook for appointment
+  if (process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK) {
+    fetch(process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_id: businessId, lead_id: leadId, email, name, service,
+        datetime: payload.startTime,
+      }),
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ success: true });
 }
