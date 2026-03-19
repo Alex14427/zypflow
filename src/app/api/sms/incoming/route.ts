@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   // Find existing lead by phone number
   const { data: lead } = await supabaseAdmin.from('leads')
     .select('id, business_id').eq('phone', from)
-    .order('created_at', { ascending: false }).limit(1).single();
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
   if (lead) {
     const newMsg = { role: 'user', content: body, timestamp: new Date().toISOString() };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Find existing SMS conversation
     const { data: conv } = await supabaseAdmin.from('conversations')
       .select('id, messages').eq('lead_id', lead.id).eq('channel', 'sms')
-      .order('created_at', { ascending: false }).limit(1).single();
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
     if (conv) {
       await supabaseAdmin.from('conversations')

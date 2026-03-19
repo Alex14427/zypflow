@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 const PRICES: Record<string, string> = {
-  starter: process.env.STRIPE_STARTER_PRICE_ID!,
-  growth: process.env.STRIPE_GROWTH_PRICE_ID!,
-  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID!,
+  starter: process.env.STRIPE_STARTER_PRICE_ID || '',
+  growth: process.env.STRIPE_GROWTH_PRICE_ID || '',
+  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID || '',
 };
 
 export async function POST(req: NextRequest) {

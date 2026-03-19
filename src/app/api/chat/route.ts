@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { chatRateLimit } from '@/lib/ratelimit';
 import { chatInputSchema } from '@/lib/validators';
 import { scoreLead } from '@/lib/scoring';
+import { getSystemPrompt } from '@/lib/prompts';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   // 3. Fetch business details
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('name, services, knowledge_base, ai_personality, system_prompt, booking_url')
+    .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url')
     .eq('id', businessId)
     .single();
 
@@ -63,19 +64,15 @@ export async function POST(req: NextRequest) {
     if (conv) messages = conv.messages;
   }
 
-  // 5. Build system prompt
-  const systemPrompt = biz.system_prompt || `You are a friendly AI assistant for ${biz.name}. Personality: ${biz.ai_personality}.
-
-SERVICES: ${JSON.stringify(biz.services)}
-KNOWLEDGE BASE: ${JSON.stringify(biz.knowledge_base)}
-BOOKING LINK: ${biz.booking_url || 'Not set'}
-
-RULES: Answer from knowledge base only. Capture name/email/phone naturally.
-Offer booking link when appropriate. Keep responses under 3 sentences.
-Never make up info. Be honest that you are an AI if asked.
-
-When you detect contact info, append at the END of your response:
-<!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->`;
+  // 5. Build system prompt (uses industry-specific templates from Section 14)
+  const systemPrompt = biz.system_prompt || getSystemPrompt(
+    biz.name,
+    biz.industry || 'general',
+    biz.services || [],
+    biz.knowledge_base || [],
+    biz.booking_url,
+    biz.ai_personality || 'friendly and professional'
+  );
 
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
