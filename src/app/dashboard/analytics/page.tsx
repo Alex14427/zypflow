@@ -12,7 +12,7 @@ interface DailyData {
 
 export default function AnalyticsPage() {
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
-  const [totals, setTotals] = useState({ leads: 0, bookings: 0, conversations: 0, reviews: 0 });
+  const [totals, setTotals] = useState({ leads: 0, bookings: 0, conversations: 0, reviews: 0, followUpsSent: 0 });
   const [sourceBreakdown, setSourceBreakdown] = useState<{ source: string; count: number }[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<{ status: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,12 +29,13 @@ export default function AnalyticsPage() {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const since = thirtyDaysAgo.toISOString();
 
-      const [leadsRes, apptsRes, convsRes, reviewsRes, allLeadsRes] = await Promise.all([
+      const [leadsRes, apptsRes, convsRes, reviewsRes, allLeadsRes, followUpsRes] = await Promise.all([
         supabase.from('leads').select('id, created_at, source, status').eq('business_id', biz.id).gte('created_at', since),
         supabase.from('appointments').select('id, datetime').eq('business_id', biz.id).gte('datetime', since),
         supabase.from('conversations').select('id, created_at').eq('business_id', biz.id).gte('created_at', since),
         supabase.from('reviews').select('id', { count: 'exact' }).eq('business_id', biz.id),
         supabase.from('leads').select('id, source, status').eq('business_id', biz.id),
+        supabase.from('follow_ups').select('id', { count: 'exact' }).eq('business_id', biz.id),
       ]);
 
       const leads = leadsRes.data || [];
@@ -47,6 +48,7 @@ export default function AnalyticsPage() {
         bookings: appts.length,
         conversations: convs.length,
         reviews: reviewsRes.count || 0,
+        followUpsSent: followUpsRes.count || 0,
       });
 
       // Build daily data for chart
@@ -143,6 +145,47 @@ export default function AnalyticsPage() {
         <div className="flex justify-between text-[10px] text-gray-400 mt-2">
           <span>{new Date(dailyData[0]?.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
           <span>Today</span>
+        </div>
+      </div>
+
+      {/* Conversion Funnel */}
+      <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
+        <h2 className="font-semibold mb-4">Conversion Funnel</h2>
+        <div className="space-y-3">
+          {(() => {
+            const bookedCount = statusBreakdown.find(s => s.status === 'booked')?.count || 0;
+            const conversionRate = totals.leads > 0 ? ((bookedCount / totals.leads) * 100).toFixed(1) : '0';
+            const funnelSteps = [
+              { label: 'Conversations', count: totals.conversations, color: 'bg-purple-500' },
+              { label: 'Leads Captured', count: totals.leads, color: 'bg-blue-500' },
+              { label: 'Follow-ups Sent', count: totals.followUpsSent, color: 'bg-yellow-500' },
+              { label: 'Booked', count: bookedCount, color: 'bg-green-500' },
+              { label: 'Reviews Collected', count: totals.reviews, color: 'bg-orange-500' },
+            ];
+            const maxCount = Math.max(...funnelSteps.map(s => s.count), 1);
+            return (
+              <>
+                <div className="flex items-center gap-3 mb-4 p-3 bg-brand-purple/5 rounded-lg">
+                  <span className="text-sm text-gray-600">Lead-to-Booking Conversion Rate:</span>
+                  <span className="text-2xl font-bold text-brand-purple">{conversionRate}%</span>
+                </div>
+                {funnelSteps.map(step => (
+                  <div key={step.label}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{step.label}</span>
+                      <span className="text-gray-500 font-medium">{step.count}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-3">
+                      <div
+                        className={`${step.color} h-3 rounded-full transition-all`}
+                        style={{ width: `${Math.max((step.count / maxCount) * 100, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { chatRateLimit } from '@/lib/ratelimit';
 import { chatInputSchema } from '@/lib/validators';
 import { scoreLead } from '@/lib/scoring';
 import { getSystemPrompt } from '@/lib/prompts';
+import { fireWebhook } from '@/lib/webhook';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -159,20 +160,18 @@ export async function POST(req: NextRequest) {
         .update({ lead_id: currentLeadId }).eq('id', convId);
     }
 
-    // Fire Make.com webhook for new lead notification (fire and forget)
+    // Fire Make.com webhook for new lead notification (with retry)
     if (process.env.MAKE_NEW_LEAD_WEBHOOK) {
-      fetch(process.env.MAKE_NEW_LEAD_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      fireWebhook(
+        process.env.MAKE_NEW_LEAD_WEBHOOK,
+        {
           business_id: businessId,
           lead_id: currentLeadId,
           ...extractedLead,
           score: scoreLead(extractedLead),
-        }),
-      }).catch((err) => {
-        console.error('Make.com new lead webhook failed:', err);
-      });
+        },
+        'make_new_lead'
+      ).catch(() => {}); // fire and forget — retries happen inside fireWebhook
     }
   }
 
