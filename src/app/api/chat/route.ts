@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
         .update({ lead_id: currentLeadId }).eq('id', convId);
     }
 
-    // Fire Make.com webhook for new lead notification
+    // Fire Make.com webhook for new lead notification (fire and forget)
     if (process.env.MAKE_NEW_LEAD_WEBHOOK) {
       fetch(process.env.MAKE_NEW_LEAD_WEBHOOK, {
         method: 'POST',
@@ -170,7 +170,9 @@ export async function POST(req: NextRequest) {
           ...extractedLead,
           score: scoreLead(extractedLead),
         }),
-      }).catch(() => {}); // fire and forget
+      }).catch((err) => {
+        console.error('Make.com new lead webhook failed:', err);
+      });
     }
   }
 

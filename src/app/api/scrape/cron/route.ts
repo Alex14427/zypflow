@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAutomationAuth } from '@/lib/auth-automation';
 
 const INDUSTRIES = ['dental practices', 'aesthetic clinics', 'physiotherapy clinics', 'law firms', 'plumbing services'];
 const CITIES = ['London', 'Manchester', 'Birmingham', 'Leeds', 'Bristol', 'Edinburgh', 'Glasgow', 'Liverpool', 'Sheffield', 'Cardiff'];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
   const results = [];
 
   // Run one industry-city combo per cron invocation (rotate weekly)

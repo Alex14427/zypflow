@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     await sendBookingConfirmation(email, name, service, startTime, biz?.name || 'our office');
   }
 
-  // Fire Make.com webhook for appointment
+  // Fire Make.com webhook for appointment (fire and forget)
   if (process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK) {
     fetch(process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK, {
       method: 'POST',
@@ -63,7 +63,9 @@ export async function POST(req: NextRequest) {
         business_id: businessId, lead_id: leadId, email, name, service,
         datetime: payload.startTime,
       }),
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Make.com appointment webhook failed:', err);
+    });
   }
 
   return NextResponse.json({ success: true });
