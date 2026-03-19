@@ -265,7 +265,7 @@ footer ul a:hover{color:var(--accent-light)}
 
 <nav id="nav">
   <div class="container">
-    <a href="#" class="logo">Zyp<b>flow</b></a>
+    <a href="/" class="logo">Zyp<b>flow</b></a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#how">How It Works</a></li>
@@ -273,7 +273,8 @@ footer ul a:hover{color:var(--accent-light)}
       <li><a href="#faq">FAQ</a></li>
     </ul>
     <div style="display:flex;align-items:center;gap:12px">
-      <a href="https://calendly.com/alex-zypflow/30min" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Book a Demo</a>
+      <a href="/login" class="btn btn-sm" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff">Log In</a>
+      <a href="/signup" class="btn btn-primary btn-sm">Start Free Trial</a>
       <button class="hamburger" onclick="document.getElementById('mob').classList.toggle('open')" aria-label="Menu">
         <span></span><span></span><span></span>
       </button>
@@ -652,18 +653,16 @@ footer ul a:hover{color:var(--accent-light)}
         <li><a href="#features">Features</a></li>
         <li><a href="#pricing">Pricing</a></li>
         <li><a href="#how">How It Works</a></li>
-        <li><a href="#">API Docs</a></li>
-        <li><a href="#">Integrations</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="mailto:hello@zypflow.com">Contact Us</a></li>
       </ul>
     </div>
     <div>
-      <h4>Company</h4>
+      <h4>Get Started</h4>
       <ul>
-        <li><a href="#">About Us</a></li>
-        <li><a href="#">Blog</a></li>
-        <li><a href="#">Careers</a></li>
-        <li><a href="#">Contact</a></li>
-        <li><a href="#">Partners</a></li>
+        <li><a href="/signup">Start Free Trial</a></li>
+        <li><a href="/login">Log In</a></li>
+        <li><a href="mailto:hello@zypflow.com">Contact Us</a></li>
       </ul>
     </div>
     <div>
@@ -672,8 +671,7 @@ footer ul a:hover{color:var(--accent-light)}
         <li><a href="/privacy">Privacy Policy</a></li>
         <li><a href="/terms">Terms of Service</a></li>
         <li><a href="/privacy">GDPR</a></li>
-        <li><a href="#">Cookie Policy</a></li>
-        <li><a href="#">DPA</a></li>
+        <li><a href="/privacy">Cookie Policy</a></li>
       </ul>
     </div>
   </div>
@@ -684,7 +682,7 @@ footer ul a:hover{color:var(--accent-light)}
 
 <!-- Cookie Consent -->
 <div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);color:rgba(255,255,255,.8);padding:16px 28px;z-index:9999;font-size:.84rem;display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-  <p style="margin:0;max-width:700px;line-height:1.5">We use cookies to improve your experience and analyse site traffic. By continuing, you agree to our <a href="#" style="color:var(--accent-light);text-decoration:underline">Cookie Policy</a>.</p>
+  <p style="margin:0;max-width:700px;line-height:1.5">We use cookies to improve your experience and analyse site traffic. By continuing, you agree to our <a href="/privacy" style="color:var(--accent-light);text-decoration:underline">Privacy Policy</a>.</p>
   <div style="display:flex;gap:8px">
     <button onclick="acceptCookies()" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:var(--radius-pill);font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font)">Accept</button>
     <button onclick="document.getElementById('cookie-banner').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);padding:10px 24px;border-radius:var(--radius-pill);font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font)">Decline</button>
