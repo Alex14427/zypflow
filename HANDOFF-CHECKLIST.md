@@ -81,10 +81,10 @@ Everything that can be built programmatically is done. The remaining 10% require
 ### Infrastructure (Done via APIs)
 - [x] **Stripe**: 3 products, 3 prices, webhook endpoint, customer portal — all configured
 - [x] **Twilio**: Number `+18146322244` purchased, SMS webhook configured
-- [x] **Make.com**: 3 scenarios created + 2 webhooks:
-  - Scenario 4892870: New Lead Notification (webhook trigger)
-  - Scenario 4892876: Appointment Reminders (hourly HTTP → `/api/automations/reminders`)
-  - Scenario 4892877: Lead Follow-Up (daily HTTP → `/api/automations/follow-up`)
+- [x] **Make.com**: 3 scenarios created, configured & ALL ACTIVE:
+  - Scenario 4892870: New Lead Notification — webhook trigger + Resend email notification to alex@zypflow.co.uk — **ACTIVE**
+  - Scenario 4892876: Appointment Reminders (hourly HTTP → `/api/automations/reminders`) — **ACTIVE**
+  - Scenario 4892877: Lead Follow-Up (daily HTTP → `/api/automations/follow-up`) — **ACTIVE**
   - Webhook: `https://hook.eu1.make.com/51uslzyr7p7z4lvqtlosad9dtjlhrnbr` (new lead)
   - Webhook: `https://hook.eu1.make.com/fwfwndbc7u9pnwca7cdonikste7mk954` (appointment completed)
 - [x] **Outreach templates**: 3-step email sequences for dental, aesthetics, general
@@ -93,7 +93,7 @@ Everything that can be built programmatically is done. The remaining 10% require
 
 ---
 
-## WHAT ALEX MUST DO (4 items — ~30 minutes total)
+## WHAT ALEX MUST DO (3 items — ~25 minutes total)
 
 ### 1. Add Supabase Service Role Key (2 min)
 1. Go to https://supabase.com/dashboard → project `pzsgdqbpaogxcrsjjysf`
@@ -108,13 +108,7 @@ Everything that can be built programmatically is done. The remaining 10% require
 5. Deploy
 6. Add custom domain: `app.zypflow.com` → CNAME → `cname.vercel-dns.com` in Cloudflare
 
-### 3. Activate Make.com Scenarios (5 min)
-The scenarios are created but inactive. Go to https://eu1.make.com and:
-1. Open "Zypflow - New Lead Notification" → configure what happens after webhook (e.g. send Slack message or email) → toggle ON
-2. Open "Zypflow - Appointment Reminders" → verify the HTTP module URL → toggle ON
-3. Open "Zypflow - Lead Follow-Up" → verify the HTTP module URL → toggle ON
-
-### 4. Upgrade Twilio & Get UK Number (10 min)
+### 3. Upgrade Twilio & Get UK Number (10 min)
 Current number is US (`+18146322244`) on a trial account. To send SMS to UK customers:
 1. Upgrade Twilio account (add billing info)
 2. Go to **Phone Numbers → Regulatory → Bundles** → create UK Mobile bundle
