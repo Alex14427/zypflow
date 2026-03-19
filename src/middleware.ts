@@ -3,6 +3,11 @@ import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function middleware(req: NextRequest) {
+  // Serve the static landing page at the root URL
+  if (req.nextUrl.pathname === '/') {
+    return NextResponse.rewrite(new URL('/landing.html', req.url));
+  }
+
   // Only protect dashboard and onboarding routes
   const protectedPaths = ['/dashboard', '/onboarding'];
   const isProtected = protectedPaths.some((p) => req.nextUrl.pathname.startsWith(p));
@@ -42,5 +47,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/onboarding/:path*'],
 };
