@@ -328,7 +328,8 @@ export default function OnboardingPage() {
 
   // Screen 6 — Widget installation
   if (step === 6) {
-    const embedCode = `<script src="https://app.zypflow.com/v1.js" data-business-id="${businessId}"></script>`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
+    const embedCode = `<script src="${appUrl}/v1.js" data-business-id="${businessId}"></script>`;
 
     return (
       <OnboardingShell step={6} title="Install your chat widget">
@@ -374,7 +375,7 @@ export default function OnboardingPage() {
             Go to Dashboard
           </button>
           <a
-            href="https://calendly.com/alex-zypflow/30min"
+            href={process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min'}
             target="_blank"
             rel="noopener noreferrer"
             className="border border-gray-300 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition"

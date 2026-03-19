@@ -12,7 +12,7 @@ function layout(content: string) {
     <div style="padding:30px">${content}</div>
     <div style="padding:20px 30px;background:#f9fafb;font-size:12px;color:#9ca3af;text-align:center">
       <p>Zypflow &mdash; AI-powered customer growth for UK service businesses</p>
-      <p><a href="https://app.zypflow.com" style="color:#6c3cff">app.zypflow.com</a></p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}" style="color:#6c3cff">app.zypflow.com</a></p>
     </div>
   </div>`;
 }
@@ -35,16 +35,16 @@ export async function sendWelcomeEmail(email: string, name: string, plan: string
       <p>Hi ${name}, your <strong>${plan}</strong> plan is now active with a 14-day free trial.</p>
       <p>Here&apos;s how to get started:</p>
       <ol style="line-height:1.8">
-        <li><a href="https://app.zypflow.com/dashboard" style="color:#6c3cff">Log in to your dashboard</a></li>
+        <li><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/dashboard" style="color:#6c3cff">Log in to your dashboard</a></li>
         <li>Add your business details, services, and FAQs</li>
         <li>Install the chat widget (one line of code)</li>
         <li>Set your Google review link</li>
       </ol>
       <p>Your AI assistant will start capturing leads the moment the widget is live on your website.</p>
       <p style="margin-top:24px">
-        <a href="https://app.zypflow.com/dashboard" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/dashboard" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard</a>
       </p>
-      <p style="margin-top:24px;color:#6b7280">Need help getting set up? <a href="https://calendly.com/alex-zypflow/30min" style="color:#6c3cff">Book a free onboarding call</a></p>`,
+      <p style="margin-top:24px;color:#6b7280">Need help getting set up? <a href="${process.env.BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min'}" style="color:#6c3cff">Book a free onboarding call</a></p>`,
   });
 }
 
@@ -86,7 +86,7 @@ export async function sendLeadNotification(
         <p style="margin:4px 0"><strong>Lead Score:</strong> ${lead.score || 0}/100</p>
       </div>
       <p style="margin-top:24px">
-        <a href="https://app.zypflow.com/dashboard/leads" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">View in Dashboard</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/dashboard/leads" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">View in Dashboard</a>
       </p>`,
   });
 }
