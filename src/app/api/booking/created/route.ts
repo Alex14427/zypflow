@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   let leadId = null;
   if (email) {
     const { data: existing } = await supabaseAdmin.from('leads')
-      .select('id').eq('business_id', businessId).eq('email', email).limit(1).single();
+      .select('id').eq('business_id', businessId).eq('email', email).limit(1).maybeSingle();
 
     if (existing) {
       leadId = existing.id;

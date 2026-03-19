@@ -50,28 +50,33 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/login'); return; }
 
-      const { data: biz } = await supabase
-        .from('businesses')
-        .select('id, name, plan, trial_ends_at')
-        .eq('email', user.email)
-        .single();
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('id, name, plan, trial_ends_at')
+          .eq('email', user.email)
+          .maybeSingle();
 
-      if (!biz) { router.push('/onboarding'); return; }
-      setBusiness(biz);
+        if (!biz) { router.push('/onboarding'); return; }
+        setBusiness(biz);
 
-      const [leadsRes, apptRes, convRes] = await Promise.all([
-        supabase.from('leads').select('*').eq('business_id', biz.id).order('created_at', { ascending: false }).limit(50),
-        supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('business_id', biz.id).order('datetime', { ascending: false }).limit(20),
-        supabase.from('conversations').select('id, channel, messages, updated_at, leads(name)').eq('business_id', biz.id).order('updated_at', { ascending: false }).limit(20),
-      ]);
+        const [leadsRes, apptRes, convRes] = await Promise.all([
+          supabase.from('leads').select('*').eq('business_id', biz.id).order('created_at', { ascending: false }).limit(50),
+          supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('business_id', biz.id).order('datetime', { ascending: false }).limit(20),
+          supabase.from('conversations').select('id, channel, messages, updated_at, leads(name)').eq('business_id', biz.id).order('updated_at', { ascending: false }).limit(20),
+        ]);
 
-      setLeads((leadsRes.data as Lead[]) || []);
-      setAppointments((apptRes.data as unknown as Appointment[]) || []);
-      setConversations((convRes.data as unknown as Conversation[]) || []);
-      setLoading(false);
+        setLeads((leadsRes.data as Lead[]) || []);
+        setAppointments((apptRes.data as unknown as Appointment[]) || []);
+        setConversations((convRes.data as unknown as Conversation[]) || []);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [router]);

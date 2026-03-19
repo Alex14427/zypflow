@@ -52,19 +52,23 @@ export default function OnboardingPage() {
   // Fetch business ID on mount
   useEffect(() => {
     async function fetchBusiness() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from('businesses')
-        .select('id, name, website, phone, industry')
-        .eq('email', user.email)
-        .single();
-      if (data) {
-        setBusinessId(data.id);
-        if (data.name) setName(data.name);
-        if (data.website) setWebsite(data.website);
-        if (data.phone) setPhone(data.phone);
-        if (data.industry) setIndustry(data.industry);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('businesses')
+          .select('id, name, website, phone, industry')
+          .eq('email', user.email)
+          .maybeSingle();
+        if (data) {
+          setBusinessId(data.id);
+          if (data.name) setName(data.name);
+          if (data.website) setWebsite(data.website);
+          if (data.phone) setPhone(data.phone);
+          if (data.industry) setIndustry(data.industry);
+        }
+      } catch (err) {
+        console.error('Onboarding fetch error:', err);
       }
     }
     fetchBusiness();
