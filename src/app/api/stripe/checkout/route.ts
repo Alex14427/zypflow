@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   }
 
+  // If no businessId/email, redirect to signup with plan preselected
+  if (!businessId || !email) {
+    return NextResponse.json({
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/signup?plan=${plan}`,
+    });
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
@@ -25,6 +32,9 @@ export async function POST(req: NextRequest) {
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
     metadata: { businessId, plan },
     automatic_tax: { enabled: true },
+    subscription_data: {
+      trial_period_days: 14,
+    },
   });
 
   return NextResponse.json({ url: session.url });
