@@ -40,6 +40,9 @@ export default function SignupPage() {
 
       if (bizError) {
         console.error('Business creation error:', bizError);
+        setError('Account created but business setup failed. Please try logging in.');
+        setLoading(false);
+        return;
       }
     }
 
@@ -50,9 +53,9 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">
+          <Link href="/" className="text-3xl font-bold inline-block hover:opacity-80 transition">
             <span className="text-brand-purple">Zyp</span>flow
-          </h1>
+          </Link>
           <p className="text-gray-500 mt-2">Start your 14-day free trial</p>
         </div>
 

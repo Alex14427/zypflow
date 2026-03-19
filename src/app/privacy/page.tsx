@@ -5,6 +5,15 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
+      <nav className="flex items-center justify-between mb-10">
+        <a href="/" className="text-xl font-bold hover:opacity-80 transition">
+          <span className="text-[#6c3cff]">Zyp</span>flow
+        </a>
+        <div className="flex gap-4 text-sm">
+          <a href="/terms" className="text-gray-500 hover:text-gray-900">Terms</a>
+          <a href="/login" className="text-[#6c3cff] hover:underline font-medium">Log In</a>
+        </div>
+      </nav>
       <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
       <p className="text-gray-400 text-sm mb-8">Last updated: 19 March 2026</p>
 

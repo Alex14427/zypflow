@@ -165,6 +165,7 @@ export default function OnboardingPage() {
           </button>
           <NextButton
             loading={saving}
+            onBack={() => setStep(1)}
             onClick={() =>
               saveAndNext({ services: services.filter((s) => s.name) })
             }
@@ -221,6 +222,7 @@ export default function OnboardingPage() {
           </button>
           <NextButton
             loading={saving}
+            onBack={() => setStep(2)}
             onClick={() =>
               saveAndNext({ knowledge_base: faqs.filter((f) => f.question && f.answer) })
             }
@@ -254,6 +256,7 @@ export default function OnboardingPage() {
           </div>
           <NextButton
             loading={saving}
+            onBack={() => setStep(3)}
             onClick={() => saveAndNext({ booking_url: bookingUrl, google_review_link: googleReviewLink })}
           />
         </div>
@@ -295,6 +298,7 @@ export default function OnboardingPage() {
           </div>
           <NextButton
             loading={saving}
+            onBack={() => setStep(4)}
             onClick={async () => {
               if (!businessId) return;
               setSaving(true);
@@ -352,7 +356,7 @@ export default function OnboardingPage() {
             <p><strong>Squarespace:</strong> Settings &rarr; Advanced &rarr; Code Injection &rarr; Footer</p>
             <p><strong>Not sure?</strong> Forward this page to whoever manages your website</p>
           </div>
-          <NextButton loading={false} onClick={() => setStep(7)} label="Continue" />
+          <NextButton loading={false} onBack={() => setStep(5)} onClick={() => setStep(7)} label="Continue" />
         </div>
       </OnboardingShell>
     );
@@ -427,16 +431,27 @@ function Field({ label, value, onChange, placeholder }: {
   );
 }
 
-function NextButton({ loading, onClick, disabled, label }: {
-  loading: boolean; onClick: () => void; disabled?: boolean; label?: string;
+function NextButton({ loading, onClick, disabled, label, onBack }: {
+  loading: boolean; onClick: () => void; disabled?: boolean; label?: string; onBack?: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={loading || disabled}
-      className="w-full bg-[#6c3cff] text-white py-2.5 rounded-lg font-semibold hover:bg-[#5a2de0] transition disabled:opacity-50 mt-4"
-    >
-      {loading ? 'Saving...' : label || 'Next'}
-    </button>
+    <div className="flex gap-3 mt-4">
+      {onBack && (
+        <button
+          onClick={onBack}
+          type="button"
+          className="px-6 py-2.5 rounded-lg font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition"
+        >
+          Back
+        </button>
+      )}
+      <button
+        onClick={onClick}
+        disabled={loading || disabled}
+        className="flex-1 bg-[#6c3cff] text-white py-2.5 rounded-lg font-semibold hover:bg-[#5a2de0] transition disabled:opacity-50"
+      >
+        {loading ? 'Saving...' : label || 'Next'}
+      </button>
+    </div>
   );
 }

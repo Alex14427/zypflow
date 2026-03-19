@@ -15,13 +15,15 @@ interface Conversation {
   messages: Message[];
   created_at: string;
   updated_at: string;
-  leads: { name: string; email: string } | null;
+  leads: { name: string; email: string; phone: string } | null;
 }
 
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [smsText, setSmsText] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -32,7 +34,7 @@ export default function ConversationsPage() {
 
       const { data } = await supabase
         .from('conversations')
-        .select('id, channel, messages, created_at, updated_at, leads(name, email)')
+        .select('id, channel, messages, created_at, updated_at, leads(name, email, phone)')
         .eq('business_id', biz.id)
         .order('updated_at', { ascending: false })
         .limit(100);
@@ -43,6 +45,32 @@ export default function ConversationsPage() {
     }
     load();
   }, []);
+
+  async function sendSms() {
+    if (!selected?.leads?.phone || !smsText.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: selected.leads.phone,
+          body: smsText.trim(),
+        }),
+      });
+      if (res.ok) {
+        // Append to conversation messages locally
+        const newMsg: Message = { role: 'assistant', content: `[SMS] ${smsText.trim()}`, timestamp: new Date().toISOString() };
+        const updatedMessages = [...(selected.messages || []), newMsg];
+        setSelected({ ...selected, messages: updatedMessages });
+        setConversations(prev => prev.map(c => c.id === selected.id ? { ...c, messages: updatedMessages } : c));
+        setSmsText('');
+      }
+    } catch (err) {
+      console.error('SMS send failed:', err);
+    }
+    setSending(false);
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
@@ -120,6 +148,25 @@ export default function ConversationsPage() {
                     </div>
                   ))}
                 </div>
+                {selected.leads?.phone && (
+                  <div className="p-3 border-t flex gap-2">
+                    <input
+                      type="text"
+                      value={smsText}
+                      onChange={e => setSmsText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendSms()}
+                      placeholder={`SMS to ${selected.leads.phone}...`}
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                    />
+                    <button
+                      onClick={sendSms}
+                      disabled={sending || !smsText.trim()}
+                      className="bg-brand-purple text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition disabled:opacity-50"
+                    >
+                      {sending ? 'Sending...' : 'Send SMS'}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
