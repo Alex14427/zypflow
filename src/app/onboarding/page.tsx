@@ -291,19 +291,31 @@ export default function OnboardingPage() {
           </div>
           <NextButton
             loading={saving}
-            onClick={() =>
-              saveAndNext({
-                ai_personality: personality,
-                ...(extraNotes
-                  ? {
-                      knowledge_base: [
-                        ...faqs.filter((f) => f.question && f.answer),
-                        { question: 'Additional business info', answer: extraNotes },
-                      ],
-                    }
-                  : {}),
-              })
-            }
+            onClick={async () => {
+              if (!businessId) return;
+              setSaving(true);
+
+              // Save personality
+              const updateData: Record<string, unknown> = { ai_personality: personality };
+
+              // If extra notes, fetch current knowledge_base and append
+              if (extraNotes) {
+                const { data: current } = await supabase
+                  .from('businesses')
+                  .select('knowledge_base')
+                  .eq('id', businessId)
+                  .single();
+                const existing = (current?.knowledge_base as FAQ[]) || [];
+                updateData.knowledge_base = [
+                  ...existing,
+                  { question: 'Additional business info', answer: extraNotes },
+                ];
+              }
+
+              await supabase.from('businesses').update(updateData).eq('id', businessId);
+              setSaving(false);
+              setStep(6);
+            }}
           />
         </div>
       </OnboardingShell>
