@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import { verifyAutomationAuth } from '@/lib/auth-automation';
 import twilio from 'twilio';
 
 const smsClient = twilio(
@@ -10,11 +11,15 @@ const smsClient = twilio(
 
 // Called by Make.com or Vercel cron to send appointment reminders
 // Checks for appointments needing 48h, 24h, or 2h reminders
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
   return sendReminders();
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
   return sendReminders();
 }
 

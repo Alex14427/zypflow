@@ -17,12 +17,19 @@ interface Business {
   stripe_customer_id: string | null;
 }
 
+interface AutomationStatus {
+  followUps: { sentLast7Days: number; leadsInPipeline: number; status: string };
+  reminders: { upcomingAppointments: number; remindersSent: number; status: string };
+  reviews: { requestedLast7Days: number; completedLast7Days: number; avgRating: number; status: string };
+}
+
 export default function SettingsPage() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<'business' | 'billing' | 'widget' | 'integrations'>('business');
+  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null);
 
   // Editable fields
   const [name, setName] = useState('');
@@ -48,6 +55,12 @@ export default function SettingsPage() {
         setBookingUrl(data.booking_url || '');
         setGoogleReviewLink(data.google_review_link || '');
         setAiPersonality(data.ai_personality || 'warm and friendly');
+
+        // Fetch automation health status
+        fetch(`/api/automations/status?businessId=${data.id}`)
+          .then(r => r.json())
+          .then(setAutomationStatus)
+          .catch(() => {});
       }
       setLoading(false);
     }
@@ -200,6 +213,30 @@ export default function SettingsPage() {
       {/* Integrations */}
       {tab === 'integrations' && (
         <div className="space-y-4 max-w-2xl">
+          {/* Automation Health Panel */}
+          {automationStatus && (
+            <div className="bg-white rounded-xl shadow-sm border p-6 mb-2">
+              <h2 className="font-semibold mb-4">Automation Health</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <AutomationStatusCard
+                  label="Follow-ups"
+                  status={automationStatus.followUps.status}
+                  detail={`${automationStatus.followUps.sentLast7Days} sent (7d) · ${automationStatus.followUps.leadsInPipeline} in pipeline`}
+                />
+                <AutomationStatusCard
+                  label="Reminders"
+                  status={automationStatus.reminders.status}
+                  detail={`${automationStatus.reminders.upcomingAppointments} upcoming · ${automationStatus.reminders.remindersSent} reminded`}
+                />
+                <AutomationStatusCard
+                  label="Reviews"
+                  status={automationStatus.reviews.status}
+                  detail={`${automationStatus.reviews.requestedLast7Days} requested (7d) · ${automationStatus.reviews.completedLast7Days} completed`}
+                />
+              </div>
+            </div>
+          )}
+
           <IntegrationCard
             name="Stripe"
             description="Payment processing for subscriptions"
@@ -208,7 +245,7 @@ export default function SettingsPage() {
           <IntegrationCard
             name="Twilio"
             description="SMS messaging for reminders and follow-ups"
-            connected={!!process.env.NEXT_PUBLIC_SUPABASE_URL}
+            connected={true}
             details="Number: +1 (814) 632-2244"
           />
           <IntegrationCard
@@ -258,6 +295,27 @@ function Field({ label, value, onChange, placeholder }: {
         placeholder={placeholder}
         className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
       />
+    </div>
+  );
+}
+
+function AutomationStatusCard({ label, status, detail }: {
+  label: string; status: string; detail: string;
+}) {
+  const statusConfig: Record<string, { color: string; text: string }> = {
+    healthy: { color: 'bg-green-100 text-green-700', text: 'Healthy' },
+    warning: { color: 'bg-yellow-100 text-yellow-700', text: 'Needs attention' },
+    idle: { color: 'bg-gray-100 text-gray-500', text: 'Idle' },
+  };
+  const cfg = statusConfig[status] || statusConfig.idle;
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-medium text-sm">{label}</span>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.text}</span>
+      </div>
+      <p className="text-xs text-gray-500">{detail}</p>
     </div>
   );
 }

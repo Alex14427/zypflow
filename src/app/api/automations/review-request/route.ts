@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import { verifyAutomationAuth } from '@/lib/auth-automation';
 import twilio from 'twilio';
 
 const smsClient = twilio(
@@ -11,6 +12,9 @@ const smsClient = twilio(
 // Called by Make.com after appointment is marked completed
 // Sends a review request to the customer
 export async function POST(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
+
   const { appointmentId } = await req.json();
   if (!appointmentId) {
     return NextResponse.json({ error: 'appointmentId required' }, { status: 400 });

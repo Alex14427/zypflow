@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import { verifyAutomationAuth } from '@/lib/auth-automation';
 import twilio from 'twilio';
 
 const smsClient = twilio(
@@ -9,10 +10,22 @@ const smsClient = twilio(
 );
 
 // Follow-up sequences for leads that haven't booked
-// Called by Make.com on a schedule (e.g. daily)
-export async function POST(req: NextRequest) {
-  const { businessId } = await req.json().catch(() => ({ businessId: null }));
+// Called by Make.com on a schedule or Vercel cron (daily)
+export async function GET(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
+  return runFollowUps(null);
+}
 
+export async function POST(req: NextRequest) {
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
+
+  const { businessId } = await req.json().catch(() => ({ businessId: null }));
+  return runFollowUps(businessId);
+}
+
+async function runFollowUps(businessId: string | null) {
   // Build query — optionally filter by business
   let query = supabaseAdmin
     .from('leads')

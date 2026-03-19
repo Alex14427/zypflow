@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendBookingConfirmation } from '@/lib/email';
+import { fireWebhook } from '@/lib/webhook';
 
 export async function POST(req: NextRequest) {
   const { payload } = await req.json();
@@ -54,16 +55,13 @@ export async function POST(req: NextRequest) {
     await sendBookingConfirmation(email, name, service, startTime, biz?.name || 'our office');
   }
 
-  // Fire Make.com webhook for appointment
+  // Fire Make.com webhook for appointment (with retry)
   if (process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK) {
-    fetch(process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        business_id: businessId, lead_id: leadId, email, name, service,
-        datetime: payload.startTime,
-      }),
-    }).catch(() => {});
+    fireWebhook(
+      process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK,
+      { business_id: businessId, lead_id: leadId, email, name, service, datetime: payload.startTime },
+      'make_appointment_completed'
+    ).catch(() => {}); // fire and forget — retries happen inside fireWebhook
   }
 
   return NextResponse.json({ success: true });
