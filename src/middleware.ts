@@ -26,8 +26,8 @@ export async function middleware(req: NextRequest) {
 
     // Verify with Supabase
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
     );
     const { data: { user } } = await supabase.auth.getUser(accessToken);
