@@ -15,9 +15,15 @@ export async function POST(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
 
-  const { appointmentId } = await req.json();
+  const { appointmentId, satisfactionScore } = await req.json();
   if (!appointmentId) {
     return NextResponse.json({ error: 'appointmentId required' }, { status: 400 });
+  }
+
+  // Only request reviews from satisfied customers (score >= 4 out of 5)
+  const score = typeof satisfactionScore === 'number' ? satisfactionScore : 5;
+  if (score < 4) {
+    return NextResponse.json({ skipped: true, reason: 'Satisfaction score below threshold' });
   }
 
   const { data: appt } = await supabaseAdmin
@@ -61,11 +67,12 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: lead.email,
       subject: `How was your experience at ${bizName}?`,
-      html: `<p>Hi ${lead.name || 'there'},</p>
+      html: `<h2 style="color:#1f2937">We'd love your feedback!</h2>
+       <p>Hi ${lead.name || 'there'},</p>
        <p>Thank you for choosing <strong>${bizName}</strong>! We hope you had a great experience.</p>
-       <p>We'd really appreciate it if you could leave us a quick review — it helps other customers find us:</p>
-       <p><a href="${reviewLink}" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Leave a Review</a></p>
-       <p>Thank you for your support!</p>`,
+       <p>We'd really appreciate it if you could leave us a quick Google review — it only takes 30 seconds and helps other customers find us:</p>
+       <p style="margin:24px 0"><a href="${reviewLink}" style="display:inline-block;background:#6c3cff;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">⭐ Leave a Review</a></p>
+       <p style="color:#6b7280;font-size:14px">Your feedback means the world to us. Thank you for your support!</p>`,
     });
   }
 
