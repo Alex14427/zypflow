@@ -68,39 +68,66 @@ async function runFollowUps(businessId: string | null) {
       (Date.now() - new Date(lead.created_at as string).getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    let messageContent = '';
+    let smsContent = '';
+    let emailHtml = '';
+    let emailSubject = '';
     let stepNumber = 0;
+
+    const bookingCta = bookingUrl
+      ? `<p style="margin-top:20px"><a href="${bookingUrl}" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Book Your Appointment</a></p>`
+      : '<p style="margin-top:16px">Just reply to this email and we\'ll get you booked in!</p>';
 
     // Follow-up schedule: Day 1, Day 3, Day 7
     if (lastStep === 0 && daysSinceCreated >= 1) {
       stepNumber = 1;
-      messageContent = `Hi ${leadName}! Thanks for your interest in ${service} at ${bizName}. Would you like to book a consultation? ${bookingUrl ? bookingUrl : 'Reply YES and we\'ll get you sorted!'}`;
+      smsContent = `Hi ${leadName}! Thanks for your interest in ${service} at ${bizName}. Would you like to book a consultation? ${bookingUrl || 'Reply YES and we\'ll get you sorted!'}`;
+      emailSubject = `${bizName} — Still interested in ${service}?`;
+      emailHtml = `<h2 style="color:#1f2937">Thanks for your interest!</h2>
+        <p>Hi ${leadName},</p>
+        <p>We noticed you recently enquired about <strong>${service}</strong> at <strong>${bizName}</strong>.</p>
+        <p>We'd love to help you take the next step. You can book a consultation at a time that suits you:</p>
+        ${bookingCta}
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">If you have any questions, just reply to this email — we're happy to help.</p>`;
     } else if (lastStep === 1 && daysSinceCreated >= 3) {
       stepNumber = 2;
-      messageContent = `Hi ${leadName}, just checking in! We'd love to help you with ${service}. ${bookingUrl ? `Book your slot here: ${bookingUrl}` : 'Let us know if you have any questions!'}`;
+      smsContent = `Hi ${leadName}, just checking in! We'd love to help you with ${service}. ${bookingUrl ? `Book your slot here: ${bookingUrl}` : 'Let us know if you have any questions!'}`;
+      emailSubject = `${bizName} — A quick reminder about ${service}`;
+      emailHtml = `<h2 style="color:#1f2937">Just checking in</h2>
+        <p>Hi ${leadName},</p>
+        <p>We wanted to follow up on your enquiry about <strong>${service}</strong>.</p>
+        <p>Many of our clients tell us they wish they'd booked sooner! We have availability coming up and would love to see you:</p>
+        ${bookingCta}
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">No pressure at all — we're here whenever you're ready.</p>`;
     } else if (lastStep === 2 && daysSinceCreated >= 7) {
       stepNumber = 3;
-      messageContent = `Hi ${leadName}, this is our last follow-up about ${service} at ${bizName}. If you're still interested, we're here to help! ${bookingUrl ? bookingUrl : ''} Reply STOP to opt out.`;
+      smsContent = `Hi ${leadName}, this is our last follow-up about ${service} at ${bizName}. If you're still interested, we're here to help! ${bookingUrl || ''} Reply STOP to opt out.`;
+      emailSubject = `${bizName} — Last chance to book ${service}`;
+      emailHtml = `<h2 style="color:#1f2937">We don't want you to miss out</h2>
+        <p>Hi ${leadName},</p>
+        <p>This is our final follow-up about <strong>${service}</strong> at <strong>${bizName}</strong>.</p>
+        <p>If the timing isn't right, no worries at all. But if you'd still like to book, we're here:</p>
+        ${bookingCta}
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">We won't send any more follow-ups after this. Wishing you all the best!</p>`;
     }
 
-    if (!messageContent || !stepNumber) continue;
+    if (!stepNumber) continue;
 
     try {
       // Send via SMS
-      if (leadPhone) {
+      if (leadPhone && smsContent) {
         await smsClient.messages.create({
-          body: messageContent,
+          body: smsContent,
           from: process.env.TWILIO_PHONE_NUMBER || '',
           to: leadPhone,
         });
       }
 
       // Send via email
-      if (leadEmail) {
+      if (leadEmail && emailHtml) {
         await sendEmail({
           to: leadEmail,
-          subject: `${bizName} — Following up on ${service}`,
-          html: `<p>${messageContent.replace(/\n/g, '<br>')}</p>`,
+          subject: emailSubject,
+          html: emailHtml,
         });
       }
 
@@ -111,7 +138,7 @@ async function runFollowUps(businessId: string | null) {
         sequence_name: 'new_lead_nurture',
         step_number: stepNumber,
         channel: leadPhone ? 'sms' : 'email',
-        message_content: messageContent,
+        message_content: smsContent,
         sent_at: new Date().toISOString(),
       });
 

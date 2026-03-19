@@ -103,9 +103,15 @@ async function sendReminder(
     await sendEmail({
       to: lead.email,
       subject: `Appointment reminder — ${service} at ${bizName}`,
-      html: `<p>Hi ${lead.name || 'there'},</p>
-       <p>This is a friendly reminder that your <strong>${service}</strong> at <strong>${bizName}</strong> is in <strong>${timeLabel}</strong>.</p>
-       <p><strong>Date:</strong> ${formattedDate}<br><strong>Time:</strong> ${formattedTime}</p>
+      html: `<h2 style="color:#1f2937">Appointment Reminder</h2>
+       <p>Hi ${lead.name || 'there'},</p>
+       <p>This is a friendly reminder that your appointment is coming up in <strong>${timeLabel}</strong>.</p>
+       <div style="background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0">
+         <p style="margin:4px 0"><strong>Service:</strong> ${service}</p>
+         <p style="margin:4px 0"><strong>Date:</strong> ${formattedDate}</p>
+         <p style="margin:4px 0"><strong>Time:</strong> ${formattedTime}</p>
+         <p style="margin:4px 0"><strong>Business:</strong> ${bizName}</p>
+       </div>
        <p>We look forward to seeing you!</p>`,
     });
   }
