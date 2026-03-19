@@ -112,6 +112,7 @@ async function runFollowUps(businessId: string | null) {
         step_number: stepNumber,
         channel: leadPhone ? 'sms' : 'email',
         message_content: messageContent,
+        sent_at: new Date().toISOString(),
       });
 
       // Update lead status

@@ -12,7 +12,7 @@ const PRICES: Record<string, string> = {
 export async function POST(req: NextRequest) {
   const { plan, businessId, email } = await req.json();
 
-  if (!PRICES[plan]) {
+  if (!plan || !PRICES[plan] || PRICES[plan] === '') {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   }
 

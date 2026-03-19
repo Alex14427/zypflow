@@ -7,6 +7,7 @@ import { chatInputSchema } from '@/lib/validators';
 import { scoreLead } from '@/lib/scoring';
 import { getSystemPrompt } from '@/lib/prompts';
 import { fireWebhook } from '@/lib/webhook';
+import { sendLeadNotification } from '@/lib/email';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -158,6 +159,21 @@ export async function POST(req: NextRequest) {
     if (convId && currentLeadId) {
       await supabaseAdmin.from('conversations')
         .update({ lead_id: currentLeadId }).eq('id', convId);
+    }
+
+    // Email notification to business owner
+    if (biz.name) {
+      const { data: bizFull } = await supabaseAdmin
+        .from('businesses').select('email').eq('id', businessId).single();
+      if (bizFull?.email) {
+        sendLeadNotification(bizFull.email, biz.name, {
+          name: extractedLead.name,
+          email: extractedLead.email,
+          phone: extractedLead.phone,
+          service_interest: extractedLead.service_interest,
+          score: scoreLead(extractedLead),
+        }).catch((err) => console.error('Lead notification email failed:', err));
+      }
     }
 
     // Fire Make.com webhook for new lead notification (with retry)

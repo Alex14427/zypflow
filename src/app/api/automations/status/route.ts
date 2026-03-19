@@ -13,12 +13,12 @@ export async function GET(req: NextRequest) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [followUpsRes, appointmentsRes, reviewsRes, leadsRes] = await Promise.all([
-    // Recent follow-ups sent
+    // Recent follow-ups sent (column is sent_at, not created_at)
     supabaseAdmin
       .from('follow_ups')
-      .select('id, created_at, step_number', { count: 'exact' })
+      .select('id, sent_at, step_number', { count: 'exact' })
       .eq('business_id', businessId)
-      .gte('created_at', sevenDaysAgo.toISOString()),
+      .gte('sent_at', sevenDaysAgo.toISOString()),
 
     // Upcoming confirmed appointments (to check if reminders are working)
     supabaseAdmin

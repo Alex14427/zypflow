@@ -17,6 +17,29 @@ interface Lead {
 
 const STATUSES = ['all', 'new', 'contacted', 'booked', 'cold', 'lost'];
 
+function exportCSV(leads: Lead[]) {
+  if (leads.length === 0) return;
+  const headers = ['Name', 'Email', 'Phone', 'Score', 'Status', 'Source', 'Interest', 'Date'];
+  const rows = leads.map(l => [
+    l.name || '',
+    l.email || '',
+    l.phone || '',
+    String(l.score),
+    l.status,
+    l.source || '',
+    l.service_interest || '',
+    new Date(l.created_at).toLocaleDateString('en-GB'),
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filtered, setFiltered] = useState<Lead[]>([]);
@@ -79,6 +102,12 @@ export default function LeadsPage() {
             onChange={e => setSearch(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-brand-purple"
           />
+          <button
+            onClick={() => exportCSV(filtered)}
+            className="bg-brand-purple text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition"
+          >
+            Export CSV
+          </button>
         </div>
       </div>
 
