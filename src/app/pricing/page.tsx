@@ -56,8 +56,10 @@ const PLANS = [
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleCheckout(plan: string) {
+    setError(null);
     setLoading(plan);
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -70,7 +72,7 @@ export default function PricingPage() {
         window.location.href = data.url;
       }
     } catch {
-      alert('Something went wrong. Please try again.');
+      setError('Something went wrong. Please try again.');
     }
     setLoading(null);
   }
@@ -91,6 +93,14 @@ export default function PricingPage() {
           </div>
         </div>
       </header>
+
+      {error && (
+        <div className="max-w-6xl mx-auto px-6 pt-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
