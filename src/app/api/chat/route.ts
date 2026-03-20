@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
+import { getOpenAI, getAnthropic, MODELS } from '@/lib/ai-client';
 import { supabaseAdmin } from '@/lib/supabase';
 import { chatRateLimit } from '@/lib/ratelimit';
 import { chatInputSchema } from '@/lib/validators';
@@ -8,9 +7,6 @@ import { scoreLead } from '@/lib/scoring';
 import { getSystemPrompt } from '@/lib/prompts';
 import { fireWebhook } from '@/lib/webhook';
 import { sendLeadNotification } from '@/lib/email';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function corsHeaders() {
   return {
@@ -66,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (conv) messages = conv.messages;
   }
 
-  // 5. Build system prompt (uses industry-specific templates from Section 14)
+  // 5. Build system prompt
   const systemPrompt = biz.system_prompt || getSystemPrompt(
     biz.name,
     biz.industry || 'general',
@@ -79,13 +75,14 @@ export async function POST(req: NextRequest) {
 
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
-  // 6. Call AI — GPT-4o primary, Claude fallback
+  // 6. Call AI — GPT-4o primary, Claude Sonnet fallback
   let reply = '';
   const chatMessages = messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
   try {
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: MODELS.chat,
       messages: [
         { role: 'system', content: systemPrompt },
         ...chatMessages,
@@ -97,8 +94,9 @@ export async function POST(req: NextRequest) {
   } catch (openaiError) {
     console.error('OpenAI failed, falling back to Claude:', openaiError);
     try {
+      const anthropic = getAnthropic();
       const claudeResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: MODELS.chatFallback,
         max_tokens: 500,
         system: systemPrompt,
         messages: chatMessages,
@@ -184,7 +182,7 @@ export async function POST(req: NextRequest) {
           score: scoreLead(extractedLead),
         },
         'make_new_lead'
-      ).catch(() => {}); // fire and forget — retries happen inside fireWebhook
+      ).catch(() => {});
     }
   }
 

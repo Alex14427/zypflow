@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getAnthropic, MODELS } from '@/lib/ai-client';
 
 // Generates a custom AI system prompt based on business details
-// Used during onboarding step 6 and in settings
+// Uses Claude Haiku — following clear structured instructions, 50x cheaper than GPT-4o
 export async function POST(req: NextRequest) {
-  // Rate limit — AI calls are expensive
+  // Rate limit
   const { aiRouteRateLimit } = await import('@/lib/ratelimit');
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const { success } = await aiRouteRateLimit.limit(`ai-prompt:${ip}`);
@@ -21,16 +19,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert at writing AI assistant system prompts for UK service businesses. Create prompts that are natural, effective at lead capture, and feel human. The prompt should be comprehensive but concise.`,
-        },
-        {
-          role: 'user',
-          content: `Write a system prompt for an AI chat assistant with these details:
+    const anthropic = getAnthropic();
+    const response = await anthropic.messages.create({
+      model: MODELS.cheap,
+      max_tokens: 1500,
+      system: `You are an expert at writing AI assistant system prompts for UK service businesses. Create prompts that are natural, effective at lead capture, and feel human. The prompt should be comprehensive but concise.`,
+      messages: [{
+        role: 'user',
+        content: `Write a system prompt for an AI chat assistant with these details:
 
 Business Name: ${name}
 Industry: ${industry}
@@ -56,13 +52,11 @@ End the prompt with exactly this lead extraction instruction:
 <!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->"
 
 Write ONLY the system prompt text, no explanations or markdown formatting.`,
-        },
-      ],
-      max_tokens: 1500,
-      temperature: 0.5,
+      }],
     });
 
-    const prompt = completion.choices[0].message.content || '';
+    const textBlock = response.content.find(b => b.type === 'text');
+    const prompt = textBlock ? textBlock.text : '';
 
     return NextResponse.json({ prompt });
   } catch (error) {

@@ -39,3 +39,5 @@ jobs:
           SENTRY_DSN: ""
           SENTRY_AUTH_TOKEN: ""
           NEXT_PUBLIC_SENTRY_DSN: ""
+          OPENAI_API_KEY: sk-placeholder-for-ci-build
+          ANTHROPIC_API_KEY: sk-ant-placeholder-for-ci-build

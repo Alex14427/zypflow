@@ -1,14 +1,30 @@
 // Outreach email templates for Instantly.ai campaigns
-// Used in Section 12.1 of Zypflow-FINAL.docx
-// Covers all 5 target industries with 3-email sequences
+// Covers all target industries with 5-email sequences (days 0, 3, 7, 14, 21)
+// Each step includes A/B subject line variants for split testing
+// Unsubscribe link appended by Instantly.ai automatically
 
-export const OUTREACH_SEQUENCES = {
+export interface OutreachStep {
+  day: number;
+  subject: string;
+  subjectB?: string; // A/B variant
+  body: string;
+  smsVersion?: string; // SMS version for multi-channel
+}
+
+export interface OutreachSequence {
+  name: string;
+  steps: OutreachStep[];
+}
+
+export const OUTREACH_SEQUENCES: Record<string, OutreachSequence> = {
   dental: {
     name: 'Dental Practice Outreach',
     steps: [
       {
         day: 0,
         subject: '{{companyName}} — filling your appointment book with AI',
+        subjectB: 'Quick question for {{companyName}}',
+        smsVersion: `Hi {{firstName}}, I noticed {{companyName}} has great reviews. We help dental practices book 30-40% more appointments using AI. Fancy a quick chat? — Alex, Zypflow`,
         body: `Hi {{firstName}},
 
 I noticed {{companyName}} has great reviews online — clearly you're doing excellent work in {{city}}.
@@ -321,11 +337,52 @@ Alex`,
       {
         day: 7,
         subject: 'Last one from me',
+        subjectB: '{{firstName}}, one last thing',
         body: `Hi {{firstName}},
 
 Last email, I promise! If you ever want to explore how AI can help {{companyName}} grow, just reply here.
 
 Wishing you all the best,
+Alex
+Zypflow | zypflow.com`,
+      },
+      {
+        day: 14,
+        subject: '{{companyName}} — quick case study',
+        subjectB: 'Thought of {{companyName}} when I saw this',
+        body: `Hi {{firstName}},
+
+Apologies for the extra email — I wanted to share something genuinely useful.
+
+We just published a case study from a service business in {{city}} that went from 12 online bookings/month to 47 using AI. Here's the short version:
+
+- Installed AI chat widget on their website (took 10 minutes)
+- AI answered customer questions 24/7 and captured contact details
+- Automated follow-ups nudged undecided enquiries into bookings
+- No-show rate dropped from 28% to 11% with automated reminders
+
+If you'd like the full case study, just reply 'send it' and I'll email it over.
+
+No hard sell — just thought it might be relevant for {{companyName}}.
+
+Alex
+Zypflow | zypflow.com`,
+        smsVersion: `Hi {{firstName}}, thought you'd find this useful — a business like {{companyName}} went from 12 to 47 monthly bookings using AI automation. Want the case study? Reply YES`,
+      },
+      {
+        day: 21,
+        subject: 'Open invitation, {{firstName}}',
+        subjectB: '{{companyName}} — standing offer',
+        body: `Hi {{firstName}},
+
+This is genuinely the last time I'll reach out.
+
+If things change down the line and you want to explore how AI can help {{companyName}} capture more enquiries and grow — I'm always here. Just reply to this email anytime, even months from now.
+
+We're a small UK team building tools specifically for businesses like yours. No pressure, no tricks, just a standing offer to help.
+
+Wishing you and the team all the best.
+
 Alex
 Zypflow | zypflow.com`,
       },
