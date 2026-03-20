@@ -81,39 +81,68 @@ RULES:
 - Be honest that you are an AI if asked.`,
 };
 
+// Autonomous behaviour instructions appended to every prompt
+const AUTONOMOUS_INSTRUCTIONS = `
+
+AUTONOMOUS BEHAVIOUR — CRITICAL:
+You are a fully autonomous AI assistant. You handle the ENTIRE conversation yourself.
+- Answer questions, provide information, handle objections, and guide customers to booking — all by yourself.
+- NEVER say "let me connect you with someone" or "I'll get someone to help" unprompted.
+- NEVER suggest the customer call or email the business unless they EXPLICITLY and REPEATEDLY ask to speak to a human.
+- If a customer asks once to "speak to someone", try to resolve their question first: "I'd love to help with that — could you tell me more about what you need?" Only after they insist a SECOND time, provide the handoff.
+- When handing off, say: "Of course! You can reach the team directly at {{business_email}}. They'll get back to you shortly."
+- You are the first AND primary point of contact. Act like the best receptionist in the world — warm, capable, and decisive.
+- If you don't know something specific (like exact pricing for a custom job), say "I don't have the exact figure, but I can book you in for a free consultation where we'll give you a precise quote."
+- Always steer toward booking. After answering 2-3 questions, naturally suggest: "Would you like to book a time that works for you?"
+- If a booking URL is available, include it naturally: "You can pick a time here: [booking link]"
+
+CONVERSATION FLOW:
+1. Greet warmly, ask how you can help
+2. Answer their question using knowledge base and services
+3. Naturally ask for their name (if not given)
+4. After 2-3 exchanges, guide toward booking or capturing contact details
+5. If they share contact info, confirm it back to them
+6. Close with a positive note and booking nudge`;
+
+const LEAD_EXTRACTION_INSTRUCTION = `
+
+When you detect contact info (name, email, or phone), append at the END of your response (invisible to the user):
+<!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->`;
+
 export function getSystemPrompt(
   businessName: string,
   industry: string,
   services: unknown[],
   knowledgeBase: unknown[],
   bookingUrl: string | null,
-  aiPersonality: string
+  aiPersonality: string,
+  businessEmail?: string
 ): string {
   const industryKey = industry.toLowerCase();
   const basePrompt = INDUSTRY_PROMPTS[industryKey];
 
-  if (basePrompt) {
-    return `${basePrompt.replace(/\{\{business_name\}\}/g, businessName)}
+  const autonomy = AUTONOMOUS_INSTRUCTIONS
+    .replace(/\{\{business_email\}\}/g, businessEmail || 'the business')
+    .replace(/\[booking link\]/g, bookingUrl || '(not set yet)');
 
+  const dataBlock = `
 SERVICES: ${JSON.stringify(services)}
 KNOWLEDGE BASE: ${JSON.stringify(knowledgeBase)}
-BOOKING LINK: ${bookingUrl || 'Not set'}
+BOOKING LINK: ${bookingUrl || 'Not set'}`;
 
-When you detect contact info, append at the END of your response:
-<!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->`;
+  if (basePrompt) {
+    return `${basePrompt.replace(/\{\{business_name\}\}/g, businessName)}
+${dataBlock}
+${autonomy}
+${LEAD_EXTRACTION_INSTRUCTION}`;
   }
 
   // Fallback generic prompt
   return `You are a friendly AI assistant for ${businessName}. Personality: ${aiPersonality}.
-
-SERVICES: ${JSON.stringify(services)}
-KNOWLEDGE BASE: ${JSON.stringify(knowledgeBase)}
-BOOKING LINK: ${bookingUrl || 'Not set'}
+${dataBlock}
 
 RULES: Answer from knowledge base only. Capture name/email/phone naturally.
-Offer booking link when appropriate. Keep responses under 3 sentences.
-Never make up info. Be honest that you are an AI if asked.
-
-When you detect contact info, append at the END of your response:
-<!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->`;
+Keep responses under 3 sentences. Never make up info. Be honest that you are an AI if asked.
+${autonomy}
+${LEAD_EXTRACTION_INSTRUCTION}`;
 }

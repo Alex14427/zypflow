@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
@@ -50,8 +50,10 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState('');
 
-  useEffect(() => {
-    async function load() {
+  const bizIdRef = useRef<string | null>(null);
+
+  const loadDashboard = useCallback(async (isInitial = false) => {
+    if (isInitial) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -62,6 +64,7 @@ export default function DashboardOverview() {
         .maybeSingle();
       if (!biz) return;
       setBusinessName(biz.name || '');
+      bizIdRef.current = biz.id;
 
       // Check setup completion
       const services = biz.services as unknown[] | null;
@@ -73,44 +76,52 @@ export default function DashboardOverview() {
         hasReviewLink: !!biz.google_review_link,
         hasWidget: true,
       });
-
-      const now = new Date().toISOString();
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const [leadsRes, convRes, apptRes, apptUpRes, reviewsRes, todayLeadsRes] = await Promise.all([
-        supabase.from('leads').select('id, name, email, score, status, source, created_at').eq('business_id', biz.id).order('created_at', { ascending: false }).limit(50),
-        supabase.from('conversations').select('id', { count: 'exact' }).eq('business_id', biz.id),
-        supabase.from('appointments').select('id', { count: 'exact' }).eq('business_id', biz.id).eq('status', 'confirmed').gte('datetime', now),
-        supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('business_id', biz.id).gte('datetime', now).order('datetime', { ascending: true }).limit(5),
-        supabase.from('reviews').select('id', { count: 'exact' }).eq('business_id', biz.id),
-        supabase.from('leads').select('id', { count: 'exact' }).eq('business_id', biz.id).gte('created_at', todayStart.toISOString()),
-      ]);
-
-      const leads = (leadsRes.data || []) as RecentLead[];
-      const totalLeads = leads.length;
-      const hotLeads = leads.filter(l => l.score >= 70).length;
-      const booked = leads.filter(l => l.status === 'booked').length;
-      const avgScore = totalLeads > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / totalLeads) : 0;
-
-      setStats({
-        totalLeads,
-        hotLeads,
-        booked,
-        newToday: todayLeadsRes.count || 0,
-        totalConversations: convRes.count || 0,
-        upcomingAppointments: apptRes.count || 0,
-        reviewsSent: reviewsRes.count || 0,
-        conversionRate: totalLeads > 0 ? Math.round((booked / totalLeads) * 100) : 0,
-        avgScore,
-      });
-
-      setRecentLeads(leads.slice(0, 5));
-      setUpcoming((apptUpRes.data as unknown as UpcomingAppt[]) || []);
-      setLoading(false);
     }
-    load();
+    if (!bizIdRef.current) return;
+    const bizId = bizIdRef.current;
+
+    const now = new Date().toISOString();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [leadsRes, convRes, apptRes, apptUpRes, reviewsRes, todayLeadsRes] = await Promise.all([
+      supabase.from('leads').select('id, name, email, score, status, source, created_at').eq('business_id', bizId).order('created_at', { ascending: false }).limit(50),
+      supabase.from('conversations').select('id', { count: 'exact' }).eq('business_id', bizId),
+      supabase.from('appointments').select('id', { count: 'exact' }).eq('business_id', bizId).eq('status', 'confirmed').gte('datetime', now),
+      supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('business_id', bizId).gte('datetime', now).order('datetime', { ascending: true }).limit(5),
+      supabase.from('reviews').select('id', { count: 'exact' }).eq('business_id', bizId),
+      supabase.from('leads').select('id', { count: 'exact' }).eq('business_id', bizId).gte('created_at', todayStart.toISOString()),
+    ]);
+
+    const leads = (leadsRes.data || []) as RecentLead[];
+    const totalLeads = leads.length;
+    const hotLeads = leads.filter(l => l.score >= 70).length;
+    const booked = leads.filter(l => l.status === 'booked').length;
+    const avgScore = totalLeads > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / totalLeads) : 0;
+
+    setStats({
+      totalLeads,
+      hotLeads,
+      booked,
+      newToday: todayLeadsRes.count || 0,
+      totalConversations: convRes.count || 0,
+      upcomingAppointments: apptRes.count || 0,
+      reviewsSent: reviewsRes.count || 0,
+      conversionRate: totalLeads > 0 ? Math.round((booked / totalLeads) * 100) : 0,
+      avgScore,
+    });
+
+    setRecentLeads(leads.slice(0, 5));
+    setUpcoming((apptUpRes.data as unknown as UpcomingAppt[]) || []);
+    if (isInitial) setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadDashboard(true);
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => loadDashboard(false), 30000);
+    return () => clearInterval(interval);
+  }, [loadDashboard]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;

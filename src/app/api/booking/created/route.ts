@@ -28,8 +28,15 @@ export async function POST(req: NextRequest) {
   return handleBooking(payload);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleBooking(payload: any) {
+interface CalPayload {
+  attendees?: { email?: string; name?: string }[];
+  metadata?: { businessId?: string };
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+async function handleBooking(payload: CalPayload) {
   const email = payload.attendees?.[0]?.email;
   const name = payload.attendees?.[0]?.name;
   const businessId = payload.metadata?.businessId;
@@ -60,7 +67,7 @@ async function handleBooking(payload: any) {
   }
 
   const service = payload.title || 'Consultation';
-  const startTime = new Date(payload.startTime);
+  const startTime = new Date(payload.startTime || new Date().toISOString());
 
   await supabaseAdmin.from('appointments').insert({
     business_id: businessId,
@@ -68,14 +75,14 @@ async function handleBooking(payload: any) {
     service,
     datetime: payload.startTime,
     duration_minutes: Math.round(
-      (new Date(payload.endTime).getTime() - startTime.getTime()) / 60000
+      (new Date(payload.endTime || payload.startTime || '').getTime() - startTime.getTime()) / 60000
     ),
     status: 'confirmed',
   });
 
   // Send booking confirmation email
   if (email && name) {
-    await sendBookingConfirmation(email, name, service, startTime, biz?.name || 'our office');
+    await sendBookingConfirmation(email, name, service as string, startTime, biz?.name || 'our office');
   }
 
   // Fire Make.com webhook for appointment (with retry)
