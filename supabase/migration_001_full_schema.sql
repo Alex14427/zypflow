@@ -1,7 +1,7 @@
 -- =============================================
 -- ZYPFLOW DATABASE SCHEMA v1.0
 -- Run this entire block in Supabase SQL Editor
--- Project: pzsgdqbpaogxcrsjjysf
+-- Project: quarijsqejzilervrcub
 -- =============================================
 
 -- 1. BUSINESSES (one row per paying customer)
