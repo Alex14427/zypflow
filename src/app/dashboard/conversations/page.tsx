@@ -55,6 +55,14 @@ export default function ConversationsPage() {
     const convs = (data as unknown as Conversation[]) || [];
     setConversations(convs);
     if (isInitial && convs.length > 0) setSelected(convs[0]);
+    // Update selected conversation with fresh data (new messages from customers)
+    if (!isInitial) {
+      setSelected(prev => {
+        if (!prev) return prev;
+        const updated = convs.find(c => c.id === prev.id);
+        return updated || prev;
+      });
+    }
     if (isInitial) setLoading(false);
   }, []);
 

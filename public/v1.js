@@ -51,6 +51,11 @@
       greetingEl.style.display = 'none';
       greetingDismissed = true;
     }
+    // Clear unread badge when opening
+    if (isOpen) {
+      var badge = bubble.querySelector('.zyp-unread');
+      if (badge) badge.remove();
+    }
     // Update bubble icon
     if (isOpen) {
       bubble.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>';

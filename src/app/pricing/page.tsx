@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 const PLANS = [
   {
@@ -57,6 +58,18 @@ const PLANS = [
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<{ businessId: string; email: string } | null>(null);
+
+  // Auto-detect logged-in user for seamless upgrade
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: biz } = await supabase.from('businesses').select('id').eq('email', user.email).maybeSingle();
+      if (biz) setUserInfo({ businessId: biz.id, email: user.email! });
+    }
+    checkUser();
+  }, []);
 
   async function handleCheckout(plan: string) {
     setError(null);
@@ -65,7 +78,11 @@ export default function PricingPage() {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          plan,
+          businessId: userInfo?.businessId,
+          email: userInfo?.email,
+        }),
       });
       const data = await res.json();
       if (data.url) {
