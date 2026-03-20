@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { LeadDrawer } from '@/components/lead-drawer';
 
 interface Lead {
   id: string;
@@ -46,7 +47,8 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -54,13 +56,12 @@ export default function LeadsPage() {
       if (!user) return;
       const { data: biz } = await supabase.from('businesses').select('id').eq('email', user.email).maybeSingle();
       if (!biz) return;
-      setBusinessId(biz.id);
 
       const { data } = await supabase.from('leads')
         .select('*')
         .eq('business_id', biz.id)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
       setLeads((data as Lead[]) || []);
       setLoading(false);
     }
@@ -75,11 +76,16 @@ export default function LeadsPage() {
       result = result.filter(l =>
         (l.name || '').toLowerCase().includes(q) ||
         (l.email || '').toLowerCase().includes(q) ||
-        (l.phone || '').includes(q)
+        (l.phone || '').includes(q) ||
+        (l.service_interest || '').toLowerCase().includes(q)
       );
     }
+    // Sort
+    if (sortBy === 'score') {
+      result = [...result].sort((a, b) => b.score - a.score);
+    }
     setFiltered(result);
-  }, [leads, filter, search]);
+  }, [leads, filter, search, sortBy]);
 
   async function updateStatus(leadId: string, newStatus: string) {
     await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
@@ -93,8 +99,11 @@ export default function LeadsPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Leads</h1>
-        <div className="flex gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Leads</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{leads.length} total &middot; {leads.filter(l => l.status === 'new').length} new</p>
+        </div>
+        <div className="flex gap-3 flex-wrap">
           <input
             type="text"
             placeholder="Search leads..."
@@ -102,6 +111,14 @@ export default function LeadsPage() {
             onChange={e => setSearch(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-brand-purple"
           />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'date' | 'score')}
+            className="border rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+          >
+            <option value="date">Sort by Date</option>
+            <option value="score">Sort by Score</option>
+          </select>
           <button
             onClick={() => exportCSV(filtered)}
             className="bg-brand-purple text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition"
@@ -143,8 +160,12 @@ export default function LeadsPage() {
           </thead>
           <tbody>
             {filtered.map(lead => (
-              <tr key={lead.id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{lead.name || '\u2014'}</td>
+              <tr
+                key={lead.id}
+                className="border-t hover:bg-gray-50 cursor-pointer"
+                onClick={() => setSelectedLeadId(lead.id)}
+              >
+                <td className="px-4 py-3 font-medium text-brand-purple hover:underline">{lead.name || '\u2014'}</td>
                 <td className="px-4 py-3 text-gray-600">{lead.email || '\u2014'}</td>
                 <td className="px-4 py-3 text-gray-600">{lead.phone || '\u2014'}</td>
                 <td className="px-4 py-3">
@@ -152,7 +173,7 @@ export default function LeadsPage() {
                     {lead.score}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <select
                     value={lead.status}
                     onChange={e => updateStatus(lead.id, e.target.value)}
@@ -182,6 +203,11 @@ export default function LeadsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Lead detail drawer */}
+      {selectedLeadId && (
+        <LeadDrawer leadId={selectedLeadId} onClose={() => setSelectedLeadId(null)} />
+      )}
     </div>
   );
 }

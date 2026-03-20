@@ -4,9 +4,32 @@ import { sendBookingConfirmation } from '@/lib/email';
 import { fireWebhook } from '@/lib/webhook';
 
 export async function POST(req: NextRequest) {
+  // Verify Cal.com webhook signature if secret is configured
+  const calSecret = process.env.CAL_WEBHOOK_SECRET;
+  if (calSecret) {
+    const signature = req.headers.get('x-cal-signature-256');
+    if (!signature) {
+      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    }
+    const body = await req.text();
+    const crypto = await import('crypto');
+    const expected = crypto.createHmac('sha256', calSecret).update(body).digest('hex');
+    if (signature !== expected) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+    // Parse the verified body
+    const { payload } = JSON.parse(body);
+    if (!payload) return NextResponse.json({ error: 'No payload' }, { status: 400 });
+    return handleBooking(payload);
+  }
+
   const { payload } = await req.json();
   if (!payload) return NextResponse.json({ error: 'No payload' }, { status: 400 });
+  return handleBooking(payload);
+}
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleBooking(payload: any) {
   const email = payload.attendees?.[0]?.email;
   const name = payload.attendees?.[0]?.name;
   const businessId = payload.metadata?.businessId;
