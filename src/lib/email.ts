@@ -1,7 +1,13 @@
 import { Resend } from 'resend';
 import crypto from 'crypto';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY || 'missing');
+  }
+  return _resend;
+}
 
 const FROM = 'Zypflow <hello@zypflow.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
@@ -39,7 +45,7 @@ export async function sendEmail({ to, subject, html }: {
   to: string; subject: string; html: string;
 }) {
   const unsubLink = unsubscribeUrl(to);
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: FROM,
     to,
     subject,

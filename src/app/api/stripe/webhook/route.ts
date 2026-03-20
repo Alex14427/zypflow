@@ -3,7 +3,8 @@ import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendWelcomeEmail, sendPaymentFailedEmail, sendTrialEndingEmail } from '@/lib/email';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+let _stripe: Stripe | null = null;
+function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_missing'); return _stripe; }
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
       console.error('STRIPE_WEBHOOK_SECRET is not configured');
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     }
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret);
   } catch {
     return NextResponse.json({ error: 'Bad signature' }, { status: 400 });
   }
