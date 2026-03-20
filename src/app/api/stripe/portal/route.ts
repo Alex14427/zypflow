@@ -4,7 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+let _stripe: Stripe | null = null;
+function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_missing'); return _stripe; }
 
 export async function POST() {
   // Get the authenticated user
@@ -46,7 +47,7 @@ export async function POST() {
     return NextResponse.json({ error: 'No billing account found' }, { status: 404 });
   }
 
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: biz.stripe_customer_id,
     return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings`,
   });

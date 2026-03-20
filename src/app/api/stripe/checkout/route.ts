@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+let _stripe: Stripe | null = null;
+function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_missing'); return _stripe; }
 
 const PRICES: Record<string, string> = {
   starter: process.env.STRIPE_STARTER_PRICE_ID || '',
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'You already have an active subscription. Manage it from Settings.' }, { status: 400 });
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
     customer_email: email,
