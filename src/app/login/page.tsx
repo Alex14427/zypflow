@@ -10,17 +10,30 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [failCount, setFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const router = useRouter();
+
+  const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (isLocked) return;
     setLoading(true);
     setError('');
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      const newCount = failCount + 1;
+      setFailCount(newCount);
+      setError('Invalid email or password.');
       setLoading(false);
+      // Lock after 5 consecutive failures for 60 seconds
+      if (newCount >= 5) {
+        setLockedUntil(Date.now() + 60000);
+        setError('Too many failed attempts. Please wait 60 seconds.');
+        setTimeout(() => { setLockedUntil(null); setFailCount(0); }, 60000);
+      }
     } else {
       router.push('/dashboard');
     }
@@ -62,10 +75,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isLocked}
             className="w-full bg-brand-purple hover:bg-brand-purple-dark text-white py-2.5 rounded-lg font-semibold transition disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Log In'}
+            {loading ? 'Logging in...' : isLocked ? 'Please wait...' : 'Log In'}
           </button>
         </form>
 

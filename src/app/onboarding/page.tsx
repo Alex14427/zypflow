@@ -57,6 +57,20 @@ export default function OnboardingPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [generatingPrompt, setGeneratingPrompt] = useState(false);
 
+  // Restore saved step on mount
+  useEffect(() => {
+    const savedStep = localStorage.getItem('zyp-onboarding-step');
+    if (savedStep) {
+      const parsed = parseInt(savedStep, 10);
+      if (parsed >= 1 && parsed <= 8) setStep(parsed);
+    }
+  }, []);
+
+  // Persist step changes
+  useEffect(() => {
+    localStorage.setItem('zyp-onboarding-step', String(step));
+  }, [step]);
+
   // Fetch business ID on mount
   useEffect(() => {
     async function fetchBusiness() {
@@ -553,7 +567,7 @@ export default function OnboardingPage() {
         </div>
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => { localStorage.removeItem('zyp-onboarding-step'); router.push('/dashboard'); }}
             className="bg-[#6c3cff] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#5a2de0] transition"
           >
             Go to Dashboard
