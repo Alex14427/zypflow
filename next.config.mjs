@@ -42,4 +42,7 @@ export default withSentryConfig(nextConfig, {
   project: 'zypflow',
   silent: true,
   hideSourceMaps: true,
+  // Skip source map upload in CI when SENTRY_AUTH_TOKEN is not set
+  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
 });
