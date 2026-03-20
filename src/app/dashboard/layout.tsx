@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { RealtimeProvider } from '@/components/realtime-provider';
+import { NotificationBell } from '@/components/notification-bell';
+import { CommandPalette } from '@/components/command-palette';
 
 interface Business {
   id: string;
@@ -43,77 +46,112 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     load();
   }, [router]);
 
+  // Trial banner logic
+  const trialDaysLeft = business?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(business.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const showTrialBanner = trialDaysLeft !== null && trialDaysLeft <= 7 && business?.plan === 'trial';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+    <RealtimeProvider businessId={business?.id || null}>
+      <CommandPalette />
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-5 border-b">
-          <Link href="/dashboard" className="text-xl font-bold">
-            <span className="text-brand-purple">Zyp</span>flow
-          </Link>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-brand-purple/10 text-brand-purple'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-brand-purple/10 rounded-full flex items-center justify-center text-brand-purple text-sm font-bold">
-              {business?.name?.[0] || 'Z'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{business?.name || 'Loading...'}</p>
-              <p className="text-xs text-gray-400 uppercase">{business?.plan || '...'}</p>
-            </div>
+        {/* Sidebar */}
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="p-5 border-b">
+            <Link href="/dashboard" className="text-xl font-bold">
+              <span className="text-brand-purple">Zyp</span>flow
+            </Link>
           </div>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }}
-            className="w-full text-left text-sm text-gray-400 hover:text-gray-600 px-1"
-          >
-            Log out
-          </button>
+
+          <nav className="flex-1 p-3 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                    isActive
+                      ? 'bg-brand-purple/10 text-brand-purple'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Cmd+K hint */}
+          <div className="px-4 pb-2">
+            <button
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 text-gray-400 text-xs hover:bg-gray-100 transition"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              Quick actions
+              <kbd className="ml-auto bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded text-[10px] font-mono">&#8984;K</kbd>
+            </button>
+          </div>
+
+          <div className="p-4 border-t">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 bg-brand-purple/10 rounded-full flex items-center justify-center text-brand-purple text-sm font-bold">
+                {business?.name?.[0] || 'Z'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{business?.name || 'Loading...'}</p>
+                <p className="text-xs text-gray-400 uppercase">{business?.plan || '...'}</p>
+              </div>
+            </div>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }}
+              className="w-full text-left text-sm text-gray-400 hover:text-gray-600 px-1"
+            >
+              Log out
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          {/* Top bar */}
+          <header className="bg-white border-b px-4 lg:px-6 py-3 flex items-center justify-between">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-600 lg:hidden">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <span className="text-lg font-bold lg:hidden"><span className="text-brand-purple">Zyp</span>flow</span>
+
+            {/* Right side actions */}
+            <div className="flex items-center gap-2 ml-auto">
+              <NotificationBell />
+            </div>
+          </header>
+
+          {/* Trial banner */}
+          {showTrialBanner && (
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2.5 text-sm font-medium flex items-center justify-between">
+              <span>Your free trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''}. Upgrade now to keep your AI assistant running.</span>
+              <Link href="/pricing" className="bg-white text-amber-600 px-4 py-1 rounded-full text-xs font-bold hover:bg-amber-50 transition">
+                Upgrade
+              </Link>
+            </div>
+          )}
+
+          <main className="p-6 lg:p-8 max-w-7xl mx-auto">
+            {children}
+          </main>
         </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        {/* Mobile header */}
-        <header className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-600">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </button>
-          <span className="text-lg font-bold"><span className="text-brand-purple">Zyp</span>flow</span>
-          <div className="w-6" />
-        </header>
-
-        <main className="p-6 lg:p-8 max-w-7xl mx-auto">
-          {children}
-        </main>
       </div>
-    </div>
+    </RealtimeProvider>
   );
 }
 

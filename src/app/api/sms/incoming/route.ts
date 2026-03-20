@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import twilio from 'twilio';
+
+const { validateRequest } = twilio;
 
 export async function POST(req: NextRequest) {
+  // Verify Twilio signature
+  const twilioSignature = req.headers.get('x-twilio-signature') || '';
+  const authToken = process.env.TWILIO_AUTH_TOKEN || '';
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/sms/incoming`;
+
   const formData = await req.formData();
-  const from = formData.get('From') as string | null;
-  const body = formData.get('Body') as string | null;
+  const params: Record<string, string> = {};
+  formData.forEach((value, key) => {
+    params[key] = value as string;
+  });
+
+  // Validate the request is actually from Twilio
+  if (authToken && !validateRequest(authToken, twilioSignature, webhookUrl, params)) {
+    console.error('Invalid Twilio signature — rejecting webhook');
+    return new NextResponse('<Response><Message>Unauthorized</Message></Response>', {
+      status: 403,
+      headers: { 'Content-Type': 'text/xml' },
+    });
+  }
+
+  const from = params.From || null;
+  const body = params.Body || null;
 
   if (!from || !body) {
     return new NextResponse('<Response></Response>', {
@@ -18,7 +40,7 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
   if (lead) {
-    const newMsg = { role: 'user', content: body, timestamp: new Date().toISOString() };
+    const newMsg = { role: 'user', content: body, timestamp: new Date().toISOString(), channel: 'sms' };
 
     try {
       // Find existing SMS conversation
@@ -38,10 +60,11 @@ export async function POST(req: NextRequest) {
       console.error('SMS conversation save error:', err);
     }
 
-    // Handle STOP opt-out
-    if (body.toUpperCase().includes('STOP')) {
+    // Handle STOP opt-out (TCPA/GDPR compliance)
+    const upperBody = body.toUpperCase().trim();
+    if (['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'].includes(upperBody)) {
       await supabaseAdmin.from('leads')
-        .update({ status: 'lost' }).eq('id', lead.id);
+        .update({ status: 'lost', sms_opted_out: true }).eq('id', lead.id);
     }
   }
 
