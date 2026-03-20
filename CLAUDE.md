@@ -9,7 +9,7 @@ Status: `HANDOFF-CHECKLIST.md`
 Always develop on: `claude/integrate-solisdigital-zypflow-n6BrI`
 
 ## Supabase
-- Project ID: pzsgdqbpaogxcrsjjysf
+- Project ID: quarijsqejzilervrcub
 - Region: eu-north-1
 - Schema migration: `supabase/migration_001_full_schema.sql` (run in SQL Editor)
 

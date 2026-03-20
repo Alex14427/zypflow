@@ -72,7 +72,7 @@ I'm building Zypflow — an AI customer growth platform for UK service businesse
 14. **Deploy to Vercel** — connect repo, set all env vars, custom domain `app.zypflow.com`
 15. **vercel.json** — configure cron jobs for scraping
 
-**Supabase project ID:** pzsgdqbpaogxcrsjjysf
+**Supabase project ID:** quarijsqejzilervrcub
 **Branch:** claude/integrate-solisdigital-zypflow-n6BrI
 
 Build everything. Don't ask questions — use the docx as source of truth for every code file. Commit and push when done.
