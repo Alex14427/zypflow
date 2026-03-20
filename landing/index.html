@@ -26,6 +26,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-EHDT9J6054"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-EHDT9J6054');</script>
 
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -273,7 +274,7 @@ footer ul a:hover{color:var(--accent-light)}
       <li><a href="#faq">FAQ</a></li>
     </ul>
     <div style="display:flex;align-items:center;gap:12px">
-      <a href="/login" class="btn btn-sm" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff">Log In</a>
+      <a href="/login" class="btn btn-sm" style="background:transparent;border:1px solid rgba(91,45,255,.2);color:var(--muted)">Log In</a>
       <a href="/signup" class="btn btn-primary btn-sm">Start Free Trial</a>
       <button class="hamburger" onclick="document.getElementById('mob').classList.toggle('open')" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -281,7 +282,7 @@ footer ul a:hover{color:var(--accent-light)}
     </div>
   </div>
 </nav>
-<div class="mobile-menu" id="mob">
+<div class="mobile-menu" id="mob" role="navigation" aria-label="Mobile navigation">
   <a href="#features" onclick="this.parentElement.classList.remove('open')">Features</a>
   <a href="#how" onclick="this.parentElement.classList.remove('open')">How It Works</a>
   <a href="#pricing" onclick="this.parentElement.classList.remove('open')">Pricing</a>
@@ -317,8 +318,8 @@ footer ul a:hover{color:var(--accent-light)}
           <div class="mockup-url"></div>
         </div>
         <div class="mockup-body" style="display:flex;flex-direction:column">
-          <div class="chat-bubble chat-ai">Hi! Welcome to Bright Smile Dental. I'm your AI assistant. Looking to book an appointment?</div>
-          <div class="chat-bubble chat-user">Yes, I'd like a teeth whitening consultation please</div>
+          <div class="chat-bubble chat-ai">Hi! Welcome to your business. I'm your AI assistant. How can I help you today?</div>
+          <div class="chat-bubble chat-user">I'd like to book a consultation please</div>
           <div class="chat-bubble chat-ai chat-ai-2">I have openings this Thursday at 2pm or Friday at 10am. Which suits you better?</div>
           <div class="chat-actions">
             <span class="cta-book">Book Thursday 2pm</span>
@@ -333,9 +334,9 @@ footer ul a:hover{color:var(--accent-light)}
 <!-- LOGOS -->
 <section class="logos">
   <div class="container">
-    <p>Trusted by service businesses across the UK</p>
+    <p>Built for every UK service industry</p>
     <div class="logo-row">
-      <span>BrightSmile</span><span>LuxAesthetics</span><span>Meridian Law</span><span>PhysioPlus</span><span>HomeGuard</span>
+      <span>Dental</span><span>Aesthetics</span><span>Legal</span><span>Physiotherapy</span><span>Home Services</span>
     </div>
   </div>
 </section>
@@ -343,9 +344,9 @@ footer ul a:hover{color:var(--accent-light)}
 <!-- STATS -->
 <section class="stats">
   <div class="container">
-    <div class="stat-card reveal"><div class="stat-num">47%</div><div class="stat-label">More bookings</div></div>
-    <div class="stat-card reveal"><div class="stat-num">62%</div><div class="stat-label">Fewer no-shows</div></div>
-    <div class="stat-card reveal"><div class="stat-num">&pound;12k</div><div class="stat-label">Avg. monthly revenue lift</div></div>
+    <div class="stat-card reveal"><div class="stat-num">3x</div><div class="stat-label">More enquiries captured</div></div>
+    <div class="stat-card reveal"><div class="stat-num">&lt;2s</div><div class="stat-label">Average AI response time</div></div>
+    <div class="stat-card reveal"><div class="stat-num">0</div><div class="stat-label">Missed calls or messages</div></div>
     <div class="stat-card reveal"><div class="stat-num">24/7</div><div class="stat-label">Always-on AI coverage</div></div>
   </div>
 </section>
@@ -370,7 +371,7 @@ footer ul a:hover{color:var(--accent-light)}
       <div class="feat-card reveal">
         <div class="feat-icon fi-c">&#128276;</div>
         <h3>Automated Reminders</h3>
-        <p>Cut no-shows by 62%. Multi-channel reminders at 48 hours, 24 hours, and 2 hours before every appointment.</p>
+        <p>Cut no-shows dramatically. Multi-channel reminders at 48 hours, 24 hours, and 2 hours before every appointment via SMS and email.</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-v">&#128260;</div>
@@ -476,37 +477,28 @@ footer ul a:hover{color:var(--accent-light)}
   </div>
 </section>
 
-<!-- TESTIMONIALS -->
+<!-- WHY ZYPFLOW -->
 <section class="testimonials">
   <div class="container">
     <div style="text-align:center">
-      <span class="sec-label">Testimonials</span>
-      <h2 class="sec-title">Loved by businesses <em>like yours</em></h2>
+      <span class="sec-label">Why Zypflow</span>
+      <h2 class="sec-title">What your business gets <em>on day one</em></h2>
     </div>
     <div class="test-grid">
       <div class="test-card reveal">
-        <div class="test-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="test-quote">"We installed Zypflow on a Monday. By Friday we had 14 new bookings we would have completely missed. The AI receptionist is genuinely better than our old answering service."</p>
-        <div class="test-author">
-          <div class="test-avatar" style="background:var(--accent)">JM</div>
-          <div><div class="test-name">Dr. James Mitchell</div><div class="test-role">Bright Smile Dental, London</div></div>
-        </div>
+        <div style="font-size:2rem;margin-bottom:12px">&#9889;</div>
+        <h3 style="font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px">Instant lead capture</h3>
+        <p style="font-size:.88rem;color:var(--muted);line-height:1.65">Every enquiry on your website is answered in under 2 seconds by your AI assistant — while you're with a patient, in court, or on a job. No more voicemails. No more "we'll call you back."</p>
       </div>
       <div class="test-card reveal">
-        <div class="test-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="test-quote">"Our no-show rate dropped from 28% to 11% in the first month. The automated reminders alone paid for the entire subscription three times over."</p>
-        <div class="test-author">
-          <div class="test-avatar" style="background:var(--teal)">SK</div>
-          <div><div class="test-name">Sarah Kim</div><div class="test-role">LuxAesthetics Clinic, Manchester</div></div>
-        </div>
+        <div style="font-size:2rem;margin-bottom:12px">&#128197;</div>
+        <h3 style="font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px">Appointments book themselves</h3>
+        <p style="font-size:.88rem;color:var(--muted);line-height:1.65">Your AI checks availability, suggests slots, and books the appointment — then sends confirmation emails and SMS reminders at 48h, 24h, and 2h before to cut no-shows drastically.</p>
       </div>
       <div class="test-card reveal">
-        <div class="test-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="test-quote">"We went from 12 Google reviews to 87 in three months. The smart review system only asks happy customers, so our rating actually went up to 4.9 stars."</p>
-        <div class="test-author">
-          <div class="test-avatar" style="background:var(--coral)">AR</div>
-          <div><div class="test-name">Alex Rivera</div><div class="test-role">HomeGuard Services, Birmingham</div></div>
-        </div>
+        <div style="font-size:2rem;margin-bottom:12px">&#11088;</div>
+        <h3 style="font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px">5-star reviews on autopilot</h3>
+        <p style="font-size:.88rem;color:var(--muted);line-height:1.65">After every completed appointment, your satisfied customers receive a friendly review request via SMS and email. Only happy customers are asked — protecting your rating while growing it fast.</p>
       </div>
     </div>
   </div>
