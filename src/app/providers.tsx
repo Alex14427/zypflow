@@ -3,6 +3,7 @@
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
+import { ToastProvider } from '@/components/toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -14,5 +15,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <PHProvider client={posthog}>{children}</PHProvider>;
+  return (
+    <PHProvider client={posthog}>
+      <ToastProvider>
+        {children}
+      </ToastProvider>
+    </PHProvider>
+  );
 }
