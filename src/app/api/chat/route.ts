@@ -76,8 +76,10 @@ export async function POST(req: NextRequest) {
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
   // 6. Call AI — GPT-4o primary, Claude Sonnet fallback
+  // Cap conversation history to last 20 messages to prevent token overflows and control costs
+  const recentMessages = messages.slice(-20);
   let reply = '';
-  const chatMessages = messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+  const chatMessages = recentMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
   try {
     const openai = getOpenAI();
