@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabase';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendWelcomeEmail, sendPaymentFailedEmail, sendTrialEndingEmail } from '@/lib/email';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -50,6 +50,34 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('businesses')
         .update({ plan: 'cancelled', active: false })
         .eq('stripe_subscription_id', sub.id);
+      break;
+    }
+
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId = invoice.customer as string;
+      if (customerId) {
+        const { data: biz } = await supabaseAdmin.from('businesses')
+          .select('name, email').eq('stripe_customer_id', customerId).maybeSingle();
+        if (biz?.email) {
+          await sendPaymentFailedEmail(biz.email, biz.name);
+        }
+      }
+      break;
+    }
+
+    case 'customer.subscription.trial_will_end': {
+      const sub = event.data.object as Stripe.Subscription;
+      const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+      const daysLeft = trialEnd
+        ? Math.max(1, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 3;
+
+      const { data: biz } = await supabaseAdmin.from('businesses')
+        .select('name, email').eq('stripe_subscription_id', sub.id).maybeSingle();
+      if (biz?.email) {
+        await sendTrialEndingEmail(biz.email, biz.name, daysLeft);
+      }
       break;
     }
   }
