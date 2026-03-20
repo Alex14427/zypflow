@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/bookings', label: 'Bookings', icon: CalendarIcon },
   { href: '/dashboard/conversations', label: 'Conversations', icon: ChatIcon },
   { href: '/dashboard/reviews', label: 'Reviews', icon: StarIcon },
+  { href: '/dashboard/templates', label: 'Templates', icon: TemplateIcon },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartIcon },
   { href: '/dashboard/settings', label: 'Settings', icon: GearIcon },
 ];
@@ -92,6 +93,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               );
             })}
           </nav>
+
+          {/* Trial countdown in sidebar */}
+          {trialDaysLeft !== null && business?.plan === 'trial' && (
+            <div className="mx-3 mb-2 p-3 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-2 h-2 rounded-full ${trialDaysLeft <= 3 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span className="text-xs font-semibold text-amber-800">Free Trial</span>
+              </div>
+              <div className="text-2xl font-bold text-amber-900">{trialDaysLeft}</div>
+              <div className="text-xs text-amber-700 mb-2">day{trialDaysLeft !== 1 ? 's' : ''} remaining</div>
+              <div className="w-full bg-amber-200 rounded-full h-1.5 mb-2">
+                <div
+                  className={`h-1.5 rounded-full transition-all ${trialDaysLeft <= 3 ? 'bg-red-500' : 'bg-amber-500'}`}
+                  style={{ width: `${Math.max(5, ((14 - trialDaysLeft) / 14) * 100)}%` }}
+                />
+              </div>
+              <Link
+                href="/pricing"
+                className="block w-full text-center text-xs font-semibold bg-brand-purple text-white py-1.5 rounded-md hover:bg-brand-purple/90 transition"
+              >
+                Upgrade Now
+              </Link>
+            </div>
+          )}
 
           {/* Cmd+K hint */}
           <div className="px-4 pb-2">
@@ -182,6 +207,9 @@ function StarIcon({ className }: { className?: string }) {
 }
 function ChartIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+}
+function TemplateIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>;
 }
 function GearIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
