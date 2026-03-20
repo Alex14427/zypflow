@@ -7,7 +7,11 @@ const FROM = 'Zypflow <hello@zypflow.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
 
 function unsubscribeUrl(email: string) {
-  const secret = process.env.AUTOMATION_SECRET || 'zypflow-unsubscribe';
+  const secret = process.env.AUTOMATION_SECRET;
+  if (!secret) {
+    console.error('AUTOMATION_SECRET is not set — unsubscribe links will be insecure');
+    return `${APP_URL}/api/email/unsubscribe?email=${encodeURIComponent(email)}&token=disabled`;
+  }
   const token = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 32);
   return `${APP_URL}/api/email/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
 }
@@ -66,7 +70,7 @@ export async function sendWelcomeEmail(email: string, name: string, plan: string
       <p style="margin-top:24px">
         <a href="${APP_URL}/dashboard" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard</a>
       </p>
-      <p style="margin-top:24px;color:#6b7280">Need help getting set up? <a href="${process.env.BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min'}" style="color:#6c3cff">Book a free onboarding call</a></p>`,
+      <p style="margin-top:24px;color:#6b7280">Need help getting set up? <a href="${process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://zypflow.com/demo'}" style="color:#6c3cff">Book a free onboarding call</a></p>`,
   });
 }
 
@@ -139,6 +143,6 @@ export async function sendTrialEndingEmail(email: string, name: string, daysLeft
       <p style="margin-top:20px">
         <a href="${APP_URL}/dashboard/settings" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Manage Billing</a>
       </p>
-      <p style="margin-top:20px;color:#6b7280;font-size:14px">Questions? Reply to this email or <a href="${process.env.BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min'}" style="color:#6c3cff">book a quick call</a>.</p>`,
+      <p style="margin-top:20px;color:#6b7280;font-size:14px">Questions? Reply to this email or <a href="${process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://zypflow.com/demo'}" style="color:#6c3cff">book a quick call</a>.</p>`,
   });
 }

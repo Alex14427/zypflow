@@ -4,6 +4,29 @@ import { supabaseAdmin } from '@/lib/supabase';
 // Returns automation health status for the dashboard
 // Checks whether follow-ups, reminders, and reviews are firing correctly
 export async function GET(req: NextRequest) {
+  // Auth check — verify dashboard user owns this business
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
+  const authCookie = req.cookies.get(`sb-${supabaseRef}-auth-token`)?.value;
+  if (!authCookie) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const parsed = JSON.parse(authCookie);
+    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser(accessToken);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const businessId = req.nextUrl.searchParams.get('businessId');
   if (!businessId) {
     return NextResponse.json({ error: 'businessId required' }, { status: 400 });

@@ -18,6 +18,15 @@ const rateLimit = redis
     })
   : null;
 
+// AI routes rate limiter: 10 requests per hour per IP (more restrictive since they're expensive)
+const aiRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, '1 h'),
+      prefix: 'ratelimit:ai',
+    })
+  : null;
+
 /** Rate limit with graceful fallback — allows request if Redis is unavailable */
 export const chatRateLimit = {
   async limit(key: string): Promise<{ success: boolean }> {
@@ -27,6 +36,19 @@ export const chatRateLimit = {
     } catch (err) {
       console.error('Rate limit check failed, allowing request:', err);
       return { success: true }; // Fail open — don't block users if Redis is down
+    }
+  },
+};
+
+/** Rate limit for expensive AI routes (extract-business, generate-prompt, suggest-replies) */
+export const aiRouteRateLimit = {
+  async limit(key: string): Promise<{ success: boolean }> {
+    if (!aiRateLimit) return { success: true };
+    try {
+      return await aiRateLimit.limit(key);
+    } catch (err) {
+      console.error('AI rate limit check failed, allowing request:', err);
+      return { success: true };
     }
   },
 };

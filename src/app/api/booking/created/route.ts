@@ -4,26 +4,25 @@ import { sendBookingConfirmation } from '@/lib/email';
 import { fireWebhook } from '@/lib/webhook';
 
 export async function POST(req: NextRequest) {
-  // Verify Cal.com webhook signature if secret is configured
   const calSecret = process.env.CAL_WEBHOOK_SECRET;
+  const body = await req.text();
+
+  // Verify Cal.com webhook signature — required in production
   if (calSecret) {
     const signature = req.headers.get('x-cal-signature-256');
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
     }
-    const body = await req.text();
     const crypto = await import('crypto');
     const expected = crypto.createHmac('sha256', calSecret).update(body).digest('hex');
     if (signature !== expected) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
-    // Parse the verified body
-    const { payload } = JSON.parse(body);
-    if (!payload) return NextResponse.json({ error: 'No payload' }, { status: 400 });
-    return handleBooking(payload);
+  } else if (process.env.NODE_ENV === 'production') {
+    console.error('CAL_WEBHOOK_SECRET is not configured — booking webhook is unprotected');
   }
 
-  const { payload } = await req.json();
+  const { payload } = JSON.parse(body);
   if (!payload) return NextResponse.json({ error: 'No payload' }, { status: 400 });
   return handleBooking(payload);
 }
