@@ -1,7 +1,7 @@
 -- =============================================
 -- ZYPFLOW DATABASE SCHEMA v1.0
 -- Run this entire block in Supabase SQL Editor
--- Project: quarijsqejzilervrcub
+-- Project: pzsgdqbpaogxcrsjjysf
 -- =============================================
 
 -- 1. BUSINESSES (one row per paying customer)
@@ -148,8 +148,10 @@ CREATE POLICY "own_business_select" ON businesses FOR SELECT USING (
 CREATE POLICY "own_business_update" ON businesses FOR UPDATE USING (
   email = auth.jwt() ->> 'email'
 );
--- Allow anon insert for signup
-CREATE POLICY "anon_business_insert" ON businesses FOR INSERT WITH CHECK (true);
+-- Allow authenticated insert for signup (email must match JWT)
+CREATE POLICY "auth_business_insert" ON businesses FOR INSERT WITH CHECK (
+  email = auth.jwt() ->> 'email'
+);
 
 -- Leads
 CREATE POLICY "own_leads" ON leads FOR ALL USING (
