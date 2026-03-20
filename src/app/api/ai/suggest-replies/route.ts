@@ -6,6 +6,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Generates 3 smart reply suggestions for a conversation
 // Used in the conversations dashboard when a business owner is replying
 export async function POST(req: NextRequest) {
+  // Rate limit — AI calls are expensive
+  const { aiRouteRateLimit } = await import('@/lib/ratelimit');
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  const { success } = await aiRouteRateLimit.limit(`ai-suggest:${ip}`);
+  if (!success) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 });
+  }
+
   const { messages, leadName, businessName, service } = await req.json();
 
   if (!messages?.length) {

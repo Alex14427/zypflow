@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
 
   // Verify token matches (simple HMAC of email)
   const crypto = await import('crypto');
-  const secret = process.env.AUTOMATION_SECRET || 'zypflow-unsubscribe';
+  const secret = process.env.AUTOMATION_SECRET;
+  if (!secret) {
+    return new NextResponse(unsubscribePage('Unsubscribe is temporarily unavailable. Please try again later.', false), {
+      headers: { 'Content-Type': 'text/html' },
+    });
+  }
   const expected = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 32);
 
   if (token !== expected) {

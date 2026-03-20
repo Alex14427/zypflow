@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   // Verify user owns this business
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('id, name')
+    .select('id, name, email')
     .eq('id', lead.business_id)
     .single();
 
@@ -57,8 +57,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   }
 
-  // Suppress void for unused userId (used for auth verification)
-  void userId;
+  // Verify the authenticated user actually owns this business
+  const { data: userBiz } = await supabaseAdmin
+    .from('businesses')
+    .select('id')
+    .eq('email', (await supabaseAdmin.auth.admin.getUserById(userId)).data.user?.email || '')
+    .single();
+
+  if (!userBiz || userBiz.id !== biz.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   // Send the follow-up email
   const { error: emailError } = await sendEmail({

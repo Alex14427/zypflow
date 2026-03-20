@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Only protect dashboard and onboarding routes
-  const protectedPaths = ['/dashboard', '/onboarding'];
+  const protectedPaths = ['/dashboard', '/onboarding', '/admin'];
   const isProtected = protectedPaths.some((p) => req.nextUrl.pathname.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
@@ -47,5 +47,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/onboarding/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/onboarding/:path*', '/admin/:path*'],
 };

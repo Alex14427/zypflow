@@ -6,6 +6,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // AI-powered business data extraction from website URL
 // Used during onboarding to auto-fill business details
 export async function POST(req: NextRequest) {
+  // Rate limit — AI calls are expensive
+  const { aiRouteRateLimit } = await import('@/lib/ratelimit');
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  const { success } = await aiRouteRateLimit.limit(`ai-extract:${ip}`);
+  if (!success) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 });
+  }
+
   const { url } = await req.json();
 
   if (!url || typeof url !== 'string') {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,11 +10,30 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
   const router = useRouter();
+
+  // Verify user has a valid recovery session before allowing password update
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setSessionValid(true);
+      } else {
+        setSessionValid(false);
+      }
+    }
+    checkSession();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (sessionValid === false) {
+      setError('Invalid or expired reset link. Please request a new one.');
+      return;
+    }
 
     if (password !== confirm) {
       setError('Passwords do not match.');
@@ -46,6 +65,13 @@ export default function ResetPasswordPage() {
           </Link>
           <p className="text-gray-500 mt-2">Set your new password</p>
         </div>
+
+        {sessionValid === false && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+            Invalid or expired reset link.{' '}
+            <Link href="/forgot-password" className="underline font-medium">Request a new one</Link>.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

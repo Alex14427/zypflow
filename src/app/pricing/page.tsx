@@ -61,12 +61,19 @@ export default function PricingPage() {
   const [userInfo, setUserInfo] = useState<{ businessId: string; email: string } | null>(null);
 
   // Auto-detect logged-in user for seamless upgrade
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
   useEffect(() => {
     async function checkUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('businesses').select('id').eq('email', user.email).maybeSingle();
-      if (biz) setUserInfo({ businessId: biz.id, email: user.email! });
+      const { data: biz } = await supabase.from('businesses').select('id, plan, stripe_subscription_id').eq('email', user.email).maybeSingle();
+      if (biz) {
+        setUserInfo({ businessId: biz.id, email: user.email! });
+        if (biz.stripe_subscription_id && biz.plan !== 'trial' && biz.plan !== 'cancelled') {
+          setCurrentPlan(biz.plan);
+        }
+      }
     }
     checkUser();
   }, []);
@@ -157,15 +164,15 @@ export default function PricingPage() {
               </ul>
 
               <button
-                onClick={() => handleCheckout(plan.key)}
-                disabled={loading === plan.key}
+                onClick={() => currentPlan ? window.location.href = '/dashboard/settings' : handleCheckout(plan.key)}
+                disabled={loading === plan.key || currentPlan === plan.key}
                 className={`w-full py-3 rounded-lg font-semibold transition disabled:opacity-50 ${
                   plan.popular
                     ? 'bg-brand-purple text-white hover:bg-brand-purple-dark'
                     : 'border-2 border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white'
                 }`}
               >
-                {loading === plan.key ? 'Redirecting...' : plan.cta}
+                {currentPlan === plan.key ? 'Current Plan' : loading === plan.key ? 'Redirecting...' : currentPlan ? 'Switch Plan' : plan.cta}
               </button>
             </div>
           ))}

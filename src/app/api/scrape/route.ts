@@ -5,6 +5,11 @@ import { supabaseAdmin } from '@/lib/supabase';
 const apify = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
 
 export async function POST(req: NextRequest) {
+  // Auth check — only allow automation sources (Vercel Cron, Make.com)
+  const { verifyAutomationAuth } = await import('@/lib/auth-automation');
+  const authError = verifyAutomationAuth(req);
+  if (authError) return authError;
+
   const { industry, city, maxResults = 50 } = await req.json();
 
   if (!industry || !city) {
@@ -25,6 +30,7 @@ export async function POST(req: NextRequest) {
   const { items } = await apify.dataset(run.defaultDatasetId).listItems();
 
   let inserted = 0;
+  try {
   for (const item of items as Record<string, unknown>[]) {
     const emails = item.emails as string[] | undefined;
     const phones = item.phones as string[] | undefined;
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
         .select('id')
         .eq('email', prospect.email)
         .limit(1)
-        .single();
+        .maybeSingle();
       if (existing) continue;
     }
 
@@ -64,4 +70,8 @@ export async function POST(req: NextRequest) {
     inserted,
     duplicatesSkipped: items.length - inserted,
   });
+  } catch (error) {
+    console.error('Scrape error:', error);
+    return NextResponse.json({ error: 'Scraping failed' }, { status: 500 });
+  }
 }

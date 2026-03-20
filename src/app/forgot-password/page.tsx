@@ -15,7 +15,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError('');
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${appUrl}/reset-password`,
     });
