@@ -573,7 +573,7 @@ export default function OnboardingPage() {
             Go to Dashboard
           </button>
           <a
-            href={process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min'}
+            href={process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://zypflow.com/demo'}
             target="_blank"
             rel="noopener noreferrer"
             className="border border-gray-300 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition"

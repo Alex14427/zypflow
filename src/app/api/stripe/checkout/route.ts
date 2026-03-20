@@ -23,6 +23,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Prevent duplicate subscriptions — check if already on a paid plan
+  const supabaseAdmin = (await import('@/lib/supabase')).supabaseAdmin;
+  const { data: existingBiz } = await supabaseAdmin
+    .from('businesses')
+    .select('plan, stripe_subscription_id')
+    .eq('id', businessId)
+    .single();
+
+  if (existingBiz?.stripe_subscription_id && existingBiz.plan !== 'trial' && existingBiz.plan !== 'cancelled') {
+    return NextResponse.json({ error: 'You already have an active subscription. Manage it from Settings.' }, { status: 400 });
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],

@@ -11,9 +11,33 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET || '');
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET is not configured');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch {
     return NextResponse.json({ error: 'Bad signature' }, { status: 400 });
+  }
+
+  // Idempotency check — prevent processing duplicate webhook events
+  const eventId = event.id;
+  const { data: existingEvent } = await supabaseAdmin
+    .from('stripe_webhook_events')
+    .select('id')
+    .eq('event_id', eventId)
+    .maybeSingle();
+
+  if (existingEvent) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  // Record event to prevent future duplicates (best-effort, table may not exist yet)
+  try {
+    await supabaseAdmin.from('stripe_webhook_events').insert({ event_id: eventId, event_type: event.type });
+  } catch {
+    // Table may not exist yet — ignore
   }
 
   switch (event.type) {

@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [business, setBusiness] = useState<Business | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -43,6 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .maybeSingle();
       if (!data) { router.push('/onboarding'); return; }
       setBusiness(data);
+      setAuthChecked(true);
     }
     load();
   }, [router]);
@@ -149,7 +151,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <main className="p-6 lg:p-8 max-w-7xl mx-auto">
             <ErrorBoundary>
-              {children}
+              {authChecked ? children : (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" />
+                </div>
+              )}
             </ErrorBoundary>
           </main>
         </div>

@@ -246,13 +246,13 @@ export default function SettingsPage() {
             name="Twilio"
             description="SMS messaging for reminders and follow-ups"
             connected={true}
-            details="Number: +1 (814) 632-2244"
+            details="SMS & appointment reminders active"
           />
           <IntegrationCard
             name="Resend"
             description="Transactional email delivery"
             connected={true}
-            details="From: hello@zypflow.com"
+            details="Email notifications active"
           />
           <IntegrationCard
             name="Cal.com"

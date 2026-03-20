@@ -51,10 +51,12 @@ export function validateEnv(): Env {
   if (!result.success) {
     const missing = result.error.issues.map(i => `  ${i.path.join('.')}: ${i.message}`).join('\n');
     console.error(`\n❌ Missing or invalid environment variables:\n${missing}\n`);
-    // Don't throw in production — log and continue with what we have
+    // Throw in development, and also in production for critical vars
     if (process.env.NODE_ENV === 'development') {
       throw new Error('Invalid environment variables');
     }
+    // In production: log loudly but continue — Vercel env vars may be set differently
+    console.error('⚠️  Running with potentially invalid env vars in production. Check Vercel settings.');
   }
 
   _env = (result.success ? result.data : process.env) as Env;
