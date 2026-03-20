@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getOpenAI, MODELS } from '@/lib/ai-client';
 
 // AI-powered business data extraction from website URL
-// Used during onboarding to auto-fill business details
+// Uses GPT-4o — complex HTML parsing needs capability (can't downgrade this one)
 export async function POST(req: NextRequest) {
-  // Rate limit — AI calls are expensive
+  // Rate limit
   const { aiRouteRateLimit } = await import('@/lib/ratelimit');
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const { success } = await aiRouteRateLimit.limit(`ai-extract:${ip}`);
@@ -50,11 +48,11 @@ export async function POST(req: NextRequest) {
       .replace(/&[a-zA-Z]+;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 8000); // Keep under token limits
+      .slice(0, 8000);
 
-    // Use GPT-4o to extract structured business data
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: MODELS.extraction,
       messages: [
         {
           role: 'system',
@@ -96,7 +94,6 @@ ${cleanText}`,
     });
 
     const rawResponse = completion.choices[0].message.content || '{}';
-    // Strip markdown code fences if present
     const jsonStr = rawResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     const extracted = JSON.parse(jsonStr);

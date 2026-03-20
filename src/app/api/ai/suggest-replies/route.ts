@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getAnthropic, MODELS } from '@/lib/ai-client';
 
 // Generates 3 smart reply suggestions for a conversation
-// Used in the conversations dashboard when a business owner is replying
+// Uses Claude Haiku — simple structured output, 50x cheaper than GPT-4o
 export async function POST(req: NextRequest) {
-  // Rate limit — AI calls are expensive
+  // Rate limit — AI calls cost money even with Haiku
   const { aiRouteRateLimit } = await import('@/lib/ratelimit');
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const { success } = await aiRouteRateLimit.limit(`ai-suggest:${ip}`);
@@ -21,14 +19,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const lastMessages = messages.slice(-6); // Last 6 messages for context
+    const lastMessages = messages.slice(-6);
+    const conversationText = lastMessages
+      .map((m: { role: string; content: string }) => `${m.role === 'user' ? 'Customer' : 'Business'}: ${m.content}`)
+      .join('\n');
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a reply suggestion engine for ${businessName || 'a UK service business'}. Generate 3 short, professional SMS/chat reply options for the business owner to send to their customer.
+    const anthropic = getAnthropic();
+    const response = await anthropic.messages.create({
+      model: MODELS.cheap,
+      max_tokens: 300,
+      system: `You are a reply suggestion engine for ${businessName || 'a UK service business'}. Generate 3 short, professional SMS/chat reply options for the business owner to send to their customer.
 
 Rules:
 - Each reply should be 1-2 sentences max
@@ -39,17 +39,14 @@ Rules:
 - Be warm and professional
 - Include the customer's name (${leadName || 'there'}) naturally
 - Return ONLY a JSON array of 3 strings, no markdown`,
-        },
-        {
-          role: 'user',
-          content: `Conversation so far:\n${lastMessages.map((m: { role: string; content: string }) => `${m.role === 'user' ? 'Customer' : 'Business'}: ${m.content}`).join('\n')}\n\n${service ? `Service of interest: ${service}` : ''}\n\nGenerate 3 reply options for the business owner to send:`,
-        },
-      ],
-      max_tokens: 300,
-      temperature: 0.7,
+      messages: [{
+        role: 'user',
+        content: `Conversation so far:\n${conversationText}\n\n${service ? `Service of interest: ${service}` : ''}\n\nGenerate 3 reply options for the business owner to send:`,
+      }],
     });
 
-    const raw = completion.choices[0].message.content || '[]';
+    const textBlock = response.content.find(b => b.type === 'text');
+    const raw = textBlock ? textBlock.text : '[]';
     const jsonStr = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const suggestions = JSON.parse(jsonStr);
 
