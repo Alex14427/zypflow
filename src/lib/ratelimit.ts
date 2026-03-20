@@ -27,15 +27,32 @@ const aiRateLimit = redis
     })
   : null;
 
-/** Rate limit with graceful fallback — allows request if Redis is unavailable */
+// In-memory fallback rate limiter when Redis is unavailable
+const memoryLimiter = new Map<string, { count: number; resetAt: number }>();
+function memoryLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = memoryLimiter.get(key);
+  if (!entry || now > entry.resetAt) {
+    memoryLimiter.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxRequests) return false;
+  entry.count++;
+  return true;
+}
+
+/** Rate limit — fails CLOSED (blocks) if Redis is down, using in-memory fallback */
 export const chatRateLimit = {
   async limit(key: string): Promise<{ success: boolean }> {
-    if (!rateLimit) return { success: true }; // No Redis = no rate limiting (dev mode)
+    if (!rateLimit) {
+      // No Redis — use in-memory limiter (30 req/hour)
+      return { success: memoryLimit(`chat:${key}`, 30, 3600_000) };
+    }
     try {
       return await rateLimit.limit(key);
     } catch (err) {
-      console.error('Rate limit check failed, allowing request:', err);
-      return { success: true }; // Fail open — don't block users if Redis is down
+      console.error('Rate limit check failed, using memory fallback:', err);
+      return { success: memoryLimit(`chat:${key}`, 30, 3600_000) };
     }
   },
 };
@@ -43,12 +60,14 @@ export const chatRateLimit = {
 /** Rate limit for expensive AI routes (extract-business, generate-prompt, suggest-replies) */
 export const aiRouteRateLimit = {
   async limit(key: string): Promise<{ success: boolean }> {
-    if (!aiRateLimit) return { success: true };
+    if (!aiRateLimit) {
+      return { success: memoryLimit(`ai:${key}`, 10, 3600_000) };
+    }
     try {
       return await aiRateLimit.limit(key);
     } catch (err) {
-      console.error('AI rate limit check failed, allowing request:', err);
-      return { success: true };
+      console.error('AI rate limit check failed, using memory fallback:', err);
+      return { success: memoryLimit(`ai:${key}`, 10, 3600_000) };
     }
   },
 };

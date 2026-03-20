@@ -24,7 +24,7 @@ export const OUTREACH_SEQUENCES: Record<string, OutreachSequence> = {
         day: 0,
         subject: '{{companyName}} — filling your appointment book with AI',
         subjectB: 'Quick question for {{companyName}}',
-        smsVersion: `Hi {{firstName}}, I noticed {{companyName}} has great reviews. We help dental practices book 30-40% more appointments using AI. Fancy a quick chat? — Alex, Zypflow`,
+        smsVersion: `Hi {{firstName}}, we built an AI assistant for dental practices that answers patient questions and books appointments 24/7. 14-day free trial, no card needed. Fancy a quick chat? — Alex, Zypflow`,
         body: `Hi {{firstName}},
 
 I noticed {{companyName}} has great reviews online — clearly you're doing excellent work in {{city}}.
@@ -36,7 +36,7 @@ I'm reaching out because we've built an AI receptionist specifically for dental 
 - Captures every enquiry — no more missed calls or late-night form fills
 - Sends automated appointment reminders (cuts no-shows by 40%)
 
-Practices using it are seeing 30-40% more bookings from the same website traffic.
+It means every enquiry gets answered instantly — even at 2am on a Sunday.
 
 Would you be open to a quick 10-minute demo? I can show you exactly how it works with a dental practice like yours.
 
@@ -51,11 +51,9 @@ Zypflow | zypflow.com`,
 
 Just following up on my previous email. I know dental practices are incredibly busy, so I'll keep this brief.
 
-One of our clients (a 3-chair practice in Manchester) went from 12 online bookings/month to 34 after installing our AI chat widget. It took them 15 minutes to set up.
-
 The AI handles the questions patients ask most — "How much do veneers cost?", "Do you do emergency appointments?", "Can I get a same-day crown?" — and books them straight in.
 
-Happy to share exactly how they did it if you're interested.
+It takes 15 minutes to set up and there's a 14-day free trial, so there's no risk in trying it.
 
 Best,
 Alex`,
@@ -96,7 +94,7 @@ We've built an AI assistant specifically for aesthetics clinics that handles the
 - Books consultations directly into your calendar
 - Captures leads from Instagram, Google, and your website — even at midnight
 
-Clinics using Zypflow are converting 35% more website visitors into booked consultations.
+It means no enquiry goes unanswered — even the ones that come in at midnight via Instagram.
 
 Would a quick 10-minute call be useful? I can walk you through a live demo.
 
@@ -109,11 +107,11 @@ Zypflow | zypflow.com`,
         subject: 'Re: {{companyName}} — convert more enquiries into consultations',
         body: `Hi {{firstName}},
 
-Quick follow-up — I wanted to share that one aesthetics clinic we work with was losing 60% of their enquiries because they couldn't respond fast enough (most came in after 6pm via Instagram).
+Quick follow-up. Most aesthetics enquiries come in after 6pm — when your team has gone home. That's exactly when our AI steps in.
 
-After adding our AI chat assistant, they captured every single one. Their consultation bookings went up 41% in the first month, and their average booking value increased because the AI pre-qualified clients before consultations.
+It handles treatment questions, gives pricing guidance, and books consultations directly into your calendar. All while you're off the clock.
 
-If that sounds interesting, I'm happy to show you how it works — takes 10 minutes.
+14-day free trial, no card required. Happy to show you how it works — takes 10 minutes.
 
 Alex`,
       },
@@ -150,7 +148,7 @@ We've built an AI assistant for physiotherapy practices that handles the initial
 - Captures every website and Google enquiry — even out of hours
 - Sends appointment reminders automatically (reduces no-shows by 35-40%)
 
-One physio clinic we work with added 22 new patient bookings in their first month — all from existing website traffic they weren't converting before.
+Most physio practices lose enquiries simply because no one's free to answer. Our AI makes sure that never happens.
 
 Fancy a quick 10-minute demo? Happy to show you how it works.
 
@@ -202,7 +200,7 @@ We've built an AI assistant for law firms and legal practices that handles initi
 - Captures every website enquiry — even the ones that come in at 11pm
 - Pre-qualifies leads so you only speak to serious prospects
 
-Law firms using it are converting 25-30% more website visitors into booked consultations, because they're responding in seconds rather than hours.
+Speed matters — potential clients who get a response in seconds are far more likely to book than those waiting hours for a callback.
 
 Would you be open to a quick 10-minute demo? I can show you exactly how it works for legal practices.
 
@@ -217,7 +215,7 @@ Zypflow | zypflow.com`,
 
 Just following up. One thing I hear from law firms is that potential clients often enquire outside business hours — evenings, weekends — and by Monday morning they've already gone elsewhere.
 
-Our AI assistant responds instantly, gathers their details, and books them in. One firm we work with captured 18 new consultations in their first month from enquiries they would have otherwise missed.
+Our AI assistant responds instantly, gathers their details, and books them in. Most firms we speak to tell us they're losing enquiries to competitors who simply respond faster. Our AI responds in under 2 seconds, 24/7.
 
 Happy to show you how it works in 10 minutes if you're curious.
 
@@ -256,7 +254,7 @@ We've built an AI assistant for home service businesses (plumbing, electrical, c
 - Follows up with leads who don't book straight away
 - Sends appointment reminders so customers don't forget
 
-Home service businesses using it are seeing 30%+ more bookings — mainly from enquiries they were previously missing because they were too busy to answer the phone.
+It means you never miss an enquiry while you're on a job — your AI handles it and books them straight in.
 
 Would you be open to a quick 10-minute chat? Happy to show you how it works.
 
@@ -273,7 +271,7 @@ Just a quick follow-up. I know you're busy running {{companyName}} and probably 
 
 That's exactly the problem we solve. Our AI handles those conversations automatically — on your website, 24/7 — and books jobs straight into your diary. No extra staff, no missed calls.
 
-One plumber in Leeds added 15 new jobs in his first month without lifting a finger. Setup took him 10 minutes.
+Setup takes 10 minutes and there's a 14-day free trial — no card needed, no risk.
 
 Happy to do a quick demo if you're curious.
 
@@ -311,7 +309,7 @@ We've built an AI assistant that helps service businesses like yours:
 - Follow up with leads who don't book straight away
 - Send appointment reminders (cuts no-shows by 35%)
 
-It installs in 5 minutes (one line of code on your website) and businesses are seeing 30%+ more bookings from the same traffic.
+It installs in 5 minutes (one line of code on your website) and starts capturing leads immediately.
 
 Would you be open to a quick chat? I'd love to show you how it works.
 
@@ -328,7 +326,7 @@ Just a quick follow-up. I know you're busy running {{companyName}}, so I'll be b
 
 Our AI assistant answers the questions your customers ask most (pricing, availability, services) and books them in automatically. No extra staff needed.
 
-One business we work with went from missing 40% of their enquiries to capturing every single one — their bookings increased 33% in 30 days.
+The whole point is simple: every enquiry gets answered in under 2 seconds, 24/7. No more missed opportunities.
 
 Happy to do a quick 10-minute demo if you're curious.
 
@@ -354,20 +352,20 @@ Zypflow | zypflow.com`,
 
 Apologies for the extra email — I wanted to share something genuinely useful.
 
-We just published a case study from a service business in {{city}} that went from 12 online bookings/month to 47 using AI. Here's the short version:
+I wanted to share what Zypflow actually does in practice for businesses like {{companyName}}:
 
-- Installed AI chat widget on their website (took 10 minutes)
-- AI answered customer questions 24/7 and captured contact details
-- Automated follow-ups nudged undecided enquiries into bookings
-- No-show rate dropped from 28% to 11% with automated reminders
+- AI chat widget answers customer questions 24/7 (takes 10 minutes to install)
+- Captures every lead — even the ones that come in at 2am
+- Automated follow-ups nudge undecided enquiries into bookings
+- Appointment reminders cut no-shows via SMS and email
 
-If you'd like the full case study, just reply 'send it' and I'll email it over.
+We're offering a 14-day free trial with no card required. If you'd like to try it, just reply and I'll send you a link.
 
-No hard sell — just thought it might be relevant for {{companyName}}.
+No hard sell — just thought it might be useful for {{companyName}}.
 
 Alex
 Zypflow | zypflow.com`,
-        smsVersion: `Hi {{firstName}}, thought you'd find this useful — a business like {{companyName}} went from 12 to 47 monthly bookings using AI automation. Want the case study? Reply YES`,
+        smsVersion: `Hi {{firstName}}, we help businesses like {{companyName}} capture every enquiry 24/7 using AI. 14-day free trial, no card needed. Want to try it? Reply YES — Alex, Zypflow`,
       },
       {
         day: 21,

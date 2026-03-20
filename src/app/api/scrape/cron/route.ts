@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
   if (authError) return authError;
   const results = [];
 
-  // Run one industry-city combo per cron invocation (rotate weekly)
-  const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
-  const comboIndex = week % (INDUSTRIES.length * CITIES.length);
+  // Run one industry-city combo per cron invocation (rotate daily for higher volume)
+  const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const comboIndex = day % (INDUSTRIES.length * CITIES.length);
   const industry = INDUSTRIES[Math.floor(comboIndex / CITIES.length)];
   const city = CITIES[comboIndex % CITIES.length];
 
