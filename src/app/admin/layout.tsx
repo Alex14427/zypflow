@@ -48,11 +48,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-50">
       <header className="bg-brand-purple text-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Zypflow Admin</h1>
-            <p className="text-sm text-purple-200">Internal Dashboard</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-xl font-bold">Zypflow HQ</h1>
+              <p className="text-sm text-purple-200">Owner Command Center</p>
+            </div>
+            <nav className="hidden md:flex items-center gap-4 text-sm">
+              <a href="/admin" className="text-purple-200 hover:text-white transition">Dashboard</a>
+              <a href="/dashboard" className="text-purple-200 hover:text-white transition">Customer View</a>
+              <a href="/" className="text-purple-200 hover:text-white transition">Landing Page</a>
+            </nav>
           </div>
-          <p className="text-sm text-purple-200">{email}</p>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-purple-200">{email}</span>
+            <span className="bg-purple-500/40 text-xs px-2 py-0.5 rounded-full font-medium">Owner</span>
+          </div>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
