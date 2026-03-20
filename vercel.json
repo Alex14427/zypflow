@@ -18,6 +18,10 @@
     {
       "path": "/api/automations/lifecycle",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/outreach/cron",
+      "schedule": "0 7 * * *"
     }
   ]
 }
