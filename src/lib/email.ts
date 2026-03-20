@@ -8,7 +8,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
 
 function unsubscribeUrl(email: string) {
   const secret = process.env.AUTOMATION_SECRET || 'zypflow-unsubscribe';
-  const token = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 16);
+  const token = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 32);
   return `${APP_URL}/api/email/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
 }
 

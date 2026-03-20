@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   // Verify token matches (simple HMAC of email)
   const crypto = await import('crypto');
   const secret = process.env.AUTOMATION_SECRET || 'zypflow-unsubscribe';
-  const expected = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 16);
+  const expected = crypto.createHmac('sha256', secret).update(email).digest('hex').slice(0, 32);
 
   if (token !== expected) {
     return new NextResponse(unsubscribePage('Invalid unsubscribe link.', false), {

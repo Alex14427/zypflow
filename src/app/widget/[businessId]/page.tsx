@@ -80,7 +80,7 @@ export default function WidgetPage() {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         // Notify parent window of new unread message
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'zyp-unread', count: 1 }, '*');
+          window.parent.postMessage({ type: 'zyp-unread', count: 1 }, document.referrer || '*');
         }
       }
       if (data.conversationId) setConversationId(data.conversationId);
@@ -121,7 +121,7 @@ export default function WidgetPage() {
         </div>
         {/* Close button (sends message to parent iframe) */}
         <button
-          onClick={() => window.parent.postMessage({ type: 'zyp-close' }, '*')}
+          onClick={() => window.parent.postMessage({ type: 'zyp-close' }, document.referrer || '*')}
           className="text-white/60 hover:text-white transition p-1"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
