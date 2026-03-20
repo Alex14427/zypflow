@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { RealtimeProvider } from '@/components/realtime-provider';
 import { NotificationBell } from '@/components/notification-bell';
 import { CommandPalette } from '@/components/command-palette';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 interface Business {
   id: string;
@@ -147,7 +148,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           <main className="p-6 lg:p-8 max-w-7xl mx-auto">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
         </div>
       </div>

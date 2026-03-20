@@ -33,27 +33,37 @@ export default function ConversationsPage() {
   const [businessName, setBusinessName] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function load() {
+  const businessIdRef = useRef<string | null>(null);
+
+  const loadConversations = useCallback(async (isInitial = false) => {
+    if (isInitial) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data: biz } = await supabase.from('businesses').select('id, name').eq('email', user.email).maybeSingle();
       if (!biz) return;
       setBusinessName(biz.name || '');
-
-      const { data } = await supabase
-        .from('conversations')
-        .select('id, channel, messages, created_at, updated_at, lead_id, leads(name, email, phone, score, status, service_interest)')
-        .eq('business_id', biz.id)
-        .order('updated_at', { ascending: false })
-        .limit(200);
-      const convs = (data as unknown as Conversation[]) || [];
-      setConversations(convs);
-      if (convs.length > 0) setSelected(convs[0]);
-      setLoading(false);
+      businessIdRef.current = biz.id;
     }
-    load();
+    if (!businessIdRef.current) return;
+
+    const { data } = await supabase
+      .from('conversations')
+      .select('id, channel, messages, created_at, updated_at, lead_id, leads(name, email, phone, score, status, service_interest)')
+      .eq('business_id', businessIdRef.current)
+      .order('updated_at', { ascending: false })
+      .limit(200);
+    const convs = (data as unknown as Conversation[]) || [];
+    setConversations(convs);
+    if (isInitial && convs.length > 0) setSelected(convs[0]);
+    if (isInitial) setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadConversations(true);
+    // Auto-refresh every 15 seconds
+    const interval = setInterval(() => loadConversations(false), 15000);
+    return () => clearInterval(interval);
+  }, [loadConversations]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {

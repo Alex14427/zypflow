@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   // 3. Fetch business details
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url')
+    .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url, email')
     .eq('id', businessId)
     .single();
 
@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
     biz.services || [],
     biz.knowledge_base || [],
     biz.booking_url,
-    biz.ai_personality || 'friendly and professional'
+    biz.ai_personality || 'friendly and professional',
+    biz.email
   );
 
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
@@ -162,18 +163,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Email notification to business owner
-    if (biz.name) {
-      const { data: bizFull } = await supabaseAdmin
-        .from('businesses').select('email').eq('id', businessId).single();
-      if (bizFull?.email) {
-        sendLeadNotification(bizFull.email, biz.name, {
-          name: extractedLead.name,
-          email: extractedLead.email,
-          phone: extractedLead.phone,
-          service_interest: extractedLead.service_interest,
-          score: scoreLead(extractedLead),
-        }).catch((err) => console.error('Lead notification email failed:', err));
-      }
+    if (biz.name && biz.email) {
+      sendLeadNotification(biz.email, biz.name, {
+        name: extractedLead.name,
+        email: extractedLead.email,
+        phone: extractedLead.phone,
+        service_interest: extractedLead.service_interest,
+        score: scoreLead(extractedLead),
+      }).catch((err) => console.error('Lead notification email failed:', err));
     }
 
     // Fire Make.com webhook for new lead notification (with retry)

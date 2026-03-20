@@ -44,6 +44,10 @@ export function LeadDrawer({ leadId, onClose }: { leadId: string; onClose: () =>
   const [followUps, setFollowUps] = useState<FollowUpSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'timeline' | 'conversations'>('timeline');
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [followUpMessage, setFollowUpMessage] = useState('');
+  const [sendingFollowUp, setSendingFollowUp] = useState(false);
+  const [followUpSent, setFollowUpSent] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -146,6 +150,59 @@ export function LeadDrawer({ leadId, onClose }: { leadId: string; onClose: () =>
               <span>&middot;</span>
               <span>Created: {new Date(lead.created_at).toLocaleDateString('en-GB')}</span>
             </div>
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-2">
+              {lead.email && (
+                <button
+                  onClick={() => { setShowFollowUp(!showFollowUp); setFollowUpSent(false); }}
+                  className="text-xs bg-brand-purple text-white px-3 py-1.5 rounded-lg font-medium hover:bg-brand-purple-dark transition"
+                >
+                  {showFollowUp ? 'Cancel' : 'Send Follow-up'}
+                </button>
+              )}
+            </div>
+            {/* Follow-up form */}
+            {showFollowUp && lead.email && (
+              <div className="mt-3 space-y-2">
+                {followUpSent ? (
+                  <p className="text-sm text-green-600 font-medium">Follow-up sent successfully!</p>
+                ) : (
+                  <>
+                    <textarea
+                      value={followUpMessage}
+                      onChange={e => setFollowUpMessage(e.target.value)}
+                      placeholder={`Hi ${lead.name || 'there'}, just following up on your enquiry about ${lead.service_interest || 'our services'}...`}
+                      rows={3}
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple resize-none"
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!followUpMessage.trim()) return;
+                        setSendingFollowUp(true);
+                        try {
+                          const res = await fetch('/api/email/follow-up', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ leadId, message: followUpMessage }),
+                          });
+                          if (res.ok) {
+                            setFollowUpSent(true);
+                            setFollowUpMessage('');
+                          }
+                        } catch {
+                          // Fail silently
+                        }
+                        setSendingFollowUp(false);
+                      }}
+                      disabled={sendingFollowUp || !followUpMessage.trim()}
+                      className="text-xs bg-brand-purple text-white px-4 py-1.5 rounded-lg font-medium hover:bg-brand-purple-dark transition disabled:opacity-50"
+                    >
+                      {sendingFollowUp ? 'Sending...' : 'Send Email'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
