@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     console.error('OpenAI failed, falling back to Claude:', openaiError);
     try {
       const claudeResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         system: systemPrompt,
         messages: chatMessages,
