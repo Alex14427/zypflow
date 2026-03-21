@@ -55,6 +55,17 @@ function SignupContent() {
     });
 
     if (authError) {
+      // If user already exists, try logging them in instead
+      if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('already been registered')) {
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+        if (loginError) {
+          setError('Account already exists. Please log in with your password.');
+          setLoading(false);
+          return;
+        }
+        window.location.href = '/dashboard';
+        return;
+      }
       setError(authError.message);
       setLoading(false);
       return;
@@ -70,13 +81,17 @@ function SignupContent() {
 
       if (bizError) {
         console.error('Business creation error:', bizError);
-        setError('Account created but business setup failed. Please try logging in.');
-        setLoading(false);
-        return;
+        // Business might already exist from a previous attempt — not fatal
+        if (!bizError.message.includes('duplicate')) {
+          setError('Account created but business setup failed. Please try logging in.');
+          setLoading(false);
+          return;
+        }
       }
     }
 
-    router.push('/onboarding');
+    // Full page reload so middleware picks up the new auth cookie
+    window.location.href = '/onboarding';
   }
 
   return (

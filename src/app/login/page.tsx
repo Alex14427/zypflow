@@ -35,7 +35,8 @@ export default function LoginPage() {
         setTimeout(() => { setLockedUntil(null); setFailCount(0); }, 60000);
       }
     } else {
-      router.push('/dashboard');
+      // Full page reload so middleware picks up the new auth cookie
+      window.location.href = '/dashboard';
     }
   }
 
