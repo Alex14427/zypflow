@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,8 +37,9 @@ export default function LoginPage() {
         setTimeout(() => { setLockedUntil(null); setFailCount(0); }, 60000);
       }
     } else {
-      // Full page reload so middleware picks up the new auth cookie
-      window.location.href = '/dashboard';
+      // Admins go to the owner command center, customers go to dashboard
+      const destination = ADMIN_EMAILS.includes(email.toLowerCase()) ? '/admin' : '/dashboard';
+      window.location.href = destination;
     }
   }
 

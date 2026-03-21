@@ -9,6 +9,8 @@ import { NotificationBell } from '@/components/notification-bell';
 import { CommandPalette } from '@/components/command-palette';
 import { ErrorBoundary } from '@/components/error-boundary';
 
+const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
+
 interface Business {
   id: string;
   name: string;
@@ -33,11 +35,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [business, setBusiness] = useState<Business | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
+      if (ADMIN_EMAILS.includes(user.email ?? '')) setIsAdmin(true);
       const { data } = await supabase
         .from('businesses')
         .select('id, name, plan, trial_ends_at')
@@ -74,6 +78,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <nav className="flex-1 p-3 space-y-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-brand-purple to-purple-700 text-white mb-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                Owner HQ
+              </Link>
+            )}
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
               return (
