@@ -1,38 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabase';
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { getApiUser } from '@/lib/api-auth';
 
 let _stripe: Stripe | null = null;
 function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_missing'); return _stripe; }
 
-export async function POST() {
-  // Get the authenticated user
-  const cookieStore = cookies();
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
-  const authCookie = cookieStore.get(`sb-${supabaseRef}-auth-token`)?.value;
-
-  if (!authCookie) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let email: string | undefined;
-  try {
-    const parsed = JSON.parse(authCookie);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    const supabaseClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-    const { data: { user } } = await supabaseClient.auth.getUser(accessToken);
-    email = user?.email;
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (!email) {
+export async function POST(req: NextRequest) {
+  const user = await getApiUser(req);
+  if (!user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,7 +16,7 @@ export async function POST() {
   const { data: biz } = await supabaseAdmin
     .from('businesses')
     .select('stripe_customer_id')
-    .eq('email', email)
+    .eq('email', user.email)
     .maybeSingle();
 
   if (!biz?.stripe_customer_id) {

@@ -58,8 +58,8 @@ export default function SettingsPage() {
 
         // Fetch automation health status
         fetch(`/api/automations/status?businessId=${data.id}`)
-          .then(r => r.json())
-          .then(setAutomationStatus)
+          .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
+          .then(d => { if (d.followUps) setAutomationStatus(d); })
           .catch(() => {});
       }
       setLoading(false);
