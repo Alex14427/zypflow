@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/lib/email';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getApiUser } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
-  // Auth check — verify the dashboard user
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
-  const authCookie = req.cookies.get(`sb-${supabaseRef}-auth-token`)?.value;
-
-  if (!authCookie) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let userId: string;
-  try {
-    const parsed = JSON.parse(authCookie);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    userId = user.id;
-  } catch {
+  const user = await getApiUser(req);
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -58,13 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify the authenticated user actually owns this business
-  const { data: userBiz } = await supabaseAdmin
-    .from('businesses')
-    .select('id')
-    .eq('email', (await supabaseAdmin.auth.admin.getUserById(userId)).data.user?.email || '')
-    .single();
-
-  if (!userBiz || userBiz.id !== biz.id) {
+  if (biz.email !== user.email) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

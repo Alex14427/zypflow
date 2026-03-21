@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { smsInputSchema } from '@/lib/validators';
-import { createClient } from '@supabase/supabase-js';
+import { getApiUser } from '@/lib/api-auth';
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID || '',
@@ -9,27 +9,8 @@ const client = twilio(
 );
 
 export async function POST(req: NextRequest) {
-  // Verify the request comes from an authenticated dashboard user
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
-  const authCookie = req.cookies.get(`sb-${supabaseRef}-auth-token`)?.value;
-
-  if (!authCookie) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const parsed = JSON.parse(authCookie);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  } catch {
+  const user = await getApiUser(req);
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

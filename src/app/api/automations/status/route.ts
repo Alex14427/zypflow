@@ -1,29 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
 
 // Returns automation health status for the dashboard
-// Checks whether follow-ups, reminders, and reviews are firing correctly
 export async function GET(req: NextRequest) {
-  // Auth check — verify dashboard user owns this business
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
-  const authCookie = req.cookies.get(`sb-${supabaseRef}-auth-token`)?.value;
-  if (!authCookie) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  try {
-    const parsed = JSON.parse(authCookie);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Auth check using @supabase/ssr cookie-based auth
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll() {},
+      },
     }
-  } catch {
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -36,14 +32,12 @@ export async function GET(req: NextRequest) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [followUpsRes, appointmentsRes, reviewsRes, leadsRes] = await Promise.all([
-    // Recent follow-ups sent (column is sent_at, not created_at)
     supabaseAdmin
       .from('follow_ups')
       .select('id, sent_at, step_number', { count: 'exact' })
       .eq('business_id', businessId)
       .gte('sent_at', sevenDaysAgo.toISOString()),
 
-    // Upcoming confirmed appointments (to check if reminders are working)
     supabaseAdmin
       .from('appointments')
       .select('id, reminder_48h_sent, reminder_24h_sent, reminder_2h_sent, status')
@@ -51,14 +45,12 @@ export async function GET(req: NextRequest) {
       .eq('status', 'confirmed')
       .gte('datetime', now.toISOString()),
 
-    // Recent review requests
     supabaseAdmin
       .from('reviews')
       .select('id, requested_at, completed_at, rating', { count: 'exact' })
       .eq('business_id', businessId)
       .gte('requested_at', sevenDaysAgo.toISOString()),
 
-    // Leads in follow-up pipeline
     supabaseAdmin
       .from('leads')
       .select('id, status', { count: 'exact' })
@@ -66,7 +58,6 @@ export async function GET(req: NextRequest) {
       .in('status', ['new', 'contacted']),
   ]);
 
-  const followUps = followUpsRes.data || [];
   const appointments = appointmentsRes.data || [];
   const reviews = reviewsRes.data || [];
   const pipelineLeads = leadsRes.count || 0;

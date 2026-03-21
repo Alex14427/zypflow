@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 interface Template {
   id: string;
@@ -10,9 +10,197 @@ interface Template {
   trigger_type: string;
   featured: boolean;
   setup_minutes: number;
-  icon: string;
   minutes_saved_per_run: number;
 }
+
+const TEMPLATES: Template[] = [
+  // General
+  {
+    id: 'new-lead-follow-up',
+    name: 'New Lead Auto Follow-Up',
+    industry: 'general',
+    description: 'Automatically send a personalised follow-up email when a new lead comes in via the chat widget. Includes a booking link and service summary.',
+    trigger_type: 'new_lead',
+    featured: true,
+    setup_minutes: 5,
+    minutes_saved_per_run: 15,
+  },
+  {
+    id: 'appointment-reminders',
+    name: 'Appointment Reminder Sequence',
+    industry: 'general',
+    description: 'Send SMS and email reminders at 48h, 24h, and 2h before appointments. Reduces no-shows by up to 40%.',
+    trigger_type: 'appointment_created',
+    featured: true,
+    setup_minutes: 5,
+    minutes_saved_per_run: 10,
+  },
+  {
+    id: 'review-request',
+    name: 'Post-Appointment Review Request',
+    industry: 'general',
+    description: 'Automatically ask happy customers for a Google review 2 hours after their appointment. Includes direct link to your Google review page.',
+    trigger_type: 'appointment_completed',
+    featured: true,
+    setup_minutes: 3,
+    minutes_saved_per_run: 8,
+  },
+  {
+    id: 'lead-scoring-alert',
+    name: 'Hot Lead Alert',
+    industry: 'general',
+    description: 'Get an instant SMS or email notification when a lead scores 70+ so you can follow up personally while they\'re still interested.',
+    trigger_type: 'lead_score_update',
+    featured: false,
+    setup_minutes: 3,
+    minutes_saved_per_run: 5,
+  },
+  {
+    id: 'win-back-campaign',
+    name: 'Win-Back Campaign',
+    industry: 'general',
+    description: 'Re-engage leads who haven\'t responded in 14 days with a personalised offer or check-in message.',
+    trigger_type: 'lead_inactive',
+    featured: false,
+    setup_minutes: 10,
+    minutes_saved_per_run: 20,
+  },
+  {
+    id: 'weekly-report',
+    name: 'Weekly Performance Report',
+    industry: 'general',
+    description: 'Receive a weekly email summary of new leads, bookings, conversations, and revenue — delivered every Monday morning.',
+    trigger_type: 'scheduled',
+    featured: false,
+    setup_minutes: 5,
+    minutes_saved_per_run: 15,
+  },
+  // Dental
+  {
+    id: 'dental-new-patient',
+    name: 'New Patient Welcome',
+    industry: 'dental',
+    description: 'Welcome new dental patients with registration forms, practice info, and pre-appointment instructions. Includes parking and what to bring.',
+    trigger_type: 'new_lead',
+    featured: true,
+    setup_minutes: 10,
+    minutes_saved_per_run: 20,
+  },
+  {
+    id: 'dental-recall',
+    name: '6-Month Check-Up Recall',
+    industry: 'dental',
+    description: 'Automatically remind patients when their 6-month check-up is due. Sends SMS with a direct booking link.',
+    trigger_type: 'scheduled',
+    featured: false,
+    setup_minutes: 5,
+    minutes_saved_per_run: 10,
+  },
+  {
+    id: 'dental-treatment-follow-up',
+    name: 'Post-Treatment Care',
+    industry: 'dental',
+    description: 'Send aftercare instructions via SMS after procedures like extractions, fillings, or whitening. Reduces post-op call volume.',
+    trigger_type: 'appointment_completed',
+    featured: false,
+    setup_minutes: 8,
+    minutes_saved_per_run: 12,
+  },
+  // Aesthetics
+  {
+    id: 'aesthetics-consultation',
+    name: 'Consultation Booking Flow',
+    industry: 'aesthetics',
+    description: 'When a lead enquires about treatments, send a personalised consultation booking link with treatment info and pricing.',
+    trigger_type: 'new_lead',
+    featured: true,
+    setup_minutes: 8,
+    minutes_saved_per_run: 15,
+  },
+  {
+    id: 'aesthetics-aftercare',
+    name: 'Treatment Aftercare Sequence',
+    industry: 'aesthetics',
+    description: 'Send tailored aftercare instructions for Botox, fillers, skin treatments etc. Includes do\'s, don\'ts, and when to expect results.',
+    trigger_type: 'appointment_completed',
+    featured: false,
+    setup_minutes: 10,
+    minutes_saved_per_run: 12,
+  },
+  {
+    id: 'aesthetics-rebooking',
+    name: 'Treatment Top-Up Reminder',
+    industry: 'aesthetics',
+    description: 'Remind clients when their treatment results will start to fade (e.g. Botox at 3 months, filler at 9 months) with a rebooking link.',
+    trigger_type: 'scheduled',
+    featured: false,
+    setup_minutes: 8,
+    minutes_saved_per_run: 10,
+  },
+  // Legal
+  {
+    id: 'legal-intake',
+    name: 'Client Intake Automation',
+    industry: 'legal',
+    description: 'Collect case details, send engagement letters, and schedule initial consultations automatically when new enquiries come in.',
+    trigger_type: 'new_lead',
+    featured: true,
+    setup_minutes: 15,
+    minutes_saved_per_run: 30,
+  },
+  {
+    id: 'legal-case-update',
+    name: 'Case Progress Update',
+    industry: 'legal',
+    description: 'Send automated case status updates to clients at key milestones. Reduces "where\'s my case?" phone calls.',
+    trigger_type: 'manual',
+    featured: false,
+    setup_minutes: 10,
+    minutes_saved_per_run: 15,
+  },
+  // Home Services
+  {
+    id: 'home-quote-follow-up',
+    name: 'Quote Follow-Up',
+    industry: 'home_services',
+    description: 'Automatically follow up with customers 24h and 72h after sending a quote. Includes a direct booking link to lock in the job.',
+    trigger_type: 'manual',
+    featured: true,
+    setup_minutes: 5,
+    minutes_saved_per_run: 15,
+  },
+  {
+    id: 'home-seasonal-reminder',
+    name: 'Seasonal Service Reminder',
+    industry: 'home_services',
+    description: 'Remind past customers about seasonal services — boiler checks in autumn, gutter cleaning in spring, garden maintenance in summer.',
+    trigger_type: 'scheduled',
+    featured: false,
+    setup_minutes: 10,
+    minutes_saved_per_run: 20,
+  },
+  // Physiotherapy
+  {
+    id: 'physio-exercise-plan',
+    name: 'Exercise Plan Delivery',
+    industry: 'physiotherapy',
+    description: 'Send personalised exercise plans and recovery instructions after each physio session. Includes video links and progress tracking.',
+    trigger_type: 'appointment_completed',
+    featured: true,
+    setup_minutes: 10,
+    minutes_saved_per_run: 15,
+  },
+  {
+    id: 'physio-progress-check',
+    name: 'Recovery Check-In',
+    industry: 'physiotherapy',
+    description: 'Send a follow-up message 3 days after treatment to check pain levels and recovery progress. Flags patients who need attention.',
+    trigger_type: 'appointment_completed',
+    featured: false,
+    setup_minutes: 5,
+    minutes_saved_per_run: 10,
+  },
+];
 
 const INDUSTRIES = [
   { label: 'All', value: '' },
@@ -36,18 +224,37 @@ function ClockIcon({ className }: { className?: string }) {
 function TrendUpIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
 }
-function SpinnerIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>;
-}
-function EmptyIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
-}
 
 function IndustryBadge({ industry }: { industry: string }) {
   const label = INDUSTRIES.find((i) => i.value === industry)?.label ?? industry;
+  const colors: Record<string, string> = {
+    dental: 'bg-blue-100 text-blue-700',
+    aesthetics: 'bg-pink-100 text-pink-700',
+    legal: 'bg-amber-100 text-amber-700',
+    home_services: 'bg-green-100 text-green-700',
+    physiotherapy: 'bg-teal-100 text-teal-700',
+    general: 'bg-brand-purple/10 text-brand-purple',
+  };
   return (
-    <span className="inline-flex items-center rounded-full bg-brand-purple/10 px-2.5 py-0.5 text-xs font-medium text-brand-purple">
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[industry] || colors.general}`}>
       {label}
+    </span>
+  );
+}
+
+function TriggerBadge({ trigger }: { trigger: string }) {
+  const labels: Record<string, string> = {
+    new_lead: 'On New Lead',
+    appointment_created: 'On Booking',
+    appointment_completed: 'After Appointment',
+    lead_score_update: 'On Score Change',
+    lead_inactive: 'On Inactivity',
+    scheduled: 'Scheduled',
+    manual: 'Manual Trigger',
+  };
+  return (
+    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+      {labels[trigger] || trigger}
     </span>
   );
 }
@@ -70,7 +277,10 @@ function TemplateCard({ template }: { template: Template }) {
           <h3 className="truncate text-sm font-semibold text-gray-900">
             {template.name}
           </h3>
-          <IndustryBadge industry={template.industry} />
+          <div className="flex items-center gap-2 mt-1">
+            <IndustryBadge industry={template.industry} />
+            <TriggerBadge trigger={template.trigger_type} />
+          </div>
         </div>
       </div>
 
@@ -99,36 +309,24 @@ function TemplateCard({ template }: { template: Template }) {
 }
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeIndustry, setActiveIndustry] = useState('');
 
-  useEffect(() => {
-    setLoading(true);
-    const url = activeIndustry
-      ? `/api/templates?industry=${encodeURIComponent(activeIndustry)}`
-      : '/api/templates';
-
-    fetch(url)
-      .then((res) => res.json())
-      .then((data: { templates: Template[] }) => {
-        setTemplates(data.templates ?? []);
-      })
-      .catch(() => {
-        setTemplates([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+  const filtered = useMemo(() => {
+    if (!activeIndustry) return TEMPLATES;
+    return TEMPLATES.filter(t => t.industry === activeIndustry || t.industry === 'general');
   }, [activeIndustry]);
+
+  // Sort: featured first
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+  }, [filtered]);
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Workflow Templates</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Get started quickly with pre-built automation workflows for your industry.
+          Pre-built automation workflows for your industry. Click &quot;Use Template&quot; to activate.
         </p>
       </div>
 
@@ -136,6 +334,9 @@ export default function TemplatesPage() {
       <div className="mb-8 flex flex-wrap gap-2">
         {INDUSTRIES.map((industry) => {
           const isActive = activeIndustry === industry.value;
+          const count = industry.value
+            ? TEMPLATES.filter(t => t.industry === industry.value).length
+            : TEMPLATES.length;
           return (
             <button
               key={industry.value}
@@ -147,32 +348,19 @@ export default function TemplatesPage() {
               }`}
             >
               {industry.label}
+              <span className={`ml-1.5 text-xs ${isActive ? 'text-purple-200' : 'text-gray-400'}`}>
+                {count}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-gray-400">
-          <SpinnerIcon className="h-8 w-8 animate-spin text-brand-purple" />
-          <p className="mt-3 text-sm">Loading templates...</p>
-        </div>
-      ) : templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-gray-400">
-          <EmptyIcon className="h-12 w-12 text-gray-300" />
-          <p className="mt-4 text-base font-medium text-gray-500">No templates found</p>
-          <p className="mt-1 text-sm text-gray-400">
-            Try selecting a different industry filter.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
-            <TemplateCard key={template.id} template={template} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {sorted.map((template) => (
+          <TemplateCard key={template.id} template={template} />
+        ))}
+      </div>
     </div>
   );
 }
