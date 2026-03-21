@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 
 // Routes that remain accessible even when trial has expired (read-only mode)
 const TRIAL_EXEMPT_PATHS = [
@@ -28,68 +28,61 @@ export async function middleware(req: NextRequest) {
   const isProtected = protectedPaths.some((p) => req.nextUrl.pathname.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
-  // Supabase v2 stores auth in sb-<ref>-auth-token cookie
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+?)\.supabase/)?.[1];
-  const authCookie = req.cookies.get(`sb-${supabaseRef}-auth-token`)?.value;
+  // Create a response that we can modify (to update cookies)
+  let response = NextResponse.next({ request: req });
 
-  if (!authCookie) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+            response.cookies.set(name, value, options as any);
+          });
+        },
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Verify the token is valid
-  let userEmail: string | undefined;
-  try {
-    const parsed = JSON.parse(authCookie);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    if (!accessToken) {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
+  const userEmail = user.email;
 
-    // Verify with Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
-    userEmail = user.email;
+  // Trial expiry check — enforce read-only mode for expired trials
+  if (req.nextUrl.pathname.startsWith('/dashboard') && userEmail) {
+    const isExempt = TRIAL_EXEMPT_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
+    if (!isExempt) {
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('plan, trial_ends_at')
+        .eq('email', userEmail)
+        .maybeSingle();
 
-    // Trial expiry check — enforce read-only mode for expired trials
-    if (req.nextUrl.pathname.startsWith('/dashboard')) {
-      const isExempt = TRIAL_EXEMPT_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
-      if (!isExempt) {
-        const { data: biz } = await supabase
-          .from('businesses')
-          .select('plan, trial_ends_at')
-          .eq('email', userEmail)
-          .maybeSingle();
-
-        if (biz?.plan === 'trial' && biz.trial_ends_at) {
-          const trialExpired = new Date(biz.trial_ends_at).getTime() < Date.now();
-          if (trialExpired) {
-            // Allow viewing the overview dashboard (read-only) but redirect write pages to pricing
-            const isWritePath = WRITE_ACTION_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
-            if (isWritePath) {
-              const url = new URL('/pricing', req.url);
-              url.searchParams.set('reason', 'trial_expired');
-              return NextResponse.redirect(url);
-            }
-            // For overview/analytics/templates — add header so client can show read-only banner
-            const res = NextResponse.next();
-            res.headers.set('x-trial-expired', 'true');
-            return res;
+      if (biz?.plan === 'trial' && biz.trial_ends_at) {
+        const trialExpired = new Date(biz.trial_ends_at).getTime() < Date.now();
+        if (trialExpired) {
+          const isWritePath = WRITE_ACTION_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
+          if (isWritePath) {
+            const url = new URL('/pricing', req.url);
+            url.searchParams.set('reason', 'trial_expired');
+            return NextResponse.redirect(url);
           }
+          response.headers.set('x-trial-expired', 'true');
         }
       }
     }
-  } catch {
-    return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

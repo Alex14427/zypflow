@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -7,11 +8,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
-/** Browser client (respects RLS) */
+/** Browser client — uses @supabase/ssr so auth tokens are stored in cookies */
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
     if (!_supabase) {
-      _supabase = createClient(supabaseUrl, supabaseAnonKey);
+      _supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
     }
     return (_supabase as any)[prop];
   },
