@@ -72,21 +72,31 @@ function SignupContent() {
     }
 
     if (authData.user) {
-      const { error: bizError } = await supabase.from('businesses').insert({
+      // Create organisation
+      const { data: org, error: orgError } = await supabase.from('organisations').insert({
         name: businessName,
         email,
+        owner_id: authData.user.id,
         plan: 'trial',
         trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      });
+      }).select('id').single();
 
-      if (bizError) {
-        console.error('Business creation error:', bizError);
-        // Business might already exist from a previous attempt — not fatal
-        if (!bizError.message.includes('duplicate')) {
-          setError('Account created but business setup failed. Please try logging in.');
+      if (orgError) {
+        console.error('Organisation creation error:', orgError);
+        if (!orgError.message.includes('duplicate')) {
+          setError('Account created but setup failed. Please try logging in.');
           setLoading(false);
           return;
         }
+      }
+
+      // Create org_member (owner role)
+      if (org) {
+        await supabase.from('org_members').insert({
+          org_id: org.id,
+          user_id: authData.user.id,
+          role: 'owner',
+        });
       }
     }
 

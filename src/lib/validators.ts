@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const chatInputSchema = z.object({
-  businessId: z.string().uuid(),
+  orgId: z.string().uuid(),
   message: z.string().min(1).max(2000),
   conversationId: z.string().uuid().nullable().optional(),
   leadId: z.string().uuid().nullable().optional(),
@@ -14,6 +14,6 @@ export const smsInputSchema = z.object({
 
 export const checkoutInputSchema = z.object({
   plan: z.enum(['starter', 'growth', 'enterprise']),
-  businessId: z.string().uuid(),
+  orgId: z.string().uuid(),
   email: z.string().email(),
 });

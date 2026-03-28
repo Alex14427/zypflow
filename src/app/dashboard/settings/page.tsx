@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface Business {
+interface Organisation {
   id: string;
   name: string;
   email: string;
@@ -24,7 +24,7 @@ interface AutomationStatus {
 }
 
 export default function SettingsPage() {
-  const [business, setBusiness] = useState<Business | null>(null);
+  const [business, setBusiness] = useState<Organisation | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -43,12 +43,12 @@ export default function SettingsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('businesses')
+      const { data } = await supabase.from('organisations')
         .select('id, name, email, phone, website, industry, plan, booking_url, google_review_link, ai_personality, stripe_customer_id')
         .eq('email', user.email)
         .maybeSingle();
       if (data) {
-        setBusiness(data as Business);
+        setBusiness(data as Organisation);
         setName(data.name || '');
         setPhone(data.phone || '');
         setWebsite(data.website || '');
@@ -57,7 +57,7 @@ export default function SettingsPage() {
         setAiPersonality(data.ai_personality || 'warm and friendly');
 
         // Fetch automation health status
-        fetch(`/api/automations/status?businessId=${data.id}`)
+        fetch(`/api/automations/status?orgId=${data.id}`)
           .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
           .then(d => { if (d.followUps) setAutomationStatus(d); })
           .catch(() => {});
@@ -70,7 +70,7 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!business) return;
     setSaving(true);
-    await supabase.from('businesses').update({
+    await supabase.from('organisations').update({
       name, phone, website, booking_url: bookingUrl,
       google_review_link: googleReviewLink, ai_personality: aiPersonality,
     }).eq('id', business.id);
@@ -89,7 +89,7 @@ export default function SettingsPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
   }
 
-  const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/v1.js" data-business-id="${business?.id}"></script>`;
+  const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/v1.js" data-org-id="${business?.id}"></script>`;
 
   return (
     <div>
