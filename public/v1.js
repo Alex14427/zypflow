@@ -1,7 +1,7 @@
 (function() {
-  var s = document.querySelector('script[data-business-id]');
+  var s = document.querySelector('script[data-org-id]');
   if (!s) return;
-  var bid = s.getAttribute('data-business-id');
+  var bid = s.getAttribute('data-org-id');
   var color = s.getAttribute('data-color') || '#6c3cff';
   var pos = s.getAttribute('data-position') || 'right';
   var greeting = s.getAttribute('data-greeting') || '';

@@ -17,16 +17,16 @@ export async function OPTIONS() {
 // Public endpoint — returns minimal business info for widget branding
 // No auth required since this is embedded on client websites
 export async function GET(req: NextRequest) {
-  const businessId = req.nextUrl.searchParams.get('businessId');
+  const orgId = req.nextUrl.searchParams.get('orgId');
 
-  if (!businessId) {
-    return NextResponse.json({ error: 'businessId required' }, { status: 400 });
+  if (!orgId) {
+    return NextResponse.json({ error: 'orgId required' }, { status: 400 });
   }
 
   const { data } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('name, industry, ai_personality, services')
-    .eq('id', businessId)
+    .eq('id', orgId)
     .single();
 
   if (!data) {

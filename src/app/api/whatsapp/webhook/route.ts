@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       // Find which business this is for (by wa_phone_number_id)
       const phoneNumberId = value.metadata?.phone_number_id;
       const { data: biz } = await supabaseAdmin
-        .from('businesses')
+        .from('organisations')
         .select('id, name')
         .eq('wa_phone_number_id', phoneNumberId)
         .maybeSingle();
@@ -55,12 +55,12 @@ export async function POST(req: NextRequest) {
       if (text.toUpperCase().trim() === 'STOP') {
         await supabaseAdmin.from('gdpr_consents')
           .update({ revoked_at: new Date().toISOString() })
-          .eq('business_id', biz.id)
+          .eq('org_id', biz.id)
           .eq('channel', 'whatsapp');
 
         await supabaseAdmin.from('gdpr_audit_log').insert({
           event_type: 'consent_revoked',
-          business_id: biz.id,
+          org_id: biz.id,
           performed_at: new Date().toISOString(),
           data_fields_accessed: ['phone', 'consent'],
         });
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       const { data: existingLead } = await supabaseAdmin
         .from('leads')
         .select('id')
-        .eq('business_id', biz.id)
+        .eq('org_id', biz.id)
         .eq('phone', formattedPhone)
         .maybeSingle();
 
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         const { data: newLead } = await supabaseAdmin
           .from('leads')
           .insert({
-            business_id: biz.id,
+            org_id: biz.id,
             phone: formattedPhone,
             source: 'whatsapp',
             status: 'new',
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       const { data: existingConv } = await supabaseAdmin
         .from('conversations')
         .select('id, messages')
-        .eq('business_id', biz.id)
+        .eq('org_id', biz.id)
         .eq('lead_id', leadId)
         .eq('channel', 'sms') // Using 'sms' channel type for now — will add 'whatsapp' later
         .maybeSingle();
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       } else {
         await supabaseAdmin.from('conversations')
           .insert({
-            business_id: biz.id,
+            org_id: biz.id,
             lead_id: leadId,
             channel: 'sms',
             messages: [newMessage],
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       try {
         await supabaseAdmin.from('gdpr_consents').insert({
           contact_id: leadId,
-          business_id: biz.id,
+          org_id: biz.id,
           channel: 'whatsapp',
           consent_type: 'service',
           obtained_via: 'customer_initiated',

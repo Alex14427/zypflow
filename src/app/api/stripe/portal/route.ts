@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   // Get business with stripe customer ID
   const { data: biz } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('stripe_customer_id')
     .eq('email', user.email)
     .maybeSingle();

@@ -21,20 +21,20 @@ export async function POST(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
 
-  const { businessId } = await req.json().catch(() => ({ businessId: null }));
-  return runFollowUps(businessId);
+  const { orgId } = await req.json().catch(() => ({ orgId: null }));
+  return runFollowUps(orgId);
 }
 
-async function runFollowUps(businessId: string | null) {
+async function runFollowUps(orgId: string | null) {
   // Build query — optionally filter by business
   let query = supabaseAdmin
     .from('leads')
-    .select('id, business_id, name, email, phone, status, service_interest, created_at, businesses(name, booking_url)')
+    .select('id, org_id, name, email, phone, status, service_interest, created_at, organisations(name, booking_url)')
     .in('status', ['new', 'contacted'])
     .order('created_at', { ascending: true });
 
-  if (businessId) {
-    query = query.eq('business_id', businessId);
+  if (orgId) {
+    query = query.eq('org_id', orgId);
   }
 
   const { data: leads } = await query.limit(100);
@@ -43,7 +43,7 @@ async function runFollowUps(businessId: string | null) {
   let sent = 0;
 
   for (const lead of leads as Record<string, unknown>[]) {
-    const biz = lead.businesses as Record<string, string> | null;
+    const biz = lead.organisations as Record<string, string> | null;
     if (!biz) continue;
 
     const leadEmail = lead.email as string;
@@ -53,7 +53,7 @@ async function runFollowUps(businessId: string | null) {
     const bookingUrl = biz.booking_url || '';
     const service = (lead.service_interest as string) || 'our services';
     const leadId = lead.id as string;
-    const businessIdVal = lead.business_id as string;
+    const orgIdVal = lead.org_id as string;
 
     // Check what follow-ups have already been sent
     const { data: existingFollowUps } = await supabaseAdmin
@@ -134,7 +134,7 @@ async function runFollowUps(businessId: string | null) {
       // Record follow-up
       await supabaseAdmin.from('follow_ups').insert({
         lead_id: leadId,
-        business_id: businessIdVal,
+        org_id: orgIdVal,
         sequence_name: 'new_lead_nurture',
         step_number: stepNumber,
         channel: leadPhone ? 'sms' : 'email',

@@ -58,7 +58,7 @@ const PLANS = [
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<{ businessId: string; email: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ orgId: string; email: string } | null>(null);
 
   // Auto-detect logged-in user for seamless upgrade
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
@@ -67,9 +67,9 @@ export default function PricingPage() {
     async function checkUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('businesses').select('id, plan, stripe_subscription_id').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('organisations').select('id, plan, stripe_subscription_id').eq('email', user.email).maybeSingle();
       if (biz) {
-        setUserInfo({ businessId: biz.id, email: user.email! });
+        setUserInfo({ orgId: biz.id, email: user.email! });
         if (biz.stripe_subscription_id && biz.plan !== 'trial' && biz.plan !== 'cancelled') {
           setCurrentPlan(biz.plan);
         }
@@ -87,7 +87,7 @@ export default function PricingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan,
-          businessId: userInfo?.businessId,
+          orgId: userInfo?.orgId,
           email: userInfo?.email,
         }),
       });

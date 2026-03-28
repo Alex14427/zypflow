@@ -26,17 +26,17 @@ async function runLifecycle() {
   };
 
   // Get all active businesses with trial info
-  const { data: businesses } = await supabaseAdmin
-    .from('businesses')
+  const { data: organisations } = await supabaseAdmin
+    .from('organisations')
     .select('id, name, email, plan, trial_ends_at, system_prompt, booking_url, google_review_link, created_at')
     .eq('active', true);
 
-  if (!businesses) return NextResponse.json(results);
+  if (!organisations) return NextResponse.json(results);
 
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
 
-  for (const biz of businesses) {
+  for (const biz of organisations) {
     try {
       // --- TRIAL ENDING SEQUENCE ---
       if (biz.trial_ends_at && (biz.plan === 'starter' || biz.plan === 'growth' || biz.plan === 'enterprise')) {
@@ -74,17 +74,17 @@ async function runLifecycle() {
       const { count: leadCount } = await supabaseAdmin
         .from('leads')
         .select('id', { count: 'exact', head: true })
-        .eq('business_id', biz.id);
+        .eq('org_id', biz.id);
 
       const { count: bookingCount } = await supabaseAdmin
         .from('appointments')
         .select('id', { count: 'exact', head: true })
-        .eq('business_id', biz.id);
+        .eq('org_id', biz.id);
 
       const { count: reviewCount } = await supabaseAdmin
         .from('reviews')
         .select('id', { count: 'exact', head: true })
-        .eq('business_id', biz.id)
+        .eq('org_id', biz.id)
         .not('completed_at', 'is', null);
 
       const stats = { leads: leadCount || 0, bookings: bookingCount || 0, reviews: reviewCount || 0 };
@@ -119,22 +119,22 @@ async function runLifecycle() {
           supabaseAdmin
             .from('leads')
             .select('id', { count: 'exact', head: true })
-            .eq('business_id', biz.id)
+            .eq('org_id', biz.id)
             .gte('created_at', sevenDaysAgo.toISOString()),
           supabaseAdmin
             .from('appointments')
             .select('id', { count: 'exact', head: true })
-            .eq('business_id', biz.id)
+            .eq('org_id', biz.id)
             .gte('created_at', sevenDaysAgo.toISOString()),
           supabaseAdmin
             .from('reviews')
             .select('id', { count: 'exact', head: true })
-            .eq('business_id', biz.id)
+            .eq('org_id', biz.id)
             .gte('requested_at', sevenDaysAgo.toISOString()),
           supabaseAdmin
             .from('leads')
             .select('id', { count: 'exact', head: true })
-            .eq('business_id', biz.id)
+            .eq('org_id', biz.id)
             .gte('score', 70)
             .in('status', ['new', 'contacted']),
         ]);

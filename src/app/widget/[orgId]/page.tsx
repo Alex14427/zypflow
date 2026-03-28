@@ -26,7 +26,7 @@ const QUICK_PROMPTS_BY_INDUSTRY: Record<string, string[]> = {
 const DEFAULT_PROMPTS = ['What services do you offer?', 'How much does it cost?', 'Can I book an appointment?', 'Tell me more about your business'];
 
 export default function WidgetPage() {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { orgId } = useParams<{ orgId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export default function WidgetPage() {
   useEffect(() => {
     async function fetchBiz() {
       try {
-        const res = await fetch(`/api/widget/info?businessId=${businessId}`);
+        const res = await fetch(`/api/widget/info?orgId=${orgId}`);
         if (res.ok) {
           const data = await res.json();
           setBizInfo(data);
@@ -52,8 +52,8 @@ export default function WidgetPage() {
         // Fail silently — will use defaults
       }
     }
-    if (businessId) fetchBiz();
-  }, [businessId]);
+    if (orgId) fetchBiz();
+  }, [orgId]);
 
   async function sendMessage(text?: string) {
     const userMsg = (text || input).trim();
@@ -68,7 +68,7 @@ export default function WidgetPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessId,
+          orgId,
           message: userMsg,
           conversationId,
           leadId,

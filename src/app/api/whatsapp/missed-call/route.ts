@@ -62,12 +62,12 @@ export async function POST(req: NextRequest) {
 
   try {
     // Look up the business by the Twilio phone number that was dialled
-    // First try the env var override, then fall back to the businesses table
+    // First try the env var override, then fall back to the organisations table
     const twilioPhoneNumber =
       process.env.TWILIO_PHONE_NUMBER || calledNumber;
 
     const { data: business, error: bizError } = await supabaseAdmin
-      .from('businesses')
+      .from('organisations')
       .select('id, name, wa_phone_number_id, wa_access_token, twilio_phone_number')
       .or(
         `twilio_phone_number.eq.${calledNumber},twilio_phone_number.eq.${twilioPhoneNumber}`
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     } else {
       console.info(
         '[missed-call] WhatsApp reply sent',
-        { businessId: business.id, to: callerNumber, callStatus: CallStatus }
+        { orgId: business.id, to: callerNumber, callStatus: CallStatus }
       );
     }
   } catch (err) {

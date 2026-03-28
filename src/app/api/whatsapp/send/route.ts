@@ -16,17 +16,17 @@ export async function POST(req: NextRequest) {
     if (dashResult instanceof NextResponse) return dashResult;
   }
 
-  const { businessId, to, message } = await req.json();
+  const { orgId, to, message } = await req.json();
 
-  if (!businessId || !to || !message) {
-    return NextResponse.json({ error: 'businessId, to, and message are required' }, { status: 400 });
+  if (!orgId || !to || !message) {
+    return NextResponse.json({ error: 'orgId, to, and message are required' }, { status: 400 });
   }
 
   // Get business WhatsApp credentials
   const { data: biz } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('wa_phone_number_id, wa_access_token, name')
-    .eq('id', businessId)
+    .eq('id', orgId)
     .single();
 
   if (!biz?.wa_phone_number_id || !biz?.wa_access_token) {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const { data: consent } = await supabaseAdmin
     .from('gdpr_consents')
     .select('id')
-    .eq('business_id', businessId)
+    .eq('org_id', orgId)
     .eq('channel', 'whatsapp')
     .is('revoked_at', null)
     .limit(1)
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   // Log the GDPR audit event
   await supabaseAdmin.from('gdpr_audit_log').insert({
     event_type: 'whatsapp_message_sent',
-    business_id: businessId,
+    org_id: orgId,
     data_fields_accessed: ['phone'],
   });
 

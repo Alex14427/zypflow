@@ -33,7 +33,7 @@ export function useRealtime() {
   return useContext(RealtimeContext);
 }
 
-export function RealtimeProvider({ businessId, children }: { businessId: string | null; children: React.ReactNode }) {
+export function RealtimeProvider({ orgId, children }: { orgId: string | null; children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const idCounter = useRef(0);
 
@@ -56,7 +56,7 @@ export function RealtimeProvider({ businessId, children }: { businessId: string 
   }, []);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!orgId) return;
 
     // Request browser notification permission
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -70,7 +70,7 @@ export function RealtimeProvider({ businessId, children }: { businessId: string 
         event: 'INSERT',
         schema: 'public',
         table: 'leads',
-        filter: `business_id=eq.${businessId}`,
+        filter: `org_id=eq.${orgId}`,
       }, (payload) => {
         const lead = payload.new as { name?: string; email?: string; score?: number; service_interest?: string };
         addNotification({
@@ -89,7 +89,7 @@ export function RealtimeProvider({ businessId, children }: { businessId: string 
         event: 'UPDATE',
         schema: 'public',
         table: 'conversations',
-        filter: `business_id=eq.${businessId}`,
+        filter: `org_id=eq.${orgId}`,
       }, () => {
         addNotification({
           type: 'new_message',
@@ -107,7 +107,7 @@ export function RealtimeProvider({ businessId, children }: { businessId: string 
         event: 'INSERT',
         schema: 'public',
         table: 'appointments',
-        filter: `business_id=eq.${businessId}`,
+        filter: `org_id=eq.${orgId}`,
       }, (payload) => {
         const appt = payload.new as { service?: string; datetime?: string };
         addNotification({
@@ -124,7 +124,7 @@ export function RealtimeProvider({ businessId, children }: { businessId: string 
       supabase.removeChannel(convsChannel);
       supabase.removeChannel(apptsChannel);
     };
-  }, [businessId, addNotification]);
+  }, [orgId, addNotification]);
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));

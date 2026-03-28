@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const s = event.data.object as Stripe.Checkout.Session;
-      const { businessId, plan } = s.metadata || {};
-      if (businessId) {
-        await supabaseAdmin.from('businesses').update({
+      const { orgId, plan } = s.metadata || {};
+      if (orgId) {
+        await supabaseAdmin.from('organisations').update({
           plan,
           stripe_customer_id: s.customer as string,
           stripe_subscription_id: s.subscription as string,
-        }).eq('id', businessId);
+        }).eq('id', orgId);
 
-        const { data: biz } = await supabaseAdmin.from('businesses')
-          .select('name, email').eq('id', businessId).single();
+        const { data: biz } = await supabaseAdmin.from('organisations')
+          .select('name, email').eq('id', orgId).single();
         if (biz) await sendWelcomeEmail(biz.email, biz.name, plan || 'starter');
       }
       break;
@@ -65,14 +65,14 @@ export async function POST(req: NextRequest) {
       let plan = 'starter';
       if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) plan = 'growth';
       if (priceId === process.env.STRIPE_ENTERPRISE_PRICE_ID) plan = 'enterprise';
-      await supabaseAdmin.from('businesses')
+      await supabaseAdmin.from('organisations')
         .update({ plan }).eq('stripe_subscription_id', sub.id);
       break;
     }
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription;
-      await supabaseAdmin.from('businesses')
+      await supabaseAdmin.from('organisations')
         .update({ plan: 'cancelled', active: false })
         .eq('stripe_subscription_id', sub.id);
       break;
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;
       if (customerId) {
-        const { data: biz } = await supabaseAdmin.from('businesses')
+        const { data: biz } = await supabaseAdmin.from('organisations')
           .select('name, email').eq('stripe_customer_id', customerId).maybeSingle();
         if (biz?.email) {
           await sendPaymentFailedEmail(biz.email, biz.name);
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         ? Math.max(1, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
         : 3;
 
-      const { data: biz } = await supabaseAdmin.from('businesses')
+      const { data: biz } = await supabaseAdmin.from('organisations')
         .select('name, email').eq('stripe_subscription_id', sub.id).maybeSingle();
       if (biz?.email) {
         await sendTrialEndingEmail(biz.email, biz.name, daysLeft);
