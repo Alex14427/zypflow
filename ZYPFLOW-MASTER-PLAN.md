@@ -382,4 +382,399 @@ This runs IN PARALLEL with the build phases above. The service packages generate
 
 ---
 
-*Continue with `continue` for Part 3: Service Packages, Pricing, Go-To-Market, Metrics, Kill Switches, and Coding Conventions.*
+## 6. OVERHEAD COSTS — THE REAL NUMBERS
+
+**[CEO MODE] Every penny accounted for.** These are actual costs at launch scale, not enterprise pricing.
+
+### Fixed Monthly Overheads (regardless of users)
+
+| Service | Plan | Monthly Cost | Notes |
+|---------|------|-------------|-------|
+| Vercel | Pro | £16/mo | Required for cron jobs + commercial use |
+| Supabase | Pro | £20/mo | 8GB DB, 250K auth requests, 500MB storage |
+| Resend | Pro | £16/mo | 50K emails/mo — more than enough for Year 1 |
+| Upstash Redis | Pay-as-you-go | £3/mo | Rate limiting — minimal at launch |
+| Sentry | Team | £0/mo | Free tier (5K errors/mo) — sufficient |
+| PostHog | Free | £0/mo | 1M events/mo free |
+| Google Analytics | Free | £0/mo | — |
+| Cloudflare | Free | £0/mo | DNS + CDN |
+| Domain (zypflow.co.uk) | Annual | £1/mo | ~£12/yr |
+| Stripe | Per transaction | 1.4% + 20p | UK cards. Deducted from revenue |
+| **FIXED TOTAL** | | **~£56/mo** | |
+
+### Variable Costs Per Service Client
+
+| Service | Usage | Cost Per Client/Mo | Notes |
+|---------|-------|-------------------|-------|
+| Apify (scraping) | ~500 leads/mo per client | £8–15/mo | Free tier covers first client (49 runs) |
+| Instantly.ai | Email sending + warmup | £25/mo | Starter plan per sending account |
+| Meta WhatsApp Cloud API | ~200 service convos/mo | £0–6/mo | First 1,000/mo free across all clients |
+| Twilio SMS | ~100 SMS/mo per client | £4/mo | UK SMS ~£0.04/msg |
+| Claude API (AI summaries) | ~500 calls/mo per client | £8–12/mo | claude-sonnet-4-6 at ~$3/M input tokens |
+| OpenAI (chat engine) | ~1,000 chats/mo per client | £10–15/mo | GPT-4o at ~$2.50/M input tokens |
+| Google PageSpeed API | ~500 audits/mo per client | £0/mo | $200/mo free credit covers ~25K calls |
+| **VARIABLE TOTAL** | | **~£55–73/mo per client** | |
+
+### Variable Costs Per SaaS Subscriber
+
+| Plan | Typical API Usage | Cost Per Subscriber/Mo |
+|------|-------------------|----------------------|
+| Starter (£49/mo) | Light — 200 leads, 500 emails, 20 AI gens | £8–12/mo |
+| Growth (£149/mo) | Medium — 1,000 leads, 5K emails, 100 AI gens | £25–40/mo |
+| Agency (£349/mo) | Heavy — unlimited leads, 50K emails, unlimited AI | £60–80/mo |
+
+---
+
+## 7. PRICING STRATEGY — ENGINEERED FOR £10K NET PROFIT IN MONTH 1
+
+### The £10K Month 1 Model
+
+**[CEO MODE] Hard constraint:** £10K net profit after ALL overheads. Here's exactly how we get there.
+
+#### Revenue Target Breakdown
+
+| Revenue Source | Units | Price | Gross Revenue |
+|---------------|-------|-------|--------------|
+| Operations Detox (Pkg 1) | 2 clients | £2,500 setup + £495/mo | £5,990 |
+| Growth Engine (Pkg 2) | 1 client | £4,995 setup + £995/mo | £5,990 |
+| Starter SaaS | 10 subscribers | £49/mo | £490 |
+| Growth SaaS | 3 subscribers | £149/mo | £447 |
+| **TOTAL GROSS** | | | **£12,917** |
+
+#### Cost Breakdown for That Revenue
+
+| Cost | Amount |
+|------|--------|
+| Fixed overheads | £56 |
+| 3 service clients × £65/mo variable | £195 |
+| 13 SaaS subscribers × £15/mo avg variable | £195 |
+| Instantly.ai (3 sending accounts for service) | £75 |
+| Stripe fees (1.4% + 20p on £12,917) | ~£210 |
+| **TOTAL COSTS** | **£731** |
+
+#### Month 1 P&L
+
+| | Amount |
+|---|--------|
+| Gross Revenue | £12,917 |
+| Total Costs | £731 |
+| **Net Profit** | **£12,186** |
+| **Net Margin** | **94.3%** |
+
+**That's £10K+ net with conservative numbers.** The service package setup fees are the accelerator — they front-load cash in Month 1.
+
+#### Month 2+ (Recurring Only — No New Setup Fees)
+
+| Revenue Source | Monthly Recurring |
+|---------------|------------------|
+| 3 service retainers (£495 + £495 + £995) | £1,985 |
+| 15 SaaS subscribers (growing) | £1,200 |
+| **Monthly Recurring Revenue** | **£3,185** |
+| Monthly Costs | ~£800 |
+| **Net Monthly Profit (recurring)** | **£2,385** |
+
+To sustain £10K+/mo net from Month 2 onward, you need either:
+- **4 new service clients/mo** (setup fees + retainers), OR
+- **~70 SaaS subscribers** at blended £149/mo avg, OR
+- **Mix:** 2 new service clients + 30 SaaS subscribers
+
+**[CEO MODE] Recommendation:** Sell 2 service packages per month minimum. The setup fees are your cash engine. SaaS subscriptions compound underneath. By Month 6, recurring revenue alone exceeds £10K/mo.
+
+---
+
+### Service Packages (Revenue Engine)
+
+#### Package 1: "Operations Detox" — £2,500 setup + £495/mo
+
+**Target:** SMEs drowning in manual admin — trades, professional services, hospitality.
+
+**What they get:**
+- Week 1: Paid discovery — audit top 10 time-wasting processes
+- Week 2–3: Build 3–5 core automations (lead capture → CRM, invoice reminders, appointment confirmations, review requests, internal alerts)
+- Week 4: Handover with recorded Loom walkthrough + documentation
+- Ongoing: Monthly retainer covers monitoring, break/fix, one new automation per month
+
+**Delivery cost:** ~£65/mo in API costs. **Margin: 87% on retainer.**
+**Delivery time:** ~8 hours of actual work (rest is automated via template blueprints).
+
+#### Package 2: "Growth Engine" — £4,995 setup + £995/mo
+
+**Target:** Agencies, B2B services with inconsistent pipeline.
+
+**What they get:**
+- Everything in Operations Detox, plus:
+- Automated lead pipeline (scrape → audit → score → cold email with personalised merge tags)
+- CRM + pipeline with lead scoring
+- Call list dashboard ranked by score
+- Monthly KPI dashboard: leads generated, emails sent, replies, calls booked, deals closed
+
+**Delivery cost:** ~£73/mo in API costs. **Margin: 93% on retainer.**
+**Delivery time:** ~15 hours setup (pipeline is automated via Zypflow's own engine).
+
+#### Package 3: "Digital Infrastructure" — £7,500–£15,000 project + £1,495/mo
+
+**Target:** Established SMEs (£1M–£10M turnover) with 8–15 disconnected tools.
+
+**What they get:**
+- Full systems audit — map every tool, data flow, manual handoff
+- Architecture blueprint — documented "digital operating system"
+- Build-out: 10–20 integrated automations
+- Team training: recorded SOPs, live walkthroughs
+- Ongoing: monitoring, iteration, new automations, quarterly strategic review
+
+**Delivery cost:** ~£80/mo in API costs. **Margin: 95% on retainer.**
+**Delivery time:** ~30–40 hours over 4 weeks.
+
+---
+
+### SaaS Pricing (Self-Serve)
+
+| | Starter | Growth | Agency |
+|--|---------|--------|--------|
+| **Price** | £49/mo | £149/mo | £349/mo |
+| **Trial** | 14 days free (no card) | 14 days free (no card) | 14 days free (no card) |
+| Leads | 200 | 1,000 | Unlimited |
+| Scraping credits | 100/mo | 500/mo | Unlimited |
+| Email accounts | 1 | 5 | 25 |
+| Emails/month | 500 | 5,000 | 50,000 |
+| Audit tool | Unlimited | Unlimited | Unlimited |
+| AI generations | 20/mo | 100/mo | Unlimited |
+| WhatsApp conversations | 100/mo | 500/mo | Unlimited |
+| Templates | 5 | All 14 | All + custom |
+| Team members | 1 | 5 | 15 |
+| White-label | No | No | Yes |
+| API access | No | Read-only | Full |
+| Support | Email | Priority | Dedicated |
+| **Cost to serve** | ~£10/mo | ~£32/mo | ~£70/mo |
+| **Gross margin** | **80%** | **79%** | **80%** |
+
+**Overages:** £0.05/lead, £0.01/email, £0.02/AI generation over limit.
+
+**No free plan.** 14-day trial qualifies buyers, not browsers.
+
+---
+
+## 8. GO-TO-MARKET — MONTH 1 SALES PLAYBOOK
+
+**[CEO MODE] You need 2 service clients + 13 SaaS subscribers in 30 days. Here's how.**
+
+### Week 1: Audit Tool Launch (Days 1–7)
+- Deploy `/audit` — public, no signup required
+- Share on LinkedIn (personal + company page), Twitter/X, Reddit (r/webdev, r/smallbusiness, r/UKBusiness)
+- Post 3x "building in public" updates
+- Run 50 audits manually on target businesses → save results → use as outreach ammunition
+- **Target:** 100+ audit submissions, 50+ emails captured
+
+### Week 2: Cold Outreach Blitz (Days 8–14)
+- Cold email 100 UK SMEs using their own audit data as the hook
+- Subject: "I found {{number_of_issues}} issues with {{website}}"
+- LinkedIn DMs to 50 connections in target industries
+- Offer first 3 clients 20% discount for testimonial + case study rights
+- **Target:** 10+ replies, 5+ discovery calls booked
+
+### Week 3: Close + Activate (Days 15–21)
+- Close 2+ service clients from discovery calls
+- Collect setup fees (£2,500–£4,995 each) via Stripe
+- Begin delivery using Zypflow's own automation stack
+- Push SaaS signups via audit tool email list → trial invites
+- **Target:** 2 service clients signed, 8+ SaaS trials started
+
+### Week 4: Compound (Days 22–30)
+- Deliver first results to service clients (scrape, audit, outreach running)
+- Convert trial users → paid (Day 10 + Day 13 reminder emails trigger)
+- Request testimonials from early adopters
+- **Target:** £10K+ net in the bank, 13+ SaaS subscribers
+
+### Outreach Templates
+
+**Cold email (service):**
+> Hi {{first_name}},
+>
+> I ran a quick audit on {{website}} — your speed score is {{speed_score}}/100 and there are {{number_of_issues}} issues that are likely costing you enquiries.
+>
+> We help UK {{industry}} businesses automate their client pipeline. Our last client went from 3 enquiries/week to 12 within 60 days.
+>
+> Would a 15-minute walkthrough of the findings be useful?
+>
+> {{your_name}}, Zypflow
+
+**Trial conversion email (Day 10):**
+> Hi {{first_name}},
+>
+> You've got 4 days left on your Zypflow trial. So far you've {{action_summary}}.
+>
+> Upgrade now to keep your templates, leads, and automations running. Plans start at £49/mo.
+>
+> [Upgrade Now →]
+
+---
+
+## 9. METRICS THAT MATTER
+
+### North Star Metric
+**Pipeline-to-Close Conversion Rate** — if this is zero, nothing else matters.
+
+### Leading Indicators (Weekly)
+
+| Metric | Target | Why |
+|--------|--------|-----|
+| Audit submissions | 50+/week | Top-of-funnel demand |
+| Emails captured from audits | 30+/week | Conversion to leads |
+| Outreach emails sent | 500+/week | Pipeline velocity |
+| Reply rate | 3–5% | Message-market fit |
+| Discovery calls booked | 3+/week | Bottom-of-funnel |
+| SaaS trial signups | 10+/week | Self-serve traction |
+
+### Lagging Indicators (Monthly)
+
+| Metric | Target | Why |
+|--------|--------|-----|
+| New service clients | 2+/month | Revenue growth |
+| MRR | Growing 20%+ MoM | Business health |
+| Client churn | <5%/month | Service quality |
+| Trial → Paid conversion | >25% | Activation quality |
+| Net margin | >80% | Unit economics |
+| Automation success rate | >98% | System reliability |
+
+### Kill Switches — Stop Building, Start Selling If:
+
+| Trigger | After | Action |
+|---------|-------|--------|
+| Zero paying clients | 90 days of active outreach | Pivot positioning or market |
+| Reply rate <1% | 2,000+ emails sent | Rewrite copy, change ICP |
+| Every call: "we use GoHighLevel" | 10+ calls | Wrong market — go more niche |
+| Audit tool <10 submissions/week | 4 weeks live | No demand for wedge — pivot |
+| CAC exceeds £2,000 | 5+ clients acquired | Pricing or channel problem |
+
+---
+
+## 10. FREE APIs & SERVICES REQUIRED
+
+| Service | What For | Cost | Status |
+|---------|----------|------|--------|
+| Meta WhatsApp Cloud API | WhatsApp messaging | 1,000 service convos/mo free | Partially integrated |
+| Google PageSpeed Insights API | Website audits | Free ($200/mo credit) | Not integrated |
+| HMRC MTD API | Making Tax Digital | Free (sandbox + production) | Phase 6 |
+| Xero API | Accounting sync for MTD | Free partner programme | Phase 6 |
+| FreeAgent API | Accounting sync for MTD | Free for integrations | Phase 6 |
+| Zapier REST API | Migration tool reads user's Zaps | Free (user provides key) | Phase 5 |
+| Google Places API | Review request links | Free ($200/mo credit) | Phase 6 |
+| Cal.com API | Booking integration | Free tier | LIVE |
+| Stripe Connect | Affiliate payouts | Free to set up | Phase 6 |
+| Apify | Lead scraping | Free tier (49 runs/mo) | LIVE |
+| Instantly.ai | Cold email | From £25/mo per account | INTEGRATED |
+
+---
+
+## 11. CODING CONVENTIONS
+
+### TypeScript Strict Mode — Always
+```typescript
+// tsconfig.json — strict: true is non-negotiable
+// Use Zod for ALL external data validation
+// Use server components by default, 'use client' only for interactivity
+```
+
+### File Structure (Next.js App Router)
+```
+src/
+  app/
+    (marketing)/          → Public pages (landing, pricing, audit, blog)
+    (auth)/               → Login, signup, forgot password
+    (dashboard)/          → Authenticated app pages
+  components/
+    ui/                   → Reusable (Button, Card, Modal)
+    dashboard/            → Dashboard-specific
+  lib/
+    supabase/
+      client.ts           → Browser client
+      server.ts           → Server client
+      admin.ts            → Service role (edge functions only)
+    stripe.ts
+    utils.ts
+  hooks/                  → Custom React hooks
+  types/                  → TypeScript definitions
+```
+
+### Supabase Query Pattern
+```typescript
+// ALWAYS filter by org_id. RLS is the safety net, not the strategy.
+const { data, error } = await supabase
+  .from('leads')
+  .select('*')
+  .eq('org_id', orgId)
+  .order('lead_score', { ascending: false });
+
+if (error) throw error;
+```
+
+### Critical Rules
+1. **Every table has `org_id` + RLS.** No exceptions.
+2. **Never hardcode secrets.** Environment variables only.
+3. **Never trust client-side data.** Validate server-side with Zod.
+4. **Credit metering enforced server-side.** Never rely on client checks.
+5. **Log to `activity_log`.** Every significant action gets recorded.
+6. **Mobile-first.** Test every page at 375px.
+7. **No Solis references.** Zypflow is its own brand entirely.
+8. **Cache PageSpeed results 7 days.** Don't re-audit the same URL twice in a week.
+9. **Ship incremental.** Phase N must be solid before starting Phase N+1.
+10. **Build only what's validated.** If 3+ paying clients haven't asked for it, don't build it.
+
+---
+
+## 12. PRE-LAUNCH CHECKLIST (Manual Steps)
+
+### Domain Setup
+- [ ] Add `app.zypflow.com` in Vercel project settings
+- [ ] Cloudflare DNS: CNAME `app` → `cname.vercel-dns.com`
+- [ ] SSL auto-provisions via Vercel
+
+### Email Domain Verification (CRITICAL — without this, emails go to spam)
+- [ ] Add `zypflow.com` to Resend dashboard
+- [ ] Add SPF, DKIM, DMARC records in Cloudflare
+- [ ] Verify — then emails send from `hello@zypflow.com`
+
+### Email Warmup Plan
+- Week 1: Max 20 emails/day (transactional only)
+- Week 2: Max 50/day (add welcome emails)
+- Week 3: Max 150/day (add review requests, nurture)
+- Week 4: Full volume. Monitor: Open >20%, Bounce <2%, Spam <0.1%
+
+### Twilio UK Number
+- [ ] Buy UK mobile number in Twilio console
+- [ ] Complete UK regulatory bundle
+- [ ] Update `TWILIO_PHONE_NUMBER` env var
+- [ ] Set SMS webhook: `https://app.zypflow.com/api/sms/incoming`
+
+### Stripe Live Mode
+- [ ] Complete identity verification
+- [ ] Verify webhook endpoint
+- [ ] Add webhook events: checkout.session.completed, subscription.updated, subscription.deleted, invoice.payment_failed, trial_will_end
+- [ ] Copy signing secret to `STRIPE_WEBHOOK_SECRET`
+
+### Credential Rotation (CRITICAL — keys were in git history)
+- [ ] Rotate ALL API keys: Stripe, OpenAI, Anthropic, Twilio, Resend, Supabase service role, Upstash, Apify, Make.com, Cloudflare, Instantly
+- [ ] Update all values in Vercel env vars
+
+---
+
+## 13. THE 12 SURVIVAL RULES
+
+1. **Validate before you build.** Talk to 20 agencies. Confirm they'd pay.
+2. **Cut features ruthlessly.** Launch with audit + scraper + outreach. Nothing else.
+3. **Own the audit wedge.** Make it the best free audit tool in the UK.
+4. **Go vertical, not horizontal.** "For UK service businesses" — not "for everyone."
+5. **Model unit economics now.** Know cost per user per plan before setting prices.
+6. **Kill the free plan.** 14-day trial qualifies buyers, not browsers.
+7. **Build audience alongside product.** Build in public. Weekly posts. Ship audit tool first.
+8. **Sell services to fund the product.** Packages generate cash while SaaS matures.
+9. **Price on outcomes, not seats.** Charge per lead, per audit, per automation.
+10. **Dogfood aggressively.** Use Zypflow to sell Zypflow.
+11. **Set a kill switch.** No paying users within 90 days → pivot.
+12. **Track one metric.** Pipeline-to-close conversion rate.
+
+---
+
+**END OF UNIFIED MASTER PLAN**
+
+This document is the single source of truth for all Zypflow development, strategy, pricing, and operations. All previous strategy files are superseded and deleted.
