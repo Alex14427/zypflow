@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
 interface Template {
   id: string;
@@ -13,194 +13,11 @@ interface Template {
   minutes_saved_per_run: number;
 }
 
-const TEMPLATES: Template[] = [
-  // General
-  {
-    id: 'new-lead-follow-up',
-    name: 'New Lead Auto Follow-Up',
-    industry: 'general',
-    description: 'Automatically send a personalised follow-up email when a new lead comes in via the chat widget. Includes a booking link and service summary.',
-    trigger_type: 'new_lead',
-    featured: true,
-    setup_minutes: 5,
-    minutes_saved_per_run: 15,
-  },
-  {
-    id: 'appointment-reminders',
-    name: 'Appointment Reminder Sequence',
-    industry: 'general',
-    description: 'Send SMS and email reminders at 48h, 24h, and 2h before appointments. Reduces no-shows by up to 40%.',
-    trigger_type: 'appointment_created',
-    featured: true,
-    setup_minutes: 5,
-    minutes_saved_per_run: 10,
-  },
-  {
-    id: 'review-request',
-    name: 'Post-Appointment Review Request',
-    industry: 'general',
-    description: 'Automatically ask happy customers for a Google review 2 hours after their appointment. Includes direct link to your Google review page.',
-    trigger_type: 'appointment_completed',
-    featured: true,
-    setup_minutes: 3,
-    minutes_saved_per_run: 8,
-  },
-  {
-    id: 'lead-scoring-alert',
-    name: 'Hot Lead Alert',
-    industry: 'general',
-    description: 'Get an instant SMS or email notification when a lead scores 70+ so you can follow up personally while they\'re still interested.',
-    trigger_type: 'lead_score_update',
-    featured: false,
-    setup_minutes: 3,
-    minutes_saved_per_run: 5,
-  },
-  {
-    id: 'win-back-campaign',
-    name: 'Win-Back Campaign',
-    industry: 'general',
-    description: 'Re-engage leads who haven\'t responded in 14 days with a personalised offer or check-in message.',
-    trigger_type: 'lead_inactive',
-    featured: false,
-    setup_minutes: 10,
-    minutes_saved_per_run: 20,
-  },
-  {
-    id: 'weekly-report',
-    name: 'Weekly Performance Report',
-    industry: 'general',
-    description: 'Receive a weekly email summary of new leads, bookings, conversations, and revenue — delivered every Monday morning.',
-    trigger_type: 'scheduled',
-    featured: false,
-    setup_minutes: 5,
-    minutes_saved_per_run: 15,
-  },
-  // Dental
-  {
-    id: 'dental-new-patient',
-    name: 'New Patient Welcome',
-    industry: 'dental',
-    description: 'Welcome new dental patients with registration forms, practice info, and pre-appointment instructions. Includes parking and what to bring.',
-    trigger_type: 'new_lead',
-    featured: true,
-    setup_minutes: 10,
-    minutes_saved_per_run: 20,
-  },
-  {
-    id: 'dental-recall',
-    name: '6-Month Check-Up Recall',
-    industry: 'dental',
-    description: 'Automatically remind patients when their 6-month check-up is due. Sends SMS with a direct booking link.',
-    trigger_type: 'scheduled',
-    featured: false,
-    setup_minutes: 5,
-    minutes_saved_per_run: 10,
-  },
-  {
-    id: 'dental-treatment-follow-up',
-    name: 'Post-Treatment Care',
-    industry: 'dental',
-    description: 'Send aftercare instructions via SMS after procedures like extractions, fillings, or whitening. Reduces post-op call volume.',
-    trigger_type: 'appointment_completed',
-    featured: false,
-    setup_minutes: 8,
-    minutes_saved_per_run: 12,
-  },
-  // Aesthetics
-  {
-    id: 'aesthetics-consultation',
-    name: 'Consultation Booking Flow',
-    industry: 'aesthetics',
-    description: 'When a lead enquires about treatments, send a personalised consultation booking link with treatment info and pricing.',
-    trigger_type: 'new_lead',
-    featured: true,
-    setup_minutes: 8,
-    minutes_saved_per_run: 15,
-  },
-  {
-    id: 'aesthetics-aftercare',
-    name: 'Treatment Aftercare Sequence',
-    industry: 'aesthetics',
-    description: 'Send tailored aftercare instructions for Botox, fillers, skin treatments etc. Includes do\'s, don\'ts, and when to expect results.',
-    trigger_type: 'appointment_completed',
-    featured: false,
-    setup_minutes: 10,
-    minutes_saved_per_run: 12,
-  },
-  {
-    id: 'aesthetics-rebooking',
-    name: 'Treatment Top-Up Reminder',
-    industry: 'aesthetics',
-    description: 'Remind clients when their treatment results will start to fade (e.g. Botox at 3 months, filler at 9 months) with a rebooking link.',
-    trigger_type: 'scheduled',
-    featured: false,
-    setup_minutes: 8,
-    minutes_saved_per_run: 10,
-  },
-  // Legal
-  {
-    id: 'legal-intake',
-    name: 'Client Intake Automation',
-    industry: 'legal',
-    description: 'Collect case details, send engagement letters, and schedule initial consultations automatically when new enquiries come in.',
-    trigger_type: 'new_lead',
-    featured: true,
-    setup_minutes: 15,
-    minutes_saved_per_run: 30,
-  },
-  {
-    id: 'legal-case-update',
-    name: 'Case Progress Update',
-    industry: 'legal',
-    description: 'Send automated case status updates to clients at key milestones. Reduces "where\'s my case?" phone calls.',
-    trigger_type: 'manual',
-    featured: false,
-    setup_minutes: 10,
-    minutes_saved_per_run: 15,
-  },
-  // Home Services
-  {
-    id: 'home-quote-follow-up',
-    name: 'Quote Follow-Up',
-    industry: 'home_services',
-    description: 'Automatically follow up with customers 24h and 72h after sending a quote. Includes a direct booking link to lock in the job.',
-    trigger_type: 'manual',
-    featured: true,
-    setup_minutes: 5,
-    minutes_saved_per_run: 15,
-  },
-  {
-    id: 'home-seasonal-reminder',
-    name: 'Seasonal Service Reminder',
-    industry: 'home_services',
-    description: 'Remind past customers about seasonal services — boiler checks in autumn, gutter cleaning in spring, garden maintenance in summer.',
-    trigger_type: 'scheduled',
-    featured: false,
-    setup_minutes: 10,
-    minutes_saved_per_run: 20,
-  },
-  // Physiotherapy
-  {
-    id: 'physio-exercise-plan',
-    name: 'Exercise Plan Delivery',
-    industry: 'physiotherapy',
-    description: 'Send personalised exercise plans and recovery instructions after each physio session. Includes video links and progress tracking.',
-    trigger_type: 'appointment_completed',
-    featured: true,
-    setup_minutes: 10,
-    minutes_saved_per_run: 15,
-  },
-  {
-    id: 'physio-progress-check',
-    name: 'Recovery Check-In',
-    industry: 'physiotherapy',
-    description: 'Send a follow-up message 3 days after treatment to check pain levels and recovery progress. Flags patients who need attention.',
-    trigger_type: 'appointment_completed',
-    featured: false,
-    setup_minutes: 5,
-    minutes_saved_per_run: 10,
-  },
-];
+interface DeployedTemplate {
+  template_id: string;
+  is_active: boolean;
+  deployed_at: string;
+}
 
 const INDUSTRIES = [
   { label: 'All', value: '' },
@@ -223,6 +40,9 @@ function ClockIcon({ className }: { className?: string }) {
 }
 function TrendUpIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
+}
+function CheckIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
 }
 
 function IndustryBadge({ industry }: { industry: string }) {
@@ -259,9 +79,21 @@ function TriggerBadge({ trigger }: { trigger: string }) {
   );
 }
 
-function TemplateCard({ template }: { template: Template }) {
+function TemplateCard({
+  template,
+  isDeployed,
+  deploying,
+  onDeploy,
+  onDeactivate,
+}: {
+  template: Template;
+  isDeployed: boolean;
+  deploying: boolean;
+  onDeploy: () => void;
+  onDeactivate: () => void;
+}) {
   return (
-    <div className="relative flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div className={`relative flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${isDeployed ? 'border-green-300 ring-1 ring-green-200' : 'border-gray-200'}`}>
       {template.featured && (
         <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-700">
           <StarFillIcon className="h-3 w-3 text-yellow-500" />
@@ -269,8 +101,15 @@ function TemplateCard({ template }: { template: Template }) {
         </div>
       )}
 
+      {isDeployed && (
+        <div className="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+          <CheckIcon className="h-3 w-3" />
+          Active
+        </div>
+      )}
+
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-purple/10 text-brand-purple">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${isDeployed ? 'bg-green-100 text-green-600' : 'bg-brand-purple/10 text-brand-purple'}`}>
           <ZapIcon className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">
@@ -301,25 +140,108 @@ function TemplateCard({ template }: { template: Template }) {
         </div>
       </div>
 
-      <button className="mt-4 w-full rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-purple/90 focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2">
-        Use Template
-      </button>
+      {isDeployed ? (
+        <button
+          onClick={onDeactivate}
+          disabled={deploying}
+          className="mt-4 w-full rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+        >
+          {deploying ? 'Deactivating...' : 'Deactivate'}
+        </button>
+      ) : (
+        <button
+          onClick={onDeploy}
+          disabled={deploying}
+          className="mt-4 w-full rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-purple/90 focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 disabled:opacity-50"
+        >
+          {deploying ? 'Activating...' : 'Use Template'}
+        </button>
+      )}
     </div>
   );
 }
 
 export default function TemplatesPage() {
   const [activeIndustry, setActiveIndustry] = useState('');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [deployedIds, setDeployedIds] = useState<Set<string>>(new Set());
+  const [deployingId, setDeployingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch templates + deployed state on mount
+  useEffect(() => {
+    async function load() {
+      const [templatesRes, deployedRes] = await Promise.all([
+        fetch('/api/templates'),
+        fetch('/api/templates/deploy'),
+      ]);
+      const templatesData = await templatesRes.json();
+      const deployedData = await deployedRes.json();
+
+      setTemplates(templatesData.templates || []);
+      setDeployedIds(
+        new Set(
+          (deployedData.deployed || [])
+            .filter((d: DeployedTemplate) => d.is_active)
+            .map((d: DeployedTemplate) => d.template_id)
+        )
+      );
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const deployTemplate = useCallback(async (templateId: string) => {
+    setDeployingId(templateId);
+    try {
+      const res = await fetch('/api/templates/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
+      if (res.ok) {
+        setDeployedIds(prev => new Set(prev).add(templateId));
+      }
+    } finally {
+      setDeployingId(null);
+    }
+  }, []);
+
+  const deactivateTemplate = useCallback(async (templateId: string) => {
+    setDeployingId(templateId);
+    try {
+      const res = await fetch(`/api/templates/deploy?templateId=${templateId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setDeployedIds(prev => {
+          const next = new Set(prev);
+          next.delete(templateId);
+          return next;
+        });
+      }
+    } finally {
+      setDeployingId(null);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
-    if (!activeIndustry) return TEMPLATES;
-    return TEMPLATES.filter(t => t.industry === activeIndustry || t.industry === 'general');
-  }, [activeIndustry]);
+    if (!activeIndustry) return templates;
+    return templates.filter(t => t.industry === activeIndustry || t.industry === 'general');
+  }, [activeIndustry, templates]);
 
-  // Sort: featured first
   const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-  }, [filtered]);
+    return [...filtered].sort((a, b) => {
+      // Deployed first, then featured, then by name
+      const aDeployed = deployedIds.has(a.id) ? 1 : 0;
+      const bDeployed = deployedIds.has(b.id) ? 1 : 0;
+      if (bDeployed !== aDeployed) return bDeployed - aDeployed;
+      if (b.featured !== a.featured) return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+      return 0;
+    });
+  }, [filtered, deployedIds]);
+
+  const activeCount = deployedIds.size;
 
   return (
     <div>
@@ -327,6 +249,11 @@ export default function TemplatesPage() {
         <h1 className="text-2xl font-bold text-gray-900">Workflow Templates</h1>
         <p className="mt-1 text-sm text-gray-500">
           Pre-built automation workflows for your industry. Click &quot;Use Template&quot; to activate.
+          {activeCount > 0 && (
+            <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+              {activeCount} active
+            </span>
+          )}
         </p>
       </div>
 
@@ -335,8 +262,8 @@ export default function TemplatesPage() {
         {INDUSTRIES.map((industry) => {
           const isActive = activeIndustry === industry.value;
           const count = industry.value
-            ? TEMPLATES.filter(t => t.industry === industry.value).length
-            : TEMPLATES.length;
+            ? templates.filter(t => t.industry === industry.value).length
+            : templates.length;
           return (
             <button
               key={industry.value}
@@ -356,11 +283,26 @@ export default function TemplatesPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((template) => (
-          <TemplateCard key={template.id} template={template} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-64 animate-pulse rounded-xl bg-gray-100" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {sorted.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              isDeployed={deployedIds.has(template.id)}
+              deploying={deployingId === template.id}
+              onDeploy={() => deployTemplate(template.id)}
+              onDeactivate={() => deactivateTemplate(template.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
