@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   // Find existing lead by phone number
   const { data: lead } = await supabaseAdmin.from('leads')
-    .select('id, business_id').eq('phone', from)
+    .select('id, org_id').eq('phone', from)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
   if (lead) {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
           .eq('id', conv.id);
       } else {
         await supabaseAdmin.from('conversations')
-          .insert({ lead_id: lead.id, business_id: lead.business_id, channel: 'sms', messages: [newMsg] });
+          .insert({ lead_id: lead.id, org_id: lead.org_id, channel: 'sms', messages: [newMsg] });
       }
     } catch (err) {
       console.error('SMS conversation save error:', err);

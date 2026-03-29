@@ -30,7 +30,7 @@ async function sendReminders() {
   // Get upcoming appointments that haven't had reminders sent
   const { data: appointments } = await supabaseAdmin
     .from('appointments')
-    .select('id, datetime, service, status, reminder_48h_sent, reminder_24h_sent, reminder_2h_sent, business_id, lead_id, leads(name, email, phone), businesses(name)')
+    .select('id, datetime, service, status, reminder_48h_sent, reminder_24h_sent, reminder_2h_sent, org_id, lead_id, leads(name, email, phone), organisations(name)')
     .eq('status', 'confirmed')
     .gte('datetime', now.toISOString());
 
@@ -40,7 +40,7 @@ async function sendReminders() {
     const apptTime = new Date(appt.datetime as string);
     const hoursUntil = (apptTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     const lead = appt.leads as Record<string, string> | null;
-    const biz = appt.businesses as Record<string, string> | null;
+    const biz = appt.organisations as Record<string, string> | null;
 
     if (!lead || !biz) continue;
 

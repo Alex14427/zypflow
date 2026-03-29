@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { businessId, message, conversationId, leadId } = parsed.data;
+  const { orgId, message, conversationId, leadId } = parsed.data;
 
   // 3. Fetch business details
   const { data: biz } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url, email')
-    .eq('id', businessId)
+    .eq('id', orgId)
     .single();
 
   if (!biz) {
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   let convId = conversationId;
   if (!convId) {
     const { data } = await supabaseAdmin.from('conversations')
-      .insert({ business_id: businessId, messages, channel: 'chat' })
+      .insert({ org_id: orgId, messages, channel: 'chat' })
       .select('id').single();
     convId = data?.id;
   } else {
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
   let currentLeadId = leadId;
   if (extractedLead && (extractedLead.email || extractedLead.phone)) {
     const leadData = {
-      business_id: businessId,
+      org_id: orgId,
       name: extractedLead.name,
       email: extractedLead.email,
       phone: extractedLead.phone,
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
       fireWebhook(
         process.env.MAKE_NEW_LEAD_WEBHOOK,
         {
-          business_id: businessId,
+          org_id: orgId,
           lead_id: currentLeadId,
           ...extractedLead,
           score: scoreLead(extractedLead),

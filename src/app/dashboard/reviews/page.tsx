@@ -21,13 +21,13 @@ export default function ReviewsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('businesses').select('id').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('organisations').select('id').eq('email', user.email).maybeSingle();
       if (!biz) return;
 
       const { data } = await supabase
         .from('reviews')
         .select('id, platform, rating, review_text, requested_at, completed_at, leads(name, email)')
-        .eq('business_id', biz.id)
+        .eq('org_id', biz.id)
         .order('requested_at', { ascending: false })
         .limit(100);
       setReviews((data as unknown as Review[]) || []);

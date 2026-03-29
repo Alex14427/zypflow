@@ -69,8 +69,8 @@ export default function AdminDashboardPage() {
       { data: recentSignups },
       { data: recentEnquiries },
     ] = await Promise.all([
-      supabase.from('businesses').select('*', { count: 'exact', head: true }),
-      supabase.from('businesses').select('plan, active'),
+      supabase.from('organisations').select('*', { count: 'exact', head: true }),
+      supabase.from('organisations').select('plan, active'),
       supabase.from('leads').select('*', { count: 'exact', head: true }),
       supabase.from('conversations').select('*', { count: 'exact', head: true }),
       supabase.from('appointments').select('*', { count: 'exact', head: true }),
@@ -82,9 +82,9 @@ export default function AdminDashboardPage() {
       supabase.from('prospects').select('status'),
       supabase.from('website_enquiries').select('*', { count: 'exact', head: true }),
       supabase.from('website_enquiries').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo.toISOString()),
-      supabase.from('businesses').select('*', { count: 'exact', head: true }).eq('plan', 'cancelled'),
-      supabase.from('businesses').select('id').eq('plan', 'trial').lte('trial_ends_at', threeDaysFromNow.toISOString()).gte('trial_ends_at', now.toISOString()),
-      supabase.from('businesses').select('name, email, plan, created_at, active').order('created_at', { ascending: false }).limit(15),
+      supabase.from('organisations').select('*', { count: 'exact', head: true }).eq('plan', 'cancelled'),
+      supabase.from('organisations').select('id').eq('plan', 'trial').lte('trial_ends_at', threeDaysFromNow.toISOString()).gte('trial_ends_at', now.toISOString()),
+      supabase.from('organisations').select('name, email, plan, created_at, active').order('created_at', { ascending: false }).limit(15),
       supabase.from('website_enquiries').select('name, email, business_name, created_at, status').order('created_at', { ascending: false }).limit(10),
     ]);
 

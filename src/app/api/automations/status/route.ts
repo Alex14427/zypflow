@@ -23,9 +23,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const businessId = req.nextUrl.searchParams.get('businessId');
-  if (!businessId) {
-    return NextResponse.json({ error: 'businessId required' }, { status: 400 });
+  const orgId = req.nextUrl.searchParams.get('orgId');
+  if (!orgId) {
+    return NextResponse.json({ error: 'orgId required' }, { status: 400 });
   }
 
   const now = new Date();
@@ -35,26 +35,26 @@ export async function GET(req: NextRequest) {
     supabaseAdmin
       .from('follow_ups')
       .select('id, sent_at, step_number', { count: 'exact' })
-      .eq('business_id', businessId)
+      .eq('org_id', orgId)
       .gte('sent_at', sevenDaysAgo.toISOString()),
 
     supabaseAdmin
       .from('appointments')
       .select('id, reminder_48h_sent, reminder_24h_sent, reminder_2h_sent, status')
-      .eq('business_id', businessId)
+      .eq('org_id', orgId)
       .eq('status', 'confirmed')
       .gte('datetime', now.toISOString()),
 
     supabaseAdmin
       .from('reviews')
       .select('id, requested_at, completed_at, rating', { count: 'exact' })
-      .eq('business_id', businessId)
+      .eq('org_id', orgId)
       .gte('requested_at', sevenDaysAgo.toISOString()),
 
     supabaseAdmin
       .from('leads')
       .select('id, status', { count: 'exact' })
-      .eq('business_id', businessId)
+      .eq('org_id', orgId)
       .in('status', ['new', 'contacted']),
   ]);
 

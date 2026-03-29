@@ -11,14 +11,14 @@ const PRICES: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
-  const { plan, businessId, email } = await req.json();
+  const { plan, orgId, email } = await req.json();
 
   if (!plan || !PRICES[plan] || PRICES[plan] === '') {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   }
 
-  // If no businessId/email, redirect to signup with plan preselected
-  if (!businessId || !email) {
+  // If no orgId/email, redirect to signup with plan preselected
+  if (!orgId || !email) {
     return NextResponse.json({
       url: `${process.env.NEXT_PUBLIC_APP_URL}/signup?plan=${plan}`,
     });
@@ -27,9 +27,9 @@ export async function POST(req: NextRequest) {
   // Prevent duplicate subscriptions — check if already on a paid plan
   const supabaseAdmin = (await import('@/lib/supabase')).supabaseAdmin;
   const { data: existingBiz } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('plan, stripe_subscription_id')
-    .eq('id', businessId)
+    .eq('id', orgId)
     .single();
 
   if (existingBiz?.stripe_subscription_id && existingBiz.plan !== 'trial' && existingBiz.plan !== 'cancelled') {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     line_items: [{ price: PRICES[plan], quantity: 1 }],
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
-    metadata: { businessId, plan },
+    metadata: { orgId, plan },
     automatic_tax: { enabled: true },
     subscription_data: {
       trial_period_days: 14,

@@ -25,7 +25,7 @@ const PERSONALITIES = [
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
@@ -78,12 +78,12 @@ export default function OnboardingPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase
-          .from('businesses')
+          .from('organisations')
           .select('id, name, website, phone, industry')
           .eq('email', user.email)
           .maybeSingle();
         if (data) {
-          setBusinessId(data.id);
+          setOrgId(data.id);
           if (data.name) setName(data.name);
           if (data.website) setWebsite(data.website);
           if (data.phone) setPhone(data.phone);
@@ -166,9 +166,9 @@ export default function OnboardingPage() {
   }, [name, industry, services, faqs, personality, extraNotes, bookingUrl]);
 
   async function saveAndNext(updateData: Record<string, unknown>) {
-    if (!businessId) return;
+    if (!orgId) return;
     setSaving(true);
-    await supabase.from('businesses').update(updateData).eq('id', businessId);
+    await supabase.from('organisations').update(updateData).eq('id', orgId);
     setSaving(false);
     setStep((s) => s + 1);
   }
@@ -442,16 +442,16 @@ export default function OnboardingPage() {
             loading={saving}
             onBack={() => setStep(4)}
             onClick={async () => {
-              if (!businessId) return;
+              if (!orgId) return;
               setSaving(true);
 
               const updateData: Record<string, unknown> = { ai_personality: personality };
 
               if (extraNotes) {
                 const { data: current } = await supabase
-                  .from('businesses')
+                  .from('organisations')
                   .select('knowledge_base')
-                  .eq('id', businessId)
+                  .eq('id', orgId)
                   .single();
                 const existing = (current?.knowledge_base as FAQ[]) || [];
                 updateData.knowledge_base = [
@@ -460,7 +460,7 @@ export default function OnboardingPage() {
                 ];
               }
 
-              await supabase.from('businesses').update(updateData).eq('id', businessId);
+              await supabase.from('organisations').update(updateData).eq('id', orgId);
               setSaving(false);
               setStep(6);
             }}
@@ -494,10 +494,10 @@ export default function OnboardingPage() {
             loading={saving}
             onBack={() => setStep(5)}
             onClick={async () => {
-              if (!businessId) return;
+              if (!orgId) return;
               setSaving(true);
               if (generatedPrompt) {
-                await supabase.from('businesses').update({ system_prompt: generatedPrompt }).eq('id', businessId);
+                await supabase.from('organisations').update({ system_prompt: generatedPrompt }).eq('id', orgId);
               }
               setSaving(false);
               setStep(7);
@@ -519,7 +519,7 @@ export default function OnboardingPage() {
   // Screen 7 — Widget installation
   if (step === 7) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
-    const embedCode = `<script src="${appUrl}/v1.js" data-business-id="${businessId}"></script>`;
+    const embedCode = `<script src="${appUrl}/v1.js" data-org-id="${orgId}"></script>`;
 
     return (
       <OnboardingShell step={7} title="Install your chat widget" subtitle="One line of code — that's all it takes.">

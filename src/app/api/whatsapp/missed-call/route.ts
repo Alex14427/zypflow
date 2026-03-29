@@ -62,12 +62,12 @@ export async function POST(req: NextRequest) {
 
   try {
     // Look up the business by the Twilio phone number that was dialled
-    // First try the env var override, then fall back to the businesses table
+    // First try the env var override, then fall back to the organisations table
     const twilioPhoneNumber =
       process.env.TWILIO_PHONE_NUMBER || calledNumber;
 
     const { data: business, error: bizError } = await supabaseAdmin
-      .from('businesses')
+      .from('organisations')
       .select('id, name, wa_phone_number_id, wa_access_token, twilio_phone_number')
       .or(
         `twilio_phone_number.eq.${calledNumber},twilio_phone_number.eq.${twilioPhoneNumber}`
@@ -90,10 +90,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const message = `Hi! Sorry we missed your call at ${business.name}. How can we help? Reply here and we'll get back to you shortly.`;
+    // Use a pre-approved template for first contact (required by Meta outside 24h window)
+    // Falls back to text message if template fails (e.g. template not approved yet)
+    const templatePayload = {
+      messaging_product: 'whatsapp',
+      to: callerNumber,
+      type: 'template',
+      template: {
+        name: 'missed_call_reply',
+        language: { code: 'en_GB' },
+        components: [
+          {
+            type: 'body',
+            parameters: [{ type: 'text', text: business.name }],
+          },
+        ],
+      },
+    };
 
-    // Send WhatsApp message via Meta Cloud API
-    const waResponse = await fetch(
+    const textFallbackPayload = {
+      messaging_product: 'whatsapp',
+      to: callerNumber,
+      type: 'text',
+      text: {
+        body: `Hi! Sorry we missed your call at ${business.name}. How can we help? Reply here and we'll get back to you shortly.`,
+      },
+    };
+
+    // Try template first, fall back to text
+    let waResponse = await fetch(
       `${WHATSAPP_API}/${business.wa_phone_number_id}/messages`,
       {
         method: 'POST',
@@ -101,14 +126,24 @@ export async function POST(req: NextRequest) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${business.wa_access_token}`,
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: callerNumber,
-          type: 'text',
-          text: { body: message },
-        }),
+        body: JSON.stringify(templatePayload),
       }
     );
+
+    if (!waResponse.ok) {
+      console.info('[missed-call] Template failed, falling back to text message');
+      waResponse = await fetch(
+        `${WHATSAPP_API}/${business.wa_phone_number_id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${business.wa_access_token}`,
+          },
+          body: JSON.stringify(textFallbackPayload),
+        }
+      );
+    }
 
     if (!waResponse.ok) {
       const errBody = await waResponse.text();
@@ -116,7 +151,7 @@ export async function POST(req: NextRequest) {
     } else {
       console.info(
         '[missed-call] WhatsApp reply sent',
-        { businessId: business.id, to: callerNumber, callStatus: CallStatus }
+        { orgId: business.id, to: callerNumber, callStatus: CallStatus }
       );
     }
   } catch (err) {

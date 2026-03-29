@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data: appt } = await supabaseAdmin
     .from('appointments')
-    .select('id, lead_id, business_id, service, leads(name, email, phone), businesses(name, google_review_link)')
+    .select('id, lead_id, org_id, service, leads(name, email, phone), organisations(name, google_review_link)')
     .eq('id', appointmentId)
     .maybeSingle();
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   const lead = appt.leads as unknown as Record<string, string> | null;
-  const biz = appt.businesses as unknown as Record<string, string> | null;
+  const biz = appt.organisations as unknown as Record<string, string> | null;
   if (!lead || !biz) {
     return NextResponse.json({ error: 'Lead or business not found' }, { status: 404 });
   }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   // Create review record
   await supabaseAdmin.from('reviews').insert({
     lead_id: appt.lead_id,
-    business_id: appt.business_id,
+    org_id: appt.org_id,
     platform: 'google',
     requested_at: new Date().toISOString(),
   });

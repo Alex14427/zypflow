@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface Business {
+interface Organisation {
   id: string;
   name: string;
   email: string;
@@ -15,6 +15,8 @@ interface Business {
   google_review_link: string;
   ai_personality: string;
   stripe_customer_id: string | null;
+  wa_phone_number_id: string | null;
+  wa_access_token: string | null;
 }
 
 interface AutomationStatus {
@@ -24,7 +26,7 @@ interface AutomationStatus {
 }
 
 export default function SettingsPage() {
-  const [business, setBusiness] = useState<Business | null>(null);
+  const [business, setBusiness] = useState<Organisation | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -38,26 +40,32 @@ export default function SettingsPage() {
   const [bookingUrl, setBookingUrl] = useState('');
   const [googleReviewLink, setGoogleReviewLink] = useState('');
   const [aiPersonality, setAiPersonality] = useState('');
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState('');
+  const [waAccessToken, setWaAccessToken] = useState('');
+  const [waSaving, setWaSaving] = useState(false);
+  const [waSaved, setWaSaved] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('businesses')
-        .select('id, name, email, phone, website, industry, plan, booking_url, google_review_link, ai_personality, stripe_customer_id')
+      const { data } = await supabase.from('organisations')
+        .select('id, name, email, phone, website, industry, plan, booking_url, google_review_link, ai_personality, stripe_customer_id, wa_phone_number_id, wa_access_token')
         .eq('email', user.email)
         .maybeSingle();
       if (data) {
-        setBusiness(data as Business);
+        setBusiness(data as Organisation);
         setName(data.name || '');
         setPhone(data.phone || '');
         setWebsite(data.website || '');
         setBookingUrl(data.booking_url || '');
         setGoogleReviewLink(data.google_review_link || '');
         setAiPersonality(data.ai_personality || 'warm and friendly');
+        setWaPhoneNumberId(data.wa_phone_number_id || '');
+        setWaAccessToken(data.wa_access_token || '');
 
         // Fetch automation health status
-        fetch(`/api/automations/status?businessId=${data.id}`)
+        fetch(`/api/automations/status?orgId=${data.id}`)
           .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
           .then(d => { if (d.followUps) setAutomationStatus(d); })
           .catch(() => {});
@@ -70,7 +78,7 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!business) return;
     setSaving(true);
-    await supabase.from('businesses').update({
+    await supabase.from('organisations').update({
       name, phone, website, booking_url: bookingUrl,
       google_review_link: googleReviewLink, ai_personality: aiPersonality,
     }).eq('id', business.id);
@@ -89,7 +97,7 @@ export default function SettingsPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
   }
 
-  const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/v1.js" data-business-id="${business?.id}"></script>`;
+  const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/v1.js" data-org-id="${business?.id}"></script>`;
 
   return (
     <div>
@@ -236,6 +244,55 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+
+          {/* WhatsApp Connect */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">WhatsApp Business</h3>
+                <span className={`w-2 h-2 rounded-full ${business?.wa_phone_number_id ? 'bg-green-500' : 'bg-gray-300'}`} />
+              </div>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                business?.wa_phone_number_id ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {business?.wa_phone_number_id ? 'Connected' : 'Not connected'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Send automated WhatsApp messages to leads. Get credentials from your Meta Business Suite.</p>
+            <div className="space-y-3">
+              <Field label="Phone Number ID" value={waPhoneNumberId} onChange={setWaPhoneNumberId} placeholder="e.g. 100234567890" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
+                <input
+                  type="password"
+                  value={waAccessToken}
+                  onChange={e => setWaAccessToken(e.target.value)}
+                  placeholder="Your permanent access token"
+                  className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    if (!business) return;
+                    setWaSaving(true);
+                    await supabase.from('organisations').update({
+                      wa_phone_number_id: waPhoneNumberId || null,
+                      wa_access_token: waAccessToken || null,
+                    }).eq('id', business.id);
+                    setWaSaving(false);
+                    setWaSaved(true);
+                    setTimeout(() => setWaSaved(false), 2000);
+                  }}
+                  disabled={waSaving}
+                  className="bg-brand-purple text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition disabled:opacity-50"
+                >
+                  {waSaving ? 'Saving...' : 'Save WhatsApp Config'}
+                </button>
+                {waSaved && <span className="text-green-600 text-sm">Saved!</span>}
+              </div>
+            </div>
+          </div>
 
           <IntegrationCard
             name="Stripe"

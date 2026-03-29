@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   // Get lead info
   const { data: lead } = await supabaseAdmin
     .from('leads')
-    .select('id, name, email, business_id')
+    .select('id, name, email, org_id')
     .eq('id', leadId)
     .single();
 
@@ -27,9 +27,9 @@ export async function POST(req: NextRequest) {
 
   // Verify user owns this business
   const { data: biz } = await supabaseAdmin
-    .from('businesses')
+    .from('organisations')
     .select('id, name, email')
-    .eq('id', lead.business_id)
+    .eq('id', lead.org_id)
     .single();
 
   if (!biz) {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   // Track the follow-up
   await supabaseAdmin.from('follow_ups').insert({
-    business_id: lead.business_id,
+    org_id: lead.org_id,
     lead_id: leadId,
     type: 'manual_email',
     sent_at: new Date().toISOString(),

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
 interface CalPayload {
   attendees?: { email?: string; name?: string }[];
-  metadata?: { businessId?: string };
+  metadata?: { orgId?: string };
   title?: string;
   startTime?: string;
   endTime?: string;
@@ -38,18 +38,18 @@ interface CalPayload {
 async function handleBooking(payload: CalPayload) {
   const email = payload.attendees?.[0]?.email;
   const name = payload.attendees?.[0]?.name;
-  const businessId = payload.metadata?.businessId;
+  const orgId = payload.metadata?.orgId;
 
-  if (!businessId) return NextResponse.json({ error: 'No businessId' }, { status: 400 });
+  if (!orgId) return NextResponse.json({ error: 'No orgId' }, { status: 400 });
 
   // Get business name for confirmation email
-  const { data: biz } = await supabaseAdmin.from('businesses')
-    .select('name').eq('id', businessId).single();
+  const { data: biz } = await supabaseAdmin.from('organisations')
+    .select('name').eq('id', orgId).single();
 
   let leadId = null;
   if (email) {
     const { data: existing } = await supabaseAdmin.from('leads')
-      .select('id').eq('business_id', businessId).eq('email', email).limit(1).maybeSingle();
+      .select('id').eq('org_id', orgId).eq('email', email).limit(1).maybeSingle();
 
     if (existing) {
       leadId = existing.id;
@@ -57,7 +57,7 @@ async function handleBooking(payload: CalPayload) {
     } else {
       const { data: newLead } = await supabaseAdmin.from('leads')
         .insert({
-          business_id: businessId, name, email,
+          org_id: orgId, name, email,
           source: 'booking', status: 'booked', score: 85,
         })
         .select('id').single();
@@ -69,7 +69,7 @@ async function handleBooking(payload: CalPayload) {
   const startTime = new Date(payload.startTime || new Date().toISOString());
 
   await supabaseAdmin.from('appointments').insert({
-    business_id: businessId,
+    org_id: orgId,
     lead_id: leadId,
     service,
     datetime: payload.startTime,
@@ -88,7 +88,7 @@ async function handleBooking(payload: CalPayload) {
   if (process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK) {
     fireWebhook(
       process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK,
-      { business_id: businessId, lead_id: leadId, email, name, service, datetime: payload.startTime },
+      { org_id: orgId, lead_id: leadId, email, name, service, datetime: payload.startTime },
       'make_appointment_completed'
     ).catch(() => {}); // fire and forget — retries happen inside fireWebhook
   }
