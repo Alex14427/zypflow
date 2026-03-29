@@ -39,7 +39,7 @@ async function runLifecycle() {
   for (const biz of organisations) {
     try {
       // --- TRIAL ENDING SEQUENCE ---
-      if (biz.trial_ends_at && (biz.plan === 'starter' || biz.plan === 'growth' || biz.plan === 'enterprise')) {
+      if (biz.trial_ends_at && biz.plan === 'trial') {
         const trialEnd = new Date(biz.trial_ends_at);
         const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 

@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Trial banner logic
   const trialDaysLeft = org?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(business.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
   const showTrialBanner = trialDaysLeft !== null && trialDaysLeft <= 7 && org?.plan === 'trial';
 
