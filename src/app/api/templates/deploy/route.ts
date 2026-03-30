@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { supabaseAdmin } from '@/lib/supabase';
+import { verifyDashboardUser } from '@/lib/auth-cookie';
 import { z } from 'zod';
 
 const deploySchema = z.object({
@@ -10,18 +10,15 @@ const deploySchema = z.object({
 
 // POST — deploy (activate) a template for the user's org
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies });
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  }
+  const authResult = await verifyDashboardUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+  const { user } = authResult;
 
   // Get user's org
-  const { data: membership } = await supabase
+  const { data: membership } = await supabaseAdmin
     .from('org_members')
     .select('org_id, role')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   if (!membership) {
@@ -41,7 +38,7 @@ export async function POST(req: NextRequest) {
   const { templateId, config } = parsed.data;
 
   // Upsert into deployed_templates (toggle on)
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('deployed_templates')
     .upsert(
       {
@@ -65,17 +62,14 @@ export async function POST(req: NextRequest) {
 
 // DELETE — deactivate a template for the user's org
 export async function DELETE(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const authResult = await verifyDashboardUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+  const { user } = authResult;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  }
-
-  const { data: membership } = await supabase
+  const { data: membership } = await supabaseAdmin
     .from('org_members')
     .select('org_id, role')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   if (!membership) {
@@ -91,7 +85,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'templateId required' }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('deployed_templates')
     .update({ is_active: false })
     .eq('org_id', membership.org_id)
@@ -105,25 +99,22 @@ export async function DELETE(req: NextRequest) {
 }
 
 // GET — list deployed templates for the user's org
-export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies });
+export async function GET(req: NextRequest) {
+  const authResult = await verifyDashboardUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+  const { user } = authResult;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  }
-
-  const { data: membership } = await supabase
+  const { data: membership } = await supabaseAdmin
     .from('org_members')
     .select('org_id')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   if (!membership) {
     return NextResponse.json({ error: 'No organisation found' }, { status: 403 });
   }
 
-  const { data: deployed } = await supabase
+  const { data: deployed } = await supabaseAdmin
     .from('deployed_templates')
     .select('template_id, is_active, config, deployed_at')
     .eq('org_id', membership.org_id)
