@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createServerClient } from '@supabase/ssr';
 
+export const dynamic = 'force-dynamic';
+
 // Returns automation health status for the dashboard
 export async function GET(req: NextRequest) {
   // Auth check using @supabase/ssr cookie-based auth
