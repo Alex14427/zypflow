@@ -10,16 +10,25 @@ import {
 const twimlResponseHeaders = { 'Content-Type': 'text/xml' };
 const emptyTwiml = '<Response></Response>';
 
+function getWebhookUrl(req: NextRequest): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (appUrl) {
+    return `${appUrl.replace(/\/$/, '')}/api/sms/incoming`;
+  }
+
+  return req.url;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const twilioSignature = req.headers.get('x-twilio-signature') ?? '';
     const formData = await req.formData();
     const params = parseTwilioFormData(formData);
-    const webhookUrl = `${(process.env.NEXT_PUBLIC_APP_URL ?? req.nextUrl.origin).replace(/\/$/, '')}/api/sms/incoming`;
 
     const isValidSignature = isValidTwilioWebhookSignature({
       twilioSignature,
-      url: webhookUrl,
+      url: getWebhookUrl(req),
       params,
     });
 
