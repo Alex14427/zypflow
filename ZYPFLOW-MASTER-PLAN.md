@@ -168,9 +168,9 @@ Required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE
 ## 4. DATABASE ARCHITECTURE DECISION
 
 ### Current State: `businesses` table (single-tenant, one business per user)
-### Target State: `organisations` + `org_members` (multi-tenant, teams, roles, RLS)
+### Target State: `businesses` + `org_members` (multi-tenant, teams, roles, RLS)
 
-**Decision [ARCHITECT MODE]: Option A — Migrate to organisations schema.**
+**Decision [ARCHITECT MODE]: Option A — Migrate to businesses schema.**
 
 The multi-tenant schema is non-negotiable for the Agency tier, white-label, team members, and usage credit metering. Every table must have `org_id` + RLS. Doing it later means rewriting every query. Do it once, do it right.
 
@@ -178,7 +178,7 @@ The multi-tenant schema is non-negotiable for the Agency tier, white-label, team
 
 ```sql
 -- CORE
-organisations (id, name, slug, owner_id, plan, stripe_customer_id, stripe_subscription_id, settings, scraping_credits, email_credits, ai_credits, created_at)
+businesses (id, name, slug, owner_id, plan, stripe_customer_id, stripe_subscription_id, settings, scraping_credits, email_credits, ai_credits, created_at)
 org_members (id, org_id, user_id, role [owner/admin/member/viewer], invited_email, accepted_at, created_at)
 
 -- PIPELINE
@@ -224,15 +224,15 @@ The phases below merge both strategies — the SaaS-first build (WhatsApp, templ
 
 ### PHASE 0 — FOUNDATION MIGRATION (Week 0 — 3 days)
 
-**Goal:** Migrate from `businesses` to `organisations` schema without breaking live features.
+**Goal:** Migrate from `businesses` to `businesses` schema without breaking live features.
 
 | # | Task | Details | Risk |
 |---|------|---------|------|
-| 0.1 | Create `organisations` + `org_members` tables | New migration. Keep `businesses` table alive during transition | Low — additive |
-| 0.2 | Data migration script | Copy each `businesses` row → `organisations` row. Create `org_members` entry (role: owner) for each existing user | Medium — must preserve auth |
+| 0.1 | Create `businesses` + `org_members` tables | New migration. Keep `businesses` table alive during transition | Low — additive |
+| 0.2 | Data migration script | Copy each `businesses` row → `businesses` row. Create `org_members` entry (role: owner) for each existing user | Medium — must preserve auth |
 | 0.3 | Update all queries + lib files | Replace `business_id` references with `org_id`. Update Supabase client helpers | High — touches every page |
 | 0.4 | Update RLS policies | Apply `org_isolation` pattern to all tables | Medium |
-| 0.5 | Update onboarding wizard | Creates `organisation` + `org_member` instead of `business` | Low |
+| 0.5 | Update onboarding wizard | Creates `business` + `org_member` instead of `business` | Low |
 | 0.6 | Smoke test all 29 routes | Every page loads, auth works, data displays | Required before proceeding |
 
 **Exit criteria:** All existing features work identically on the new schema. Zero data loss.

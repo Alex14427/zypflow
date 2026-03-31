@@ -74,7 +74,7 @@ async function updateOrganisationById(
     active?: boolean;
   },
 ): Promise<void> {
-  const { error } = await supabaseAdmin.from('organisations').update(updates).eq('id', orgId);
+  const { error } = await supabaseAdmin.from('businesses').update(updates).eq('id', orgId);
 
   if (error) {
     throw new StripeWebhookError('EVENT_PROCESS_FAILED');
@@ -90,7 +90,7 @@ async function updateOrganisationBySubscriptionId(
   },
 ): Promise<void> {
   const { error } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .update(updates)
     .eq('stripe_subscription_id', subscriptionId);
 
@@ -107,7 +107,7 @@ async function updateOrganisationByCustomerId(
   },
 ): Promise<void> {
   const { error } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .update(updates)
     .eq('stripe_customer_id', customerId);
 

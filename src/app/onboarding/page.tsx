@@ -78,7 +78,7 @@ export default function OnboardingPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase
-          .from('organisations')
+          .from('businesses')
           .select('id, name, website, phone, industry')
           .eq('email', user.email)
           .maybeSingle();
@@ -168,7 +168,7 @@ export default function OnboardingPage() {
   async function saveAndNext(updateData: Record<string, unknown>) {
     if (!orgId) return;
     setSaving(true);
-    await supabase.from('organisations').update(updateData).eq('id', orgId);
+    await supabase.from('businesses').update(updateData).eq('id', orgId);
     setSaving(false);
     setStep((s) => s + 1);
   }
@@ -449,7 +449,7 @@ export default function OnboardingPage() {
 
               if (extraNotes) {
                 const { data: current } = await supabase
-                  .from('organisations')
+                  .from('businesses')
                   .select('knowledge_base')
                   .eq('id', orgId)
                   .single();
@@ -460,7 +460,7 @@ export default function OnboardingPage() {
                 ];
               }
 
-              await supabase.from('organisations').update(updateData).eq('id', orgId);
+              await supabase.from('businesses').update(updateData).eq('id', orgId);
               setSaving(false);
               setStep(6);
             }}
@@ -497,7 +497,7 @@ export default function OnboardingPage() {
               if (!orgId) return;
               setSaving(true);
               if (generatedPrompt) {
-                await supabase.from('organisations').update({ system_prompt: generatedPrompt }).eq('id', orgId);
+                await supabase.from('businesses').update({ system_prompt: generatedPrompt }).eq('id', orgId);
               }
               setSaving(false);
               setStep(7);

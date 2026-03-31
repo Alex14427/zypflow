@@ -23,7 +23,7 @@ export default function AnalyticsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('organisations').select('id, plan').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('businesses').select('id, plan').eq('email', user.email).maybeSingle();
       if (!biz) return;
 
       const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;

@@ -58,7 +58,7 @@ export default function DashboardOverview() {
       if (!user) return;
 
       const { data: biz } = await supabase
-        .from('organisations')
+        .from('businesses')
         .select('id, name, services, knowledge_base, booking_url, google_review_link')
         .eq('email', user.email)
         .maybeSingle();

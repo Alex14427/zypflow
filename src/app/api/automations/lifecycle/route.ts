@@ -26,17 +26,17 @@ async function runLifecycle() {
   };
 
   // Get all active businesses with trial info
-  const { data: organisations } = await supabaseAdmin
-    .from('organisations')
+  const { data: businesses } = await supabaseAdmin
+    .from('businesses')
     .select('id, name, email, plan, trial_ends_at, system_prompt, booking_url, google_review_link, created_at')
     .eq('active', true);
 
-  if (!organisations) return NextResponse.json(results);
+  if (!businesses) return NextResponse.json(results);
 
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
 
-  for (const biz of organisations) {
+  for (const biz of businesses) {
     try {
       // --- TRIAL ENDING SEQUENCE ---
       if (biz.trial_ends_at && biz.plan === 'trial') {

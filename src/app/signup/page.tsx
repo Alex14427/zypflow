@@ -73,7 +73,7 @@ function SignupContent() {
 
     if (authData.user) {
       // Create organisation
-      const { data: org, error: orgError } = await supabase.from('organisations').insert({
+      const { data: org, error: orgError } = await supabase.from('businesses').insert({
         name: businessName,
         email,
         owner_id: authData.user.id,
