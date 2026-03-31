@@ -133,13 +133,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
   const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null;
   const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
-  const priceId = invoice.lines.data[0]?.pricing?.price_details?.price ?? null;
+  const priceId = invoice.lines.data[0]?.price?.id ?? null;
   const resolvedPlan = resolvePlanFromPriceId(priceId);
 
   if (subscriptionId) {
     await updateOrganisationBySubscriptionId(subscriptionId, {
       plan: resolvedPlan,
       stripe_subscription_id: subscriptionId,
+      active: true,
     });
     return;
   }
