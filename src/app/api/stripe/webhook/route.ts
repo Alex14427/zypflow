@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
       }
 
       if (
-        error.message === 'STRIPE_NOT_CONFIGURED'
-        || error.message === 'WEBHOOK_NOT_CONFIGURED'
+        error.message === 'STRIPE_NOT_CONFIGURED' ||
+        error.message === 'WEBHOOK_NOT_CONFIGURED'
       ) {
         console.error('Stripe webhook configuration error:', error.message);
         return NextResponse.json({ error: 'Billing webhook is not configured' }, { status: 500 });
