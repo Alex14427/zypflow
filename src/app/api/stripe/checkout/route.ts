@@ -1,54 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { z } from 'zod';
+import {
+  createStripeCheckoutSession,
+  StripeCheckoutError,
+} from '@/services/stripe-checkout.service';
 
-let _stripe: Stripe | null = null;
-function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_missing'); return _stripe; }
-
-const PRICES: Record<string, string> = {
-  starter: process.env.STRIPE_STARTER_PRICE_ID || '',
-  growth: process.env.STRIPE_GROWTH_PRICE_ID || '',
-  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID || '',
-};
+const checkoutBodySchema = z.object({
+  plan: z.enum(['starter', 'growth', 'enterprise']),
+  orgId: z.string().uuid().optional(),
+  email: z.string().email().optional(),
+});
 
 export async function POST(req: NextRequest) {
-  const { plan, orgId, email } = await req.json();
+  try {
+    const body = await req.json();
+    const parsed = checkoutBodySchema.safeParse(body);
 
-  if (!plan || !PRICES[plan] || PRICES[plan] === '') {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 });
+    }
+
+    const result = await createStripeCheckoutSession(parsed.data);
+
+    return NextResponse.json(
+      {
+        url: result.checkoutUrl,
+        sessionId: result.sessionId,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (error instanceof StripeCheckoutError) {
+      if (error.message === 'DUPLICATE_SUBSCRIPTION') {
+        return NextResponse.json(
+          { error: 'You already have an active subscription. Manage billing in Settings.' },
+          { status: 409 },
+        );
+      }
+
+      if (
+        error.message === 'STRIPE_NOT_CONFIGURED' ||
+        error.message === 'PRICE_NOT_CONFIGURED' ||
+        error.message === 'APP_URL_NOT_CONFIGURED'
+      ) {
+        console.error('Stripe checkout configuration error:', error.message);
+        return NextResponse.json({ error: 'Billing is not configured' }, { status: 500 });
+      }
+
+      return NextResponse.json({ error: 'Unable to create checkout session' }, { status: 500 });
+    }
+
+    console.error('Stripe checkout route failed:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // If no orgId/email, redirect to signup with plan preselected
-  if (!orgId || !email) {
-    return NextResponse.json({
-      url: `${process.env.NEXT_PUBLIC_APP_URL}/signup?plan=${plan}`,
-    });
-  }
-
-  // Prevent duplicate subscriptions — check if already on a paid plan
-  const supabaseAdmin = (await import('@/lib/supabase')).supabaseAdmin;
-  const { data: existingBiz } = await supabaseAdmin
-    .from('organisations')
-    .select('plan, stripe_subscription_id')
-    .eq('id', orgId)
-    .single();
-
-  if (existingBiz?.stripe_subscription_id && existingBiz.plan !== 'trial' && existingBiz.plan !== 'cancelled') {
-    return NextResponse.json({ error: 'You already have an active subscription. Manage it from Settings.' }, { status: 400 });
-  }
-
-  const session = await getStripe().checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    customer_email: email,
-    line_items: [{ price: PRICES[plan], quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
-    metadata: { orgId, plan },
-    automatic_tax: { enabled: true },
-    subscription_data: {
-      trial_period_days: 14,
-    },
-  });
-
-  return NextResponse.json({ url: session.url });
 }
