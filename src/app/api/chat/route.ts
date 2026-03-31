@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAI, getAnthropic, MODELS } from '@/lib/ai-client';
-import { supabaseAdmin } from '@/lib/supabase';
 import { chatRateLimit } from '@/lib/ratelimit';
 import { chatInputSchema } from '@/lib/validators';
-import { scoreLead } from '@/lib/scoring';
-import { getSystemPrompt } from '@/lib/prompts';
-import { fireWebhook } from '@/lib/webhook';
-import { sendLeadNotification } from '@/lib/email';
+import { processChatMessage } from '@/services/chat.service';
 
 function corsHeaders() {
   return {
@@ -41,155 +36,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { orgId, message, conversationId, leadId } = parsed.data;
-
-  // 3. Fetch business details
-  const { data: biz } = await supabaseAdmin
-    .from('organisations')
-    .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url, email')
-    .eq('id', orgId)
-    .single();
-
-  if (!biz) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404, headers: corsHeaders() });
-  }
-
-  // 4. Fetch or create conversation
-  let messages: { role: string; content: string; timestamp: string }[] = [];
-  if (conversationId) {
-    const { data: conv } = await supabaseAdmin
-      .from('conversations').select('messages').eq('id', conversationId).single();
-    if (conv) messages = conv.messages;
-  }
-
-  // 5. Build system prompt
-  const systemPrompt = biz.system_prompt || getSystemPrompt(
-    biz.name,
-    biz.industry || 'general',
-    biz.services || [],
-    biz.knowledge_base || [],
-    biz.booking_url,
-    biz.ai_personality || 'friendly and professional',
-    biz.email
-  );
-
-  messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
-
-  // 6. Call AI — GPT-4o primary, Claude Sonnet fallback
-  // Cap conversation history to last 20 messages to prevent token overflows and control costs
-  const recentMessages = messages.slice(-20);
-  let reply = '';
-  const chatMessages = recentMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-
   try {
-    const openai = getOpenAI();
-    const completion = await openai.chat.completions.create({
-      model: MODELS.chat,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...chatMessages,
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
+    const result = await processChatMessage({
+      ...parsed.data,
+      conversationId: parsed.data.conversationId ?? undefined,
+      leadId: parsed.data.leadId ?? undefined,
     });
-    reply = completion.choices[0].message.content || '';
-  } catch (openaiError) {
-    console.error('OpenAI failed, falling back to Claude:', openaiError);
-    try {
-      const anthropic = getAnthropic();
-      const claudeResponse = await anthropic.messages.create({
-        model: MODELS.chatFallback,
-        max_tokens: 500,
-        system: systemPrompt,
-        messages: chatMessages,
-      });
-      const textBlock = claudeResponse.content.find((b) => b.type === 'text');
-      reply = textBlock ? textBlock.text : '';
-    } catch (claudeError) {
-      console.error('Claude also failed:', claudeError);
-      reply = "I'm sorry, I'm having trouble right now. Please try again in a moment.";
+    return NextResponse.json(result, { headers: corsHeaders() });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'ORG_NOT_FOUND') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404, headers: corsHeaders() });
     }
+
+    console.error('Chat route failed:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500, headers: corsHeaders() }
+    );
   }
-
-  // 7. Parse lead data if extracted
-  const leadMatch = reply.match(/<!--LEAD:(.*?)-->/s);
-  let extractedLead = null;
-  if (leadMatch) {
-    try { extractedLead = JSON.parse(leadMatch[1]); } catch {}
-    reply = reply.replace(/<!--LEAD:.*?-->/s, '').trim();
-  }
-
-  // 8. Save conversation
-  messages.push({ role: 'assistant', content: reply, timestamp: new Date().toISOString() });
-
-  let convId = conversationId;
-  if (!convId) {
-    const { data } = await supabaseAdmin.from('conversations')
-      .insert({ org_id: orgId, messages, channel: 'chat' })
-      .select('id').single();
-    convId = data?.id;
-  } else {
-    await supabaseAdmin.from('conversations')
-      .update({ messages, updated_at: new Date().toISOString() }).eq('id', convId);
-  }
-
-  // 9. Upsert lead if contact captured
-  let currentLeadId = leadId;
-  if (extractedLead && (extractedLead.email || extractedLead.phone)) {
-    const leadData = {
-      org_id: orgId,
-      name: extractedLead.name,
-      email: extractedLead.email,
-      phone: extractedLead.phone,
-      source: 'chat',
-      service_interest: extractedLead.service_interest,
-      urgency: extractedLead.urgency || 'medium',
-      status: 'new',
-      score: scoreLead(extractedLead),
-      last_contact_at: new Date().toISOString(),
-    };
-
-    if (currentLeadId) {
-      await supabaseAdmin.from('leads').update(leadData).eq('id', currentLeadId);
-    } else {
-      const { data } = await supabaseAdmin.from('leads')
-        .insert(leadData).select('id').single();
-      currentLeadId = data?.id;
-    }
-
-    if (convId && currentLeadId) {
-      await supabaseAdmin.from('conversations')
-        .update({ lead_id: currentLeadId }).eq('id', convId);
-    }
-
-    // Email notification to business owner
-    if (biz.name && biz.email) {
-      sendLeadNotification(biz.email, biz.name, {
-        name: extractedLead.name,
-        email: extractedLead.email,
-        phone: extractedLead.phone,
-        service_interest: extractedLead.service_interest,
-        score: scoreLead(extractedLead),
-      }).catch((err) => console.error('Lead notification email failed:', err));
-    }
-
-    // Fire Make.com webhook for new lead notification (with retry)
-    if (process.env.MAKE_NEW_LEAD_WEBHOOK) {
-      fireWebhook(
-        process.env.MAKE_NEW_LEAD_WEBHOOK,
-        {
-          org_id: orgId,
-          lead_id: currentLeadId,
-          ...extractedLead,
-          score: scoreLead(extractedLead),
-        },
-        'make_new_lead'
-      ).catch(() => {});
-    }
-  }
-
-  return NextResponse.json(
-    { reply, conversationId: convId, leadId: currentLeadId, leadExtracted: !!extractedLead },
-    { headers: corsHeaders() }
-  );
 }
