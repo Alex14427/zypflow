@@ -62,7 +62,7 @@ export async function middleware(req: NextRequest) {
     const isExempt = TRIAL_EXEMPT_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
     if (!isExempt) {
       const { data: biz } = await supabase
-        .from('organisations')
+        .from('businesses')
         .select('plan, trial_ends_at')
         .eq('email', userEmail)
         .maybeSingle();

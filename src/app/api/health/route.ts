@@ -8,7 +8,7 @@ export async function GET() {
 
   // Check Supabase connection
   try {
-    const { error } = await supabaseAdmin.from('organisations').select('id').limit(1);
+    const { error } = await supabaseAdmin.from('businesses').select('id').limit(1);
     checks.database = error ? 'unhealthy' : 'healthy';
   } catch {
     checks.database = 'unhealthy';

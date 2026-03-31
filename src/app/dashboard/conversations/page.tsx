@@ -39,7 +39,7 @@ export default function ConversationsPage() {
     if (isInitial) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('organisations').select('id, name').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('businesses').select('id, name').eq('email', user.email).maybeSingle();
       if (!biz) return;
       setBusinessName(biz.name || '');
       orgIdRef.current = biz.id;

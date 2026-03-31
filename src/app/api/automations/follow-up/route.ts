@@ -29,7 +29,7 @@ async function runFollowUps(orgId: string | null) {
   // Build query — optionally filter by business
   let query = supabaseAdmin
     .from('leads')
-    .select('id, org_id, name, email, phone, status, service_interest, created_at, organisations(name, booking_url)')
+    .select('id, org_id, name, email, phone, status, service_interest, created_at, businesses(name, booking_url)')
     .in('status', ['new', 'contacted'])
     .order('created_at', { ascending: true });
 
@@ -43,7 +43,7 @@ async function runFollowUps(orgId: string | null) {
   let sent = 0;
 
   for (const lead of leads as Record<string, unknown>[]) {
-    const biz = lead.organisations as Record<string, string> | null;
+    const biz = lead.businesses as Record<string, string> | null;
     if (!biz) continue;
 
     const leadEmail = lead.email as string;

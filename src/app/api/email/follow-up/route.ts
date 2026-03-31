@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   // Verify user owns this business
   const { data: biz } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('id, name, email')
     .eq('id', lead.org_id)
     .single();

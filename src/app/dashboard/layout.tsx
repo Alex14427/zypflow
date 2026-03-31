@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!user) { router.push('/login'); return; }
       if (ADMIN_EMAILS.includes(user.email ?? '')) setIsAdmin(true);
       const { data } = await supabase
-        .from('organisations')
+        .from('businesses')
         .select('id, name, plan, trial_ends_at')
         .eq('email', user.email)
         .maybeSingle();
