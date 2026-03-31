@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     await handleBookingCreatedWebhook({ payload: parsed.data.payload });
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Booking created webhook failed:', error);
