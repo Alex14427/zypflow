@@ -17,3 +17,21 @@ export const checkoutInputSchema = z.object({
   orgId: z.string().uuid(),
   email: z.string().email(),
 });
+
+
+export const calBookingWebhookSchema = z.object({
+  payload: z.object({
+    attendees: z.array(
+      z.object({
+        email: z.string().email().optional(),
+        name: z.string().min(1).optional(),
+      })
+    ).default([]),
+    metadata: z.object({
+      orgId: z.string().uuid(),
+    }).optional(),
+    title: z.string().min(1).optional(),
+    startTime: z.string().datetime(),
+    endTime: z.string().datetime().optional(),
+  }),
+});
