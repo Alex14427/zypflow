@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
     const result = await sendSms(validationResult.data);
 
     return NextResponse.json({ success: true, sid: result.sid });
-  } catch (err) {
-    console.error('SMS send error:', err);
+  } catch {
+    console.error('SMS send error');
     return NextResponse.json({ error: 'Failed to send SMS' }, { status: 500 });
   }
 }
