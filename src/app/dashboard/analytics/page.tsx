@@ -32,13 +32,13 @@ export default function AnalyticsPage() {
       const sinceStr = since.toISOString();
 
       const [leadsRes, apptsRes, convsRes, reviewsRes, allLeadsRes, followUpsRes, bookedLeadsRes] = await Promise.all([
-        supabase.from('leads').select('id, created_at, source, status, score, service_interest').eq('org_id', biz.id).gte('created_at', sinceStr),
-        supabase.from('appointments').select('id, datetime, service, status').eq('org_id', biz.id).gte('datetime', sinceStr),
-        supabase.from('conversations').select('id, created_at, messages').eq('org_id', biz.id).gte('created_at', sinceStr),
-        supabase.from('reviews').select('id, rating', { count: 'exact' }).eq('org_id', biz.id),
-        supabase.from('leads').select('id, source, status, score').eq('org_id', biz.id),
-        supabase.from('follow_ups').select('id', { count: 'exact' }).eq('org_id', biz.id),
-        supabase.from('leads').select('id').eq('org_id', biz.id).eq('status', 'booked'),
+        supabase.from('leads').select('id, created_at, source, status, score, service_interest').eq('business_id', biz.id).gte('created_at', sinceStr),
+        supabase.from('appointments').select('id, datetime, service, status').eq('business_id', biz.id).gte('datetime', sinceStr),
+        supabase.from('conversations').select('id, created_at, messages').eq('business_id', biz.id).gte('created_at', sinceStr),
+        supabase.from('reviews').select('id, rating', { count: 'exact' }).eq('business_id', biz.id),
+        supabase.from('leads').select('id, source, status, score').eq('business_id', biz.id),
+        supabase.from('follow_ups').select('id', { count: 'exact' }).eq('business_id', biz.id),
+        supabase.from('leads').select('id').eq('business_id', biz.id).eq('status', 'booked'),
       ]);
 
       const leads = leadsRes.data || [];
