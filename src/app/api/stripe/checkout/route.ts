@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (
-        error.message === 'STRIPE_NOT_CONFIGURED'
-        || error.message === 'PRICE_NOT_CONFIGURED'
-        || error.message === 'APP_URL_NOT_CONFIGURED'
+        error.message === 'STRIPE_NOT_CONFIGURED' ||
+        error.message === 'PRICE_NOT_CONFIGURED' ||
+        error.message === 'APP_URL_NOT_CONFIGURED'
       ) {
         console.error('Stripe checkout configuration error:', error.message);
         return NextResponse.json({ error: 'Billing is not configured' }, { status: 500 });
