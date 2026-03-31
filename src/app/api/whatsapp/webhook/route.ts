@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       // Find which business this is for (by wa_phone_number_id)
       const phoneNumberId = value.metadata?.phone_number_id;
       const { data: biz } = await supabaseAdmin
-        .from('organisations')
+        .from('businesses')
         .select('id, name')
         .eq('wa_phone_number_id', phoneNumberId)
         .maybeSingle();

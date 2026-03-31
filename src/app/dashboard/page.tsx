@@ -59,7 +59,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">{dashboardData.businessName} Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Track leads, conversations, appointments, and reviews in one place.</p>
+        <p className="mt-1 text-sm text-gray-500">
+          Track leads, conversations, appointments, and reviews in one place.
+        </p>
       </header>
 
       <LeadsTable leads={dashboardData.leads} />

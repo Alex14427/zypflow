@@ -72,7 +72,7 @@ function getAppUrl(): string {
 
 async function assertNoActiveSubscription(orgId: string): Promise<void> {
   const { data: organisation, error } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('plan, stripe_subscription_id')
     .eq('id', orgId)
     .maybeSingle();

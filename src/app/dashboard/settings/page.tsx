@@ -49,7 +49,7 @@ export default function SettingsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('organisations')
+      const { data } = await supabase.from('businesses')
         .select('id, name, email, phone, website, industry, plan, booking_url, google_review_link, ai_personality, stripe_customer_id, wa_phone_number_id, wa_access_token')
         .eq('email', user.email)
         .maybeSingle();
@@ -78,7 +78,7 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!business) return;
     setSaving(true);
-    await supabase.from('organisations').update({
+    await supabase.from('businesses').update({
       name, phone, website, booking_url: bookingUrl,
       google_review_link: googleReviewLink, ai_personality: aiPersonality,
     }).eq('id', business.id);
@@ -276,7 +276,7 @@ export default function SettingsPage() {
                   onClick={async () => {
                     if (!business) return;
                     setWaSaving(true);
-                    await supabase.from('organisations').update({
+                    await supabase.from('businesses').update({
                       wa_phone_number_id: waPhoneNumberId || null,
                       wa_access_token: waAccessToken || null,
                     }).eq('id', business.id);

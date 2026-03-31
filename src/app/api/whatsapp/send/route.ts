@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   // Get business WhatsApp credentials
   const { data: biz } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('wa_phone_number_id, wa_access_token, name')
     .eq('id', orgId)
     .single();

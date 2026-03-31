@@ -11,7 +11,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 
 const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
 
-interface Organisation {
+interface Business {
   id: string;
   name: string;
   plan: string;
@@ -32,7 +32,7 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [org, setOrg] = useState<Organisation | null>(null);
+  const [business, setBusiness] = useState<Business | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -43,25 +43,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!user) { router.push('/login'); return; }
       if (ADMIN_EMAILS.includes(user.email ?? '')) setIsAdmin(true);
       const { data } = await supabase
-        .from('organisations')
+        .from('businesses')
         .select('id, name, plan, trial_ends_at')
         .eq('email', user.email)
         .maybeSingle();
       if (!data) { router.push('/onboarding'); return; }
-      setOrg(data);
+      setBusiness(data);
       setAuthChecked(true);
     }
     load();
   }, [router]);
 
   // Trial banner logic
-  const trialDaysLeft = org?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const trialDaysLeft = business?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(business.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
-  const showTrialBanner = trialDaysLeft !== null && trialDaysLeft <= 7 && org?.plan === 'trial';
+  const showTrialBanner = trialDaysLeft !== null && trialDaysLeft <= 7 && business?.plan === 'trial';
 
   return (
-    <RealtimeProvider orgId={org?.id || null}>
+    <RealtimeProvider businessId={business?.id || null}>
       <CommandPalette />
       <div className="min-h-screen bg-gray-50 flex">
         {/* Mobile overlay */}
@@ -108,7 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* Trial countdown in sidebar */}
-          {trialDaysLeft !== null && org?.plan === 'trial' && (
+          {trialDaysLeft !== null && business?.plan === 'trial' && (
             <div className="mx-3 mb-2 p-3 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${trialDaysLeft <= 3 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
@@ -146,11 +146,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-t">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 bg-brand-purple/10 rounded-full flex items-center justify-center text-brand-purple text-sm font-bold">
-                {org?.name?.[0] || 'Z'}
+                {business?.name?.[0] || 'Z'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{org?.name || 'Loading...'}</p>
-                <p className="text-xs text-gray-400 uppercase">{org?.plan || '...'}</p>
+                <p className="text-sm font-medium truncate">{business?.name || 'Loading...'}</p>
+                <p className="text-xs text-gray-400 uppercase">{business?.plan || '...'}</p>
               </div>
             </div>
             <button

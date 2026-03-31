@@ -54,12 +54,12 @@ export default function LeadsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('organisations').select('id').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('businesses').select('id').eq('email', user.email).maybeSingle();
       if (!biz) return;
 
       const { data } = await supabase.from('leads')
         .select('*')
-        .eq('org_id', biz.id)
+        .eq('business_id', biz.id)
         .order('created_at', { ascending: false })
         .limit(500);
       setLeads((data as Lead[]) || []);

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('name, industry, ai_personality, services')
     .eq('id', orgId)
     .single();

@@ -67,7 +67,7 @@ export default function PricingPage() {
     async function checkUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: biz } = await supabase.from('organisations').select('id, plan, stripe_subscription_id').eq('email', user.email).maybeSingle();
+      const { data: biz } = await supabase.from('businesses').select('id, plan, stripe_subscription_id').eq('email', user.email).maybeSingle();
       if (biz) {
         setUserInfo({ orgId: biz.id, email: user.email! });
         if (biz.stripe_subscription_id && biz.plan !== 'trial' && biz.plan !== 'cancelled') {

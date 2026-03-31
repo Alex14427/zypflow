@@ -22,7 +22,7 @@ export type ChatServiceResult = {
 export async function processChatMessage({ orgId, message, conversationId, leadId }: ChatServiceInput): Promise<ChatServiceResult> {
   // 1. Fetch business details
   const { data: biz } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('name, industry, services, knowledge_base, ai_personality, system_prompt, booking_url, email')
     .eq('id', orgId)
     .single();
