@@ -27,7 +27,7 @@ export default function ReviewsPage() {
       const { data } = await supabase
         .from('reviews')
         .select('id, platform, rating, review_text, requested_at, completed_at, leads(name, email)')
-        .eq('org_id', biz.id)
+        .eq('business_id', biz.id)
         .order('requested_at', { ascending: false })
         .limit(100);
       setReviews((data as unknown as Review[]) || []);

@@ -85,12 +85,12 @@ export default function DashboardOverview() {
     todayStart.setHours(0, 0, 0, 0);
 
     const [leadsRes, convRes, apptRes, apptUpRes, reviewsRes, todayLeadsRes] = await Promise.all([
-      supabase.from('leads').select('id, name, email, score, status, source, created_at').eq('org_id', bizId).order('created_at', { ascending: false }).limit(50),
-      supabase.from('conversations').select('id', { count: 'exact' }).eq('org_id', bizId),
-      supabase.from('appointments').select('id', { count: 'exact' }).eq('org_id', bizId).eq('status', 'confirmed').gte('datetime', now),
-      supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('org_id', bizId).gte('datetime', now).order('datetime', { ascending: true }).limit(5),
-      supabase.from('reviews').select('id', { count: 'exact' }).eq('org_id', bizId),
-      supabase.from('leads').select('id', { count: 'exact' }).eq('org_id', bizId).gte('created_at', todayStart.toISOString()),
+      supabase.from('leads').select('id, name, email, score, status, source, created_at').eq('business_id', bizId).order('created_at', { ascending: false }).limit(50),
+      supabase.from('conversations').select('id', { count: 'exact' }).eq('business_id', bizId),
+      supabase.from('appointments').select('id', { count: 'exact' }).eq('business_id', bizId).eq('status', 'confirmed').gte('datetime', now),
+      supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('business_id', bizId).gte('datetime', now).order('datetime', { ascending: true }).limit(5),
+      supabase.from('reviews').select('id', { count: 'exact' }).eq('business_id', bizId),
+      supabase.from('leads').select('id', { count: 'exact' }).eq('business_id', bizId).gte('created_at', todayStart.toISOString()),
     ]);
 
     const leads = (leadsRes.data || []) as RecentLead[];

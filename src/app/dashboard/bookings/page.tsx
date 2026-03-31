@@ -27,7 +27,7 @@ export default function BookingsPage() {
       const { data } = await supabase
         .from('appointments')
         .select('id, service, datetime, duration_minutes, status, leads(name, email, phone)')
-        .eq('org_id', biz.id)
+        .eq('business_id', biz.id)
         .order('datetime', { ascending: false })
         .limit(100);
       setAppointments((data as unknown as Appointment[]) || []);

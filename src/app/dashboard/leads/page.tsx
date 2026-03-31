@@ -59,7 +59,7 @@ export default function LeadsPage() {
 
       const { data } = await supabase.from('leads')
         .select('*')
-        .eq('org_id', biz.id)
+        .eq('business_id', biz.id)
         .order('created_at', { ascending: false })
         .limit(500);
       setLeads((data as Lead[]) || []);

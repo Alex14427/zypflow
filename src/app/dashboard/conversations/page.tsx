@@ -33,7 +33,7 @@ export default function ConversationsPage() {
   const [businessName, setBusinessName] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const orgIdRef = useRef<string | null>(null);
+  const businessIdRef = useRef<string | null>(null);
 
   const loadConversations = useCallback(async (isInitial = false) => {
     if (isInitial) {
@@ -42,14 +42,14 @@ export default function ConversationsPage() {
       const { data: biz } = await supabase.from('businesses').select('id, name').eq('email', user.email).maybeSingle();
       if (!biz) return;
       setBusinessName(biz.name || '');
-      orgIdRef.current = biz.id;
+      businessIdRef.current = biz.id;
     }
-    if (!orgIdRef.current) return;
+    if (!businessIdRef.current) return;
 
     const { data } = await supabase
       .from('conversations')
       .select('id, channel, messages, created_at, updated_at, lead_id, leads(name, email, phone, score, status, service_interest)')
-      .eq('org_id', orgIdRef.current)
+      .eq('business_id', businessIdRef.current)
       .order('updated_at', { ascending: false })
       .limit(200);
     const convs = (data as unknown as Conversation[]) || [];
