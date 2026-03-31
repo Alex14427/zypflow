@@ -1,97 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-import { sendBookingConfirmation } from '@/lib/email';
-import { fireWebhook } from '@/lib/webhook';
+import { calBookingWebhookSchema } from '@/lib/validators';
+import {
+  handleBookingCreatedWebhook,
+  verifyCalWebhookSignature,
+} from '@/services/booking.service';
 
 export async function POST(req: NextRequest) {
-  const calSecret = process.env.CAL_WEBHOOK_SECRET;
-  const body = await req.text();
+  const calWebhookSecret = process.env.CAL_WEBHOOK_SECRET;
 
-  // Verify Cal.com webhook signature — required in production
-  if (calSecret) {
+  if (process.env.NODE_ENV === 'production' && !calWebhookSecret) {
+    console.error('CAL_WEBHOOK_SECRET must be configured in production.');
+    return NextResponse.json({ error: 'Webhook is not configured' }, { status: 500 });
+  }
+
+  try {
+    const rawBody = await req.text();
     const signature = req.headers.get('x-cal-signature-256');
-    if (!signature) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+
+    const isValidSignature = verifyCalWebhookSignature({
+      rawBody,
+      signature,
+      secret: calWebhookSecret,
+    });
+
+    if (!isValidSignature) {
+      return NextResponse.json({ error: 'Unauthorized webhook signature' }, { status: 401 });
     }
-    const crypto = await import('crypto');
-    const expected = crypto.createHmac('sha256', calSecret).update(body).digest('hex');
-    if (signature !== expected) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+
+    let jsonBody: unknown;
+    try {
+      jsonBody = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
-  } else if (process.env.NODE_ENV === 'production') {
-    console.error('CAL_WEBHOOK_SECRET is not configured — booking webhook is unprotected');
-  }
 
-  const { payload } = JSON.parse(body);
-  if (!payload) return NextResponse.json({ error: 'No payload' }, { status: 400 });
-  return handleBooking(payload);
-}
-
-interface CalPayload {
-  attendees?: { email?: string; name?: string }[];
-  metadata?: { orgId?: string };
-  title?: string;
-  startTime?: string;
-  endTime?: string;
-}
-
-async function handleBooking(payload: CalPayload) {
-  const email = payload.attendees?.[0]?.email;
-  const name = payload.attendees?.[0]?.name;
-  const orgId = payload.metadata?.orgId;
-
-  if (!orgId) return NextResponse.json({ error: 'No orgId' }, { status: 400 });
-
-  // Get business name for confirmation email
-  const { data: biz } = await supabaseAdmin.from('organisations')
-    .select('name').eq('id', orgId).single();
-
-  let leadId = null;
-  if (email) {
-    const { data: existing } = await supabaseAdmin.from('leads')
-      .select('id').eq('org_id', orgId).eq('email', email).limit(1).maybeSingle();
-
-    if (existing) {
-      leadId = existing.id;
-      await supabaseAdmin.from('leads').update({ status: 'booked' }).eq('id', leadId);
-    } else {
-      const { data: newLead } = await supabaseAdmin.from('leads')
-        .insert({
-          org_id: orgId, name, email,
-          source: 'booking', status: 'booked', score: 85,
-        })
-        .select('id').single();
-      leadId = newLead?.id;
+    const parsed = calBookingWebhookSchema.safeParse(jsonBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid booking payload' }, { status: 400 });
     }
+
+    await handleBookingCreatedWebhook({ payload: parsed.data.payload });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error('Booking created webhook failed:', error);
+    return NextResponse.json({ error: 'Failed to process booking webhook' }, { status: 500 });
   }
-
-  const service = payload.title || 'Consultation';
-  const startTime = new Date(payload.startTime || new Date().toISOString());
-
-  await supabaseAdmin.from('appointments').insert({
-    org_id: orgId,
-    lead_id: leadId,
-    service,
-    datetime: payload.startTime,
-    duration_minutes: Math.round(
-      (new Date(payload.endTime || payload.startTime || '').getTime() - startTime.getTime()) / 60000
-    ),
-    status: 'confirmed',
-  });
-
-  // Send booking confirmation email
-  if (email && name) {
-    await sendBookingConfirmation(email, name, service as string, startTime, biz?.name || 'our office');
-  }
-
-  // Fire Make.com webhook for appointment (with retry)
-  if (process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK) {
-    fireWebhook(
-      process.env.MAKE_APPOINTMENT_COMPLETED_WEBHOOK,
-      { org_id: orgId, lead_id: leadId, email, name, service, datetime: payload.startTime },
-      'make_appointment_completed'
-    ).catch(() => {}); // fire and forget — retries happen inside fireWebhook
-  }
-
-  return NextResponse.json({ success: true });
 }
