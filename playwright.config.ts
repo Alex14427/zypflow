@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 3001;
+const port = 3211;
 const appUrl = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
     command: `node scripts/start-e2e-dev.mjs`,
     url: appUrl,
     timeout: 300_000,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     env: {
       PORT: String(port),
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',

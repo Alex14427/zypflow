@@ -5,7 +5,8 @@ import { join } from 'node:path';
 const cwd = process.cwd();
 const envFile = join(cwd, '.env.local');
 const envMap = existsSync(envFile) ? parseEnv(readFileSync(envFile, 'utf8')) : {};
-const baseUrl = envMap.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+const smokePort = 3212;
+const baseUrl = `http://127.0.0.1:${smokePort}`;
 const cronSecret = envMap.CRON_SECRET || 'local-cron-secret';
 const smokeEnv = buildSmokeEnv();
 
@@ -33,11 +34,9 @@ let serverProcess = null;
 let spawnedServer = false;
 
 try {
-  if (!(await isReachable(baseUrl))) {
-    spawnedServer = true;
-    serverProcess = startServer();
-    await waitForServer(baseUrl, 240_000);
-  }
+  spawnedServer = true;
+  serverProcess = startServer();
+  await waitForServer(baseUrl, 240_000);
 
   const results = [];
 
@@ -94,7 +93,7 @@ function buildSmokeEnv() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || envMap.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-anon-key',
     SUPABASE_SERVICE_ROLE_KEY:
       process.env.SUPABASE_SERVICE_ROLE_KEY || envMap.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key',
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || baseUrl,
+    NEXT_PUBLIC_APP_URL: baseUrl,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || envMap.STRIPE_SECRET_KEY || 'sk_test_placeholder',
     STRIPE_WEBHOOK_SECRET:
       process.env.STRIPE_WEBHOOK_SECRET || envMap.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder',
@@ -128,8 +127,8 @@ function startServer() {
 
   const command = process.platform === 'win32' ? 'cmd.exe' : 'sh';
   const args = process.platform === 'win32'
-    ? ['/c', 'npm', 'run', 'build', '&&', 'npm', 'run', 'start', '--', '--hostname', '127.0.0.1', '--port', '3000']
-    : ['-c', 'npm run build && npm run start -- --hostname 127.0.0.1 --port 3000'];
+    ? ['/c', 'npm', 'run', 'build', '&&', 'npm', 'run', 'start', '--', '--hostname', '127.0.0.1', '--port', String(smokePort)]
+    : ['-c', `npm run build && npm run start -- --hostname 127.0.0.1 --port ${smokePort}`];
 
   const child = spawn(command, args, {
     cwd,

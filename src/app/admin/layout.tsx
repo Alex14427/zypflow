@@ -1,73 +1,47 @@
-'use client';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { isAdminEmail } from '@/lib/admin-users';
+import { resolveServerUser } from '@/lib/server-auth';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await resolveServerUser();
 
-const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [email, setEmail] = useState('');
-
-  useEffect(() => {
-    async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
-      if (!ADMIN_EMAILS.includes(user.email ?? '')) {
-        setAuthorized(false);
-        return;
-      }
-      setEmail(user.email ?? '');
-      setAuthorized(true);
-    }
-    checkAdmin();
-  }, [router]);
-
-  if (authorized === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (authorized === false) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-          <p className="mt-2 text-gray-600">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
+  if (!user?.email || !isAdminEmail(user.email)) {
+    redirect('/login');
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-brand-purple text-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      <header className="border-b border-slate-200 bg-brand-purple text-white shadow dark:border-slate-800">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <div>
               <h1 className="text-xl font-bold">Zypflow HQ</h1>
               <p className="text-sm text-purple-200">Owner Command Center</p>
             </div>
-            <nav className="hidden md:flex items-center gap-4 text-sm">
-              <a href="/admin" className="text-purple-200 hover:text-white transition">Dashboard</a>
-              <a href="/dashboard" className="text-purple-200 hover:text-white transition">Customer View</a>
-              <a href="/" className="text-purple-200 hover:text-white transition">Landing Page</a>
+            <nav className="hidden items-center gap-4 text-sm md:flex">
+              <Link href="/admin" className="text-purple-200 transition hover:text-white">
+                Dashboard
+              </Link>
+              <Link href="/dashboard" className="text-purple-200 transition hover:text-white">
+                Customer View
+              </Link>
+              <Link href="/" className="text-purple-200 transition hover:text-white">
+                Landing Page
+              </Link>
             </nav>
           </div>
+
           <div className="flex items-center gap-3">
-            <span className="text-xs text-purple-200">{email}</span>
-            <span className="bg-purple-500/40 text-xs px-2 py-0.5 rounded-full font-medium">Owner</span>
+            <ThemeToggle compact />
+            <span className="hidden text-xs text-purple-200 sm:inline">{user.email}</span>
+            <span className="rounded-full bg-purple-500/40 px-2 py-0.5 text-xs font-medium">Owner</span>
           </div>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
     </div>
   );
 }
