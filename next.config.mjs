@@ -1,16 +1,6 @@
-import { withSentryConfig } from '@sentry/nextjs';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: '/',
-        destination: '/landing.html',
-      },
-    ];
-  },
   async headers() {
     return [
       {
@@ -45,12 +35,4 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  org: 'zypflow',
-  project: 'zypflow',
-  silent: true,
-  hideSourceMaps: true,
-  // Skip source map upload in CI when SENTRY_AUTH_TOKEN is not set
-  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-});
+export default nextConfig;

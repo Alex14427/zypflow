@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
+async function unsubscribeEverywhere(email: string) {
+  await Promise.all([
+    supabaseAdmin.from('leads').update({ status: 'unsubscribed' }).eq('email', email),
+    supabaseAdmin
+      .from('prospects')
+      .update({ status: 'unsubscribed', next_follow_up_at: null })
+      .eq('email', email),
+  ]);
+}
+
 // Handles email unsubscribe requests (GDPR compliance)
 // Linked from List-Unsubscribe header and email footer
 export async function GET(req: NextRequest) {
@@ -29,10 +39,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Mark lead as unsubscribed
-  await supabaseAdmin.from('leads')
-    .update({ status: 'unsubscribed' })
-    .eq('email', email);
+  await unsubscribeEverywhere(email);
 
   return new NextResponse(unsubscribePage('You have been unsubscribed from future emails.', true), {
     headers: { 'Content-Type': 'text/html' },
@@ -46,9 +53,7 @@ export async function POST(req: NextRequest) {
   const email = params.get('email') || req.nextUrl.searchParams.get('email');
 
   if (email) {
-    await supabaseAdmin.from('leads')
-      .update({ status: 'unsubscribed' })
-      .eq('email', email);
+    await unsubscribeEverywhere(email);
   }
 
   return NextResponse.json({ unsubscribed: true });

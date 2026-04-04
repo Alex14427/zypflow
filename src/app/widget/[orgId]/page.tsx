@@ -1,7 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { DEFAULT_BRAND_COLOR, normalizeBrandColor } from '@/lib/brand-theme';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,12 +13,15 @@ interface BizInfo {
   name: string;
   industry: string;
   ai_personality: string;
+  brandColor?: string;
+  logoUrl?: string | null;
+  bookingUrl?: string | null;
   services: { name: string }[];
 }
 
 const QUICK_PROMPTS_BY_INDUSTRY: Record<string, string[]> = {
   dental: ['What services do you offer?', 'How much does a check-up cost?', 'Can I book an appointment?', 'Do you handle emergencies?'],
-  aesthetics: ['What treatments do you offer?', 'How much does Botox cost?', 'Can I book a consultation?', 'Do you have any offers?'],
+  aesthetics: ['What treatments do you offer?', 'How much does Botox cost?', 'Can I book a consultation?', 'Do you have any current availability?'],
   physiotherapy: ['I have back pain, can you help?', 'What does a first session involve?', 'Do you accept insurance?', 'Can I book an assessment?'],
   legal: ['I need legal advice', 'How much does a consultation cost?', 'What areas of law do you cover?', 'Can I book a free consultation?'],
   'home services': ['I need a quote', 'What areas do you cover?', 'How quickly can you come?', 'Do you offer free estimates?'],
@@ -25,21 +29,26 @@ const QUICK_PROMPTS_BY_INDUSTRY: Record<string, string[]> = {
 
 const DEFAULT_PROMPTS = ['What services do you offer?', 'How much does it cost?', 'Can I book an appointment?', 'Tell me more about your business'];
 
+function withAlpha(hex: string, alpha: string) {
+  return `${hex}${alpha}`;
+}
+
 export default function WidgetPage() {
-  const { orgId } = useParams<{ orgId: string }>();
+  const params = useParams<{ orgId: string }>();
+  const orgId = params?.orgId ?? '';
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [bizInfo, setBizInfo] = useState<BizInfo | null>(null);
+  const [bootNotice, setBootNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Fetch business info for branding
   useEffect(() => {
     async function fetchBiz() {
       try {
@@ -47,11 +56,15 @@ export default function WidgetPage() {
         if (res.ok) {
           const data = await res.json();
           setBizInfo(data);
+          setBootNotice(null);
+        } else {
+          setBootNotice('The live clinic profile is still loading. You can still ask a question below.');
         }
       } catch {
-        // Fail silently — will use defaults
+        setBootNotice('The live clinic profile is still loading. You can still ask a question below.');
       }
     }
+
     if (orgId) fetchBiz();
   }, [orgId]);
 
@@ -76,9 +89,12 @@ export default function WidgetPage() {
       });
 
       const data = await res.json();
+      if (!res.ok || !data.reply) {
+        throw new Error(data.error || 'Chat request failed');
+      }
+
       if (data.reply) {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
-        // Notify parent window of new unread message
         if (window.parent !== window) {
           window.parent.postMessage({ type: 'zyp-unread', count: 1 }, document.referrer || '*');
         }
@@ -101,86 +117,139 @@ export default function WidgetPage() {
   }
 
   const businessName = bizInfo?.name || 'Chat Assistant';
-  const initial = bizInfo?.name?.[0]?.toUpperCase() || 'Z';
+  const brandColor = normalizeBrandColor(bizInfo?.brandColor || DEFAULT_BRAND_COLOR);
   const industry = bizInfo?.industry?.toLowerCase() || '';
   const quickPrompts = QUICK_PROMPTS_BY_INDUSTRY[industry] || DEFAULT_PROMPTS;
+  const logoUrl = bizInfo?.logoUrl || null;
+  const bookingUrl = bizInfo?.bookingUrl || null;
+  const initial = bizInfo?.name?.[0]?.toUpperCase() || 'Z';
+  const widgetStyle = useMemo(
+    () =>
+      ({
+        '--widget-brand': brandColor,
+        '--widget-brand-soft': withAlpha(brandColor, '14'),
+        '--widget-brand-border': withAlpha(brandColor, '2a'),
+      } as CSSProperties),
+    [brandColor]
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {/* Header — branded per business */}
-      <div className="bg-[#6c3cff] text-white px-4 py-3 flex items-center gap-3">
-        <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-          {initial}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{businessName}</p>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <p className="text-xs text-white/70">Online now &middot; Replies instantly</p>
+    <div className="flex h-screen flex-col bg-[linear-gradient(180deg,#fff_0%,#fff7f3_100%)]" style={widgetStyle}>
+      <div className="border-b border-black/5 px-4 py-3 text-white" style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${withAlpha(brandColor, 'cc')} 100%)` }}>
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={`${businessName} logo`} className="h-10 w-10 rounded-full border border-white/20 object-cover bg-white/10" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-sm font-bold">
+              {initial}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{businessName}</p>
+            <div className="mt-1 flex items-center gap-2 text-xs text-white/80">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              <span>Online now</span>
+              <span>&middot;</span>
+              <span>AI assistant with human handoff when needed</span>
+            </div>
           </div>
+          <button
+            onClick={() => window.parent.postMessage({ type: 'zyp-close' }, document.referrer || '*')}
+            className="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close chat widget"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        {/* Close button (sends message to parent iframe) */}
-        <button
-          onClick={() => window.parent.postMessage({ type: 'zyp-close' }, document.referrer || '*')}
-          className="text-white/60 hover:text-white transition p-1"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 && (
-          <div className="space-y-4 mt-4">
-            {/* Welcome message */}
-            <div className="flex justify-start">
-              <div className="max-w-[85%] bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 text-sm">
-                <p>Hi there! I&apos;m the AI assistant for <strong>{businessName}</strong>. How can I help you today?</p>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {bootNotice ? (
+          <div className="mb-4 rounded-[20px] border border-amber-500/20 bg-amber-500/8 px-4 py-3 text-sm text-amber-700">
+            {bootNotice}
+          </div>
+        ) : null}
+        {messages.length === 0 ? (
+          <div className="space-y-4">
+            <div className="rounded-[24px] border border-black/5 bg-white/90 p-4 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
+              <p className="text-sm font-semibold text-slate-900">Welcome to {businessName}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Ask about services, pricing, booking, or anything a new patient would want to know before taking the next step.
+              </p>
+              <div className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3 text-xs leading-5 text-slate-500">
+                This assistant is AI-powered. If the question needs a human answer, the clinic team can step in and follow up.
               </div>
             </div>
-
-            {/* Quick prompt buttons */}
-            <div className="space-y-2">
-              <p className="text-xs text-gray-400 text-center">Quick questions:</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {quickPrompts.map((prompt, i) => (
+            <div className="rounded-[24px] border border-[var(--widget-brand-border)] bg-[var(--widget-brand-soft)] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick questions</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {quickPrompts.map((prompt) => (
                   <button
-                    key={i}
+                    key={prompt}
                     onClick={() => sendMessage(prompt)}
-                    className="text-xs bg-white border border-[#6c3cff]/20 text-[#6c3cff] px-3 py-1.5 rounded-full hover:bg-[#6c3cff]/5 transition"
+                    className="rounded-full border px-3 py-2 text-xs font-semibold transition"
+                    style={{
+                      borderColor: withAlpha(brandColor, '33'),
+                      color: brandColor,
+                      backgroundColor: '#ffffff',
+                    }}
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-[#6c3cff] text-white rounded-br-sm'
-                  : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+            <div className="rounded-[24px] border border-black/5 bg-white/90 p-4 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Prefer a direct next step?</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Book directly if you are ready, or send a message and the clinic can follow up.
+                  </p>
+                </div>
+                {bookingUrl ? (
+                  <a
+                    href={bookingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-white transition"
+                    style={{ backgroundColor: brandColor }}
+                  >
+                    Book now
+                  </a>
+                ) : null}
+              </div>
             </div>
           </div>
-        ))}
+        ) : (
+          <div className="space-y-3">
+            {messages.map((msg, i) => (
+              <div key={`${msg.role}-${i}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)] ${
+                    msg.role === 'user'
+                      ? 'rounded-br-md text-white'
+                      : 'rounded-bl-md border border-black/5 bg-white text-slate-700'
+                  }`}
+                  style={msg.role === 'user' ? { backgroundColor: brandColor } : undefined}
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm">
+          <div className="mt-3 flex justify-start">
+            <div className="rounded-3xl rounded-bl-md border border-black/5 bg-white px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
               <div className="flex gap-1.5">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                <div className="h-2 w-2 rounded-full bg-slate-300 animate-bounce" />
+                <div className="h-2 w-2 rounded-full bg-slate-300 animate-bounce [animation-delay:0.15s]" />
+                <div className="h-2 w-2 rounded-full bg-slate-300 animate-bounce [animation-delay:0.3s]" />
               </div>
             </div>
           </div>
@@ -188,37 +257,41 @@ export default function WidgetPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 border rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-[#6c3cff] focus:ring-1 focus:ring-[#6c3cff]/30"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          className="bg-[#6c3cff] text-white w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-[#5a2de0] transition flex-shrink-0"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-          </svg>
-        </button>
+      <form onSubmit={handleSubmit} className="border-t border-black/5 bg-white/90 p-3 backdrop-blur">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type a message..."
+            disabled={loading}
+            className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400"
+            style={{ boxShadow: input ? `0 0 0 2px ${withAlpha(brandColor, '1f')}` : undefined, borderColor: input ? withAlpha(brandColor, '55') : undefined }}
+          />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            className="flex h-12 w-12 items-center justify-center rounded-full text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: brandColor }}
+            aria-label="Send message"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-2 text-[10px] text-slate-400">
+          <span>AI replies first. The clinic can take over when needed.</span>
+          <a
+            href="https://zypflow.co.uk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-slate-300 transition hover:text-slate-400"
+          >
+            Powered by Zypflow
+          </a>
+        </div>
       </form>
-
-      <div className="text-center pb-2">
-        <a
-          href="https://zypflow.co.uk"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] text-gray-300 hover:text-gray-400 transition"
-        >
-          Powered by Zypflow
-        </a>
-      </div>
     </div>
   );
 }

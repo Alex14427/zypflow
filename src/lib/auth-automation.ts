@@ -8,30 +8,32 @@ import { NextRequest, NextResponse } from 'next/server';
  * Returns null if authorized, or a 401 NextResponse if not.
  */
 export function verifyAutomationAuth(req: NextRequest): NextResponse | null {
-  // Vercel cron sends: Authorization: Bearer <CRON_SECRET>
+  return verifyAutomationAuthWithOptions(req, { allowDevelopmentFallback: true });
+}
+
+export function verifyAutomationAuthWithOptions(
+  req: NextRequest,
+  options: { allowDevelopmentFallback?: boolean } = {}
+): NextResponse | null {
   const authHeader = req.headers.get('authorization');
   const apiKey = req.headers.get('x-api-key');
 
   const cronSecret = process.env.CRON_SECRET;
   const makeToken = process.env.MAKE_API_TOKEN;
 
-  // Allow Vercel cron calls
   if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
     return null;
   }
 
-  // Allow Make.com calls via Bearer token
   if (makeToken && authHeader === `Bearer ${makeToken}`) {
     return null;
   }
 
-  // Allow Make.com calls via x-api-key header
   if (makeToken && apiKey === makeToken) {
     return null;
   }
 
-  // In development, allow unauthenticated calls
-  if (process.env.NODE_ENV === 'development') {
+  if (options.allowDevelopmentFallback !== false && process.env.NODE_ENV === 'development') {
     return null;
   }
 

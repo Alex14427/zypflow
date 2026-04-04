@@ -1,328 +1,754 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import ROIDashboard from '@/components/roi-dashboard';
+import { useEffect, useState } from 'react';
+import { formatActivationStatus } from '@/lib/activation-state';
+import { formatChurnRisk, formatHealthStatus } from '@/lib/client-health';
+import { formatCurrencyGBP } from '@/lib/formatting';
+import { DashboardLoading } from '@/components/dashboard/dashboard-loading';
+import { AppointmentsList } from '@/components/dashboard/appointments-list';
+import { ConversationsPreview } from '@/components/dashboard/conversations-preview';
+import { LeadsTable } from '@/components/dashboard/leads-table';
+import { PortalEmptyState } from '@/components/dashboard/portal-primitives';
+import { ReviewsSummary } from '@/components/dashboard/reviews-summary';
+import { fetchDashboardData } from '@/services/dashboard.service';
+import { DashboardData, DashboardNextAction } from '@/types/dashboard';
 
-interface Stats {
-  totalLeads: number;
-  hotLeads: number;
-  booked: number;
-  newToday: number;
-  totalConversations: number;
-  upcomingAppointments: number;
-  reviewsSent: number;
-  conversionRate: number;
-  avgScore: number;
-}
+const QUICK_LINKS = [
+  { href: '/dashboard/leads', label: 'Review leads' },
+  { href: '/dashboard/conversations', label: 'Open inbox' },
+  { href: '/dashboard/bookings', label: 'Check bookings' },
+  { href: '/dashboard/templates', label: 'Setup checklist' },
+];
 
-interface RecentLead {
-  id: string;
-  name: string;
-  email: string;
-  score: number;
-  status: string;
-  source: string;
-  created_at: string;
-}
-
-interface UpcomingAppt {
-  id: string;
-  service: string;
-  datetime: string;
-  status: string;
-  leads: { name: string } | null;
-}
-
-interface SetupStatus {
-  hasServices: boolean;
-  hasFaqs: boolean;
-  hasBookingUrl: boolean;
-  hasReviewLink: boolean;
-  hasWidget: boolean; // we can't really check this, so default true after onboarding
-}
-
-export default function DashboardOverview() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [recentLeads, setRecentLeads] = useState<RecentLead[]>([]);
-  const [upcoming, setUpcoming] = useState<UpcomingAppt[]>([]);
-  const [setup, setSetup] = useState<SetupStatus | null>(null);
+export default function DashboardPage() {
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [businessName, setBusinessName] = useState('');
-  const [bizId, setBizId] = useState<string>('');
-
-  const bizIdRef = useRef<string | null>(null);
-
-  const loadDashboard = useCallback(async (isInitial = false) => {
-    if (isInitial) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: biz } = await supabase
-        .from('organisations')
-        .select('id, name, services, knowledge_base, booking_url, google_review_link')
-        .eq('email', user.email)
-        .maybeSingle();
-      if (!biz) return;
-      setBusinessName(biz.name || '');
-      bizIdRef.current = biz.id;
-      setBizId(biz.id);
-
-      // Check setup completion
-      const services = biz.services as unknown[] | null;
-      const faqs = biz.knowledge_base as unknown[] | null;
-      setSetup({
-        hasServices: Array.isArray(services) && services.length > 0,
-        hasFaqs: Array.isArray(faqs) && faqs.length > 0,
-        hasBookingUrl: !!biz.booking_url,
-        hasReviewLink: !!biz.google_review_link,
-        hasWidget: true,
-      });
-    }
-    if (!bizIdRef.current) return;
-    const bizId = bizIdRef.current;
-
-    const now = new Date().toISOString();
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const [leadsRes, convRes, apptRes, apptUpRes, reviewsRes, todayLeadsRes] = await Promise.all([
-      supabase.from('leads').select('id, name, email, score, status, source, created_at').eq('org_id', bizId).order('created_at', { ascending: false }).limit(50),
-      supabase.from('conversations').select('id', { count: 'exact' }).eq('org_id', bizId),
-      supabase.from('appointments').select('id', { count: 'exact' }).eq('org_id', bizId).eq('status', 'confirmed').gte('datetime', now),
-      supabase.from('appointments').select('id, service, datetime, status, leads(name)').eq('org_id', bizId).gte('datetime', now).order('datetime', { ascending: true }).limit(5),
-      supabase.from('reviews').select('id', { count: 'exact' }).eq('org_id', bizId),
-      supabase.from('leads').select('id', { count: 'exact' }).eq('org_id', bizId).gte('created_at', todayStart.toISOString()),
-    ]);
-
-    const leads = (leadsRes.data || []) as RecentLead[];
-    const totalLeads = leads.length;
-    const hotLeads = leads.filter(l => l.score >= 70).length;
-    const booked = leads.filter(l => l.status === 'booked').length;
-    const avgScore = totalLeads > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / totalLeads) : 0;
-
-    setStats({
-      totalLeads,
-      hotLeads,
-      booked,
-      newToday: todayLeadsRes.count || 0,
-      totalConversations: convRes.count || 0,
-      upcomingAppointments: apptRes.count || 0,
-      reviewsSent: reviewsRes.count || 0,
-      conversionRate: totalLeads > 0 ? Math.round((booked / totalLeads) * 100) : 0,
-      avgScore,
-    });
-
-    setRecentLeads(leads.slice(0, 5));
-    setUpcoming((apptUpRes.data as unknown as UpcomingAppt[]) || []);
-    if (isInitial) setLoading(false);
-  }, []);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboard(true);
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => loadDashboard(false), 30000);
-    return () => clearInterval(interval);
-  }, [loadDashboard]);
+    let mounted = true;
+
+    async function loadDashboard() {
+      try {
+        const data = await fetchDashboardData();
+        if (!mounted) return;
+
+        setDashboardData(data);
+        setErrorMessage(null);
+      } catch (error) {
+        if (!mounted) return;
+
+        console.error('Failed to load dashboard data:', error);
+        setErrorMessage('Unable to load dashboard right now. Please refresh the page.');
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
+    return <DashboardLoading />;
   }
 
-  const setupComplete = setup && setup.hasServices && setup.hasFaqs && setup.hasBookingUrl && setup.hasReviewLink;
-  const setupSteps = setup ? [
-    { done: setup.hasServices, label: 'Add your services', link: '/onboarding' },
-    { done: setup.hasFaqs, label: 'Add FAQs for AI', link: '/onboarding' },
-    { done: setup.hasBookingUrl, label: 'Connect booking link', link: '/dashboard/settings' },
-    { done: setup.hasReviewLink, label: 'Add Google review link', link: '/dashboard/settings' },
-  ] : [];
+  if (errorMessage || !dashboardData) {
+    return (
+      <div className="rounded-[24px] border border-red-500/30 bg-red-500/8 p-5 text-sm text-red-600 dark:text-red-300">
+        {errorMessage || 'Dashboard is unavailable.'}
+      </div>
+    );
+  }
+
+  const reviewsPending = Math.max(0, dashboardData.reviews.requestsSent - dashboardData.reviews.completed);
+  const actionQueueCount =
+    dashboardData.overview.hotLeads +
+    dashboardData.launchReadiness.missingItems.length +
+    dashboardData.activation.alerts.length;
+  const liveAutomationCount = [
+    dashboardData.automation.hasLeadReply,
+    dashboardData.automation.hasReminders,
+    dashboardData.automation.hasReviewRequests,
+    dashboardData.automation.hasRebooking,
+    dashboardData.automation.hasWeeklyReporting,
+  ].filter(Boolean).length;
+  const automationCoveragePercent = Math.round((liveAutomationCount / 5) * 100);
+  const primaryAction = dashboardData.nextActions[0] || null;
+  const topRisk =
+    dashboardData.activation.alerts[0] ||
+    dashboardData.retention.risks[0] ||
+    (dashboardData.launchReadiness.missingItems[0]
+      ? `Finish ${dashboardData.launchReadiness.missingItems[0]} to remove a launch blocker.`
+      : 'No urgent blockers are visible right now.');
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome back{businessName ? `, ${businessName}` : ''}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Here&apos;s what&apos;s happening with your business today.</p>
-        </div>
-      </div>
-
-      {/* Setup checklist (only if incomplete) */}
-      {setup && !setupComplete && (
-        <div className="bg-gradient-to-r from-brand-purple to-purple-600 rounded-2xl p-6 mb-8 text-white">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="font-semibold text-lg">Complete your setup</h2>
-              <p className="text-white/70 text-sm mt-0.5">Finish these steps to get the most out of Zypflow.</p>
-            </div>
-            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
-              {setupSteps.filter(s => s.done).length}/{setupSteps.length}
-            </span>
+    <div className="space-y-6">
+      <header className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+        <div className="space-y-4">
+          <div>
+            <span className="page-eyebrow">Client portal</span>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
+              {dashboardData.businessName}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--app-text-muted)]">
+              This is the operator view of the clinic: what converted this week, what needs human attention, and what
+              Zypflow is already handling automatically.
+            </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {setupSteps.map((step, i) => (
+
+          <div className="flex flex-wrap gap-3">
+            {QUICK_LINKS.map((link) => (
               <Link
-                key={i}
-                href={step.link}
-                className={`flex items-center gap-3 p-3 rounded-xl transition ${
-                  step.done ? 'bg-white/10' : 'bg-white/20 hover:bg-white/30'
-                }`}
+                key={link.href}
+                href={link.href}
+                className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  step.done ? 'bg-green-400' : 'bg-white/30'
-                }`}>
-                  {step.done ? (
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                  ) : (
-                    <span className="text-xs font-bold">{i + 1}</span>
-                  )}
-                </div>
-                <span className={`text-sm ${step.done ? 'line-through text-white/50' : 'font-medium'}`}>{step.label}</span>
+                {link.label}
               </Link>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <StatCard label="Total Leads" value={stats?.totalLeads || 0} />
-        <StatCard label="New Today" value={stats?.newToday || 0} color="text-blue-600" icon={<TrendIcon />} />
-        <StatCard label="Hot Leads" value={stats?.hotLeads || 0} color="text-orange-500" sub="Score 70+" />
-        <StatCard label="Booked" value={stats?.booked || 0} color="text-green-600" />
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Conversations" value={stats?.totalConversations || 0} />
-        <StatCard label="Upcoming Appts" value={stats?.upcomingAppointments || 0} color="text-purple-600" />
-        <StatCard label="Avg Lead Score" value={stats?.avgScore || 0} color="text-yellow-600" sub="out of 100" />
-        <StatCard label="Conversion Rate" value={`${stats?.conversionRate || 0}%`} color="text-green-600" />
-      </div>
-
-      {/* Quick win callouts */}
-      {stats && stats.hotLeads > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
-            </div>
+        <div className="surface-panel rounded-[28px] p-5">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-semibold text-orange-800 text-sm">You have {stats.hotLeads} hot lead{stats.hotLeads !== 1 ? 's' : ''}!</p>
-              <p className="text-xs text-orange-600">These leads scored 70+ and are ready to book. Reach out now.</p>
+              <p className="page-eyebrow">Owner digest</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">What to pay attention to now</h2>
             </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+              {automationCoveragePercent}% covered
+            </span>
           </div>
-          <Link href="/dashboard/leads" className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">
-            View Leads
-          </Link>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <MiniMeta label="Plan" value={formatPlan(dashboardData.businessPlan)} />
+            <MiniMeta label="Industry" value={formatIndustry(dashboardData.businessIndustry)} />
+            <MiniMeta label="Role" value={formatRole(dashboardData.businessRole)} />
+          </div>
+          <div className="mt-4 rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-[var(--app-text)]">Workspace readiness</p>
+              <span className="rounded-full bg-brand-purple px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                {formatActivationStatus(dashboardData.activation.status)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[var(--app-text-muted)]">
+              {dashboardData.activation.packDeployed
+                ? 'The core workflow is installed. This page shows what it is producing and where a human nudge still helps.'
+                : 'The workspace is still being prepared. Finish the missing setup so the workflow can run cleanly.'}
+            </p>
+          </div>
+          <div className="mt-4 space-y-3">
+            <DigestCard
+              label="Best signal this week"
+              title={dashboardData.proof.strongestWin}
+              detail={`${dashboardData.proof.bookingsCreated} bookings created, ${dashboardData.reviews.completed} reviews completed, and ${formatCurrencyGBP(dashboardData.proof.estimatedRevenue)} in visible proof.`}
+            />
+            <DigestCard
+              label="Watch now"
+              title={topRisk}
+              detail={
+                dashboardData.retention.churnRisk === 'low'
+                  ? 'Retention risk is low, so this is mainly about protecting momentum.'
+                  : `Retention risk is ${formatChurnRisk(dashboardData.retention.churnRisk).toLowerCase()}, so visible follow-up matters this week.`
+              }
+            />
+          </div>
         </div>
-      )}
+      </header>
 
-      {/* Two columns */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent leads */}
-        <div className="bg-white rounded-xl shadow-sm border">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold">Recent Leads</h2>
-            <Link href="/dashboard/leads" className="text-sm text-brand-purple hover:underline">View all</Link>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewTile
+          label="Estimated weekly proof"
+          value={formatCurrencyGBP(dashboardData.proof.estimatedRevenue)}
+          detail={dashboardData.proof.strongestWin}
+          accent
+        />
+        <OverviewTile
+          label="Hot leads"
+          value={dashboardData.overview.hotLeads}
+          detail="High-intent enquiries that deserve personal attention before they cool off."
+        />
+        <OverviewTile
+          label="Appointments protected"
+          value={dashboardData.proof.upcomingAppointments}
+          detail="Upcoming bookings currently sitting inside reminder and confirmation coverage."
+        />
+        <OverviewTile
+          label="Action queue"
+          value={actionQueueCount}
+          detail="Hot leads, launch blockers, and activation alerts combined into one number."
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Owner summary</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">The shortest path to keeping this clinic retained</h2>
+            </div>
+            {primaryAction ? (
+              <span className="rounded-full bg-[var(--app-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+                {primaryAction.tone}
+              </span>
+            ) : null}
           </div>
-          <div className="divide-y">
-            {recentLeads.map(lead => (
-              <div key={lead.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition">
-                <div>
-                  <p className="text-sm font-medium">{lead.name || 'Anonymous'}</p>
-                  <p className="text-xs text-gray-400">{lead.email || 'No email'} &middot; {lead.source || 'chat'}</p>
+          <div className="mt-5 space-y-3">
+            <DigestCard
+              label="Best signal"
+              title={dashboardData.proof.strongestWin}
+              detail="This is the proof line worth repeating when the owner asks whether the system is working."
+            />
+            <DigestCard
+              label="Next move"
+              title={primaryAction?.title || 'No urgent action in the queue.'}
+              detail={
+                primaryAction?.description ||
+                'The current setup is stable enough that the owner only needs to monitor proof and retention.'
+              }
+            />
+            <DigestCard
+              label="Risk to remove"
+              title={topRisk}
+              detail="Anything shown here is slowing launch confidence, visible proof, or the chance of renewal."
+            />
+          </div>
+        </div>
+
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Automation coverage</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">How much of the revenue loop is already handled</h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {liveAutomationCount}/5 live
+            </span>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-text-muted)]">
+            The closer this gets to full coverage, the less the clinic depends on manual follow-up and the easier it is to retain them.
+          </p>
+          <div className="mt-5 h-3 rounded-full bg-[var(--app-muted)]">
+            <div
+              className="h-3 rounded-full bg-brand-purple transition-all"
+              style={{ width: `${automationCoveragePercent}%` }}
+            />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <AutomationPill label="Lead reply" active={dashboardData.automation.hasLeadReply} />
+            <AutomationPill label="Reminders" active={dashboardData.automation.hasReminders} />
+            <AutomationPill label="Review requests" active={dashboardData.automation.hasReviewRequests} />
+            <AutomationPill label="Rebooking" active={dashboardData.automation.hasRebooking} />
+            <AutomationPill label="Weekly reporting" active={dashboardData.automation.hasWeeklyReporting} />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">This week</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">What the system produced</h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {dashboardData.proof.periodLabel}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <ProofStat label="New leads" value={dashboardData.proof.newLeads} />
+            <ProofStat label="Bookings created" value={dashboardData.proof.bookingsCreated} accent />
+            <ProofStat label="Follow-ups sent" value={dashboardData.proof.followUpsSent} />
+            <ProofStat label="Review requests" value={dashboardData.proof.reviewRequestsSent} />
+            <ProofStat label="Reviews completed" value={dashboardData.proof.reviewsCompleted} />
+            <ProofStat label="Average lead score" value={dashboardData.proof.averageLeadScore !== null ? `${dashboardData.proof.averageLeadScore}/100` : 'No data'} />
+          </div>
+          <div className="mt-5 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+            <p className="text-sm font-semibold text-[var(--app-text)]">Strongest win</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">{dashboardData.proof.strongestWin}</p>
+          </div>
+        </div>
+
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Focus today</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">The shortest path to keeping momentum</h2>
+            </div>
+            <span className="rounded-full bg-[var(--app-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+              {dashboardData.nextActions.length} actions
+            </span>
+          </div>
+          <div className="mt-5 space-y-3">
+            {dashboardData.nextActions.length > 0 ? (
+              dashboardData.nextActions.map((action) => (
+                <ActionRow key={action.title} action={action} />
+              ))
+            ) : (
+              <PortalEmptyState
+                title="No immediate follow-up is needed."
+                description="The system is handling the current queue cleanly. New owner actions will appear here when a lead, booking, or launch task needs attention."
+              />
+            )}
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <MetaChip label="Reviews pending" value={String(reviewsPending)} />
+            <MetaChip label="Health" value={formatHealthStatus(dashboardData.retention.healthStatus)} />
+            <MetaChip label="Churn risk" value={formatChurnRisk(dashboardData.retention.churnRisk)} />
+            <MetaChip label="Live automations" value={String(dashboardData.automation.activeTemplates)} />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Retention radar</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">
+                {formatHealthStatus(dashboardData.retention.healthStatus)}
+              </h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {dashboardData.retention.score}/100
+            </span>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-text-muted)]">{dashboardData.retention.summary}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <MetaChip label="Churn risk" value={formatChurnRisk(dashboardData.retention.churnRisk)} />
+            <MetaChip label="Health state" value={formatHealthStatus(dashboardData.retention.healthStatus)} />
+          </div>
+          {dashboardData.retention.risks.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              {dashboardData.retention.risks.map((risk) => (
+                <div
+                  key={risk}
+                  className="rounded-[22px] border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-amber-700 dark:text-amber-200"
+                >
+                  {risk}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold ${lead.score >= 70 ? 'text-orange-500' : lead.score >= 40 ? 'text-yellow-500' : 'text-gray-400'}`}>
-                    {lead.score}
-                  </span>
-                  <StatusBadge status={lead.status} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-[22px] border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200">
+              No retention risks are showing right now. The current proof signals look stable.
+            </div>
+          )}
+          <div className="mt-5 space-y-3">
+            {dashboardData.retention.actions.length > 0 ? (
+              dashboardData.retention.actions.map((action) => (
+                <div key={action} className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-3 text-sm text-[var(--app-text-muted)]">
+                  {action}
                 </div>
-              </div>
-            ))}
-            {recentLeads.length === 0 && (
-              <div className="p-6 text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-brand-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </div>
-                <p className="text-sm font-medium text-gray-700 mb-1">No leads yet</p>
-                <p className="text-xs text-gray-400 mb-3">Leads will appear here when customers use the chat widget on your website.</p>
-                <Link href="/dashboard/settings" className="text-xs text-brand-purple font-medium hover:underline">Get your widget code &rarr;</Link>
+              ))
+            ) : (
+              <PortalEmptyState
+                title="No extra retention actions are queued."
+                description="When review volume softens, rebooking slows, or churn risk rises, the next best moves will show up here."
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">What is running for you</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">Which parts of the clinic workflow are already covered</h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {dashboardData.automation.activeTemplates} live
+            </span>
+          </div>
+          <div className="mt-5 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--app-text)]">Owner view</p>
+              <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">
+              You should be able to glance at this page, see what happened, and know exactly when a human follow-up still matters.
+              </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Operating timeline</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">What changed most recently</h2>
+            </div>
+            <Link
+              href="/dashboard/analytics"
+              className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+            >
+              Open proof view
+            </Link>
+          </div>
+          <div className="mt-5 space-y-3">
+            {dashboardData.activityFeed.length > 0 ? (
+              dashboardData.activityFeed.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="block rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4 transition hover:border-brand-purple/30 hover:bg-brand-purple/5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--app-text)]">{item.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--app-text-muted)]">{item.detail}</p>
+                    </div>
+                    <span className="rounded-full bg-[var(--app-surface)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+                      {formatActivityType(item.type)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-[var(--app-text-soft)]">{formatTimelineStamp(item.timestamp)}</p>
+                </Link>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-[var(--app-border)] px-4 py-8 text-sm text-[var(--app-text-muted)]">
+                Once live activity starts flowing, this timeline becomes the quickest read on what changed, what converted, and what needs attention next.
               </div>
             )}
           </div>
         </div>
 
-        {/* Upcoming appointments */}
-        <div className="bg-white rounded-xl shadow-sm border">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold">Upcoming Bookings</h2>
-            <Link href="/dashboard/bookings" className="text-sm text-brand-purple hover:underline">View all</Link>
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Revenue loop</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">The chain that keeps clinics paying</h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              Owner-light by design
+            </span>
           </div>
-          <div className="divide-y">
-            {upcoming.map(appt => (
-              <div key={appt.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition">
-                <div>
-                  <p className="text-sm font-medium">{appt.leads?.name || 'Unknown'}</p>
-                  <p className="text-xs text-gray-400">{appt.service}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm">{new Date(appt.datetime).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
-                  <p className="text-xs text-gray-400">{new Date(appt.datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              </div>
-            ))}
-            {upcoming.length === 0 && (
-              <div className="p-6 text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                </div>
-                <p className="text-sm font-medium text-gray-700 mb-1">No upcoming appointments</p>
-                <p className="text-xs text-gray-400">Appointments appear here when customers book via Cal.com.</p>
-              </div>
-            )}
+          <div className="mt-5 space-y-3">
+            <LoopStep
+              title="Capture demand fast"
+              detail={`${dashboardData.overview.totalLeads} leads tracked so far. The faster this number grows, the easier it is to prove value.`}
+            />
+            <LoopStep
+              title="Protect every appointment"
+              detail={`${dashboardData.proof.upcomingAppointments} appointments are currently sitting inside reminder coverage and launch visibility.`}
+            />
+            <LoopStep
+              title="Create visible proof"
+              detail={`${dashboardData.reviews.completed} reviews completed so far, with ${dashboardData.reviews.requestsSent} requests sent through the workflow.`}
+            />
+            <LoopStep
+              title="Bring patients back"
+              detail={dashboardData.retention.summary}
+            />
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Go-live checklist</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">
+                {dashboardData.launchReadiness.packName}
+              </h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {dashboardData.launchReadiness.score}% ready
+            </span>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-text-muted)]">
+            {dashboardData.launchReadiness.completedCount} of {dashboardData.launchReadiness.totalCount} launch steps are
+            complete.
+          </p>
+          <div className="mt-5 h-3 rounded-full bg-[var(--app-muted)]">
+            <div
+              className="h-3 rounded-full bg-brand-purple transition-all"
+              style={{ width: `${dashboardData.launchReadiness.score}%` }}
+            />
+          </div>
+          {dashboardData.launchReadiness.missingItems.length > 0 ? (
+            <div className="mt-5 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--app-text)]">Still missing</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--app-text-muted)]">
+                {dashboardData.launchReadiness.missingItems.join(', ')}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-[24px] border border-emerald-500/25 bg-emerald-500/8 px-4 py-4 text-sm text-emerald-700 dark:text-emerald-200">
+              The launch checklist is complete. This workspace is ready for a clean automated rollout.
+            </div>
+          )}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/templates"
+              className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-purple/90"
+            >
+              Open setup checklist
+            </Link>
+            <Link
+              href="/onboarding"
+              className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+            >
+              Finish clinic setup
+            </Link>
+          </div>
+        </div>
+
+        <div className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Setup progress</p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)] capitalize">
+                {formatActivationStatus(dashboardData.activation.status)}
+              </h2>
+            </div>
+            <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+              {dashboardData.activation.score}% synced
+            </span>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-text-muted)]">
+              {dashboardData.activation.packDeployed
+                ? 'Your core workflow is deployed. The remaining blockers are listed below.'
+                : 'The workspace still needs a few setup steps before the workflow can be trusted live.'}
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <AutomationPill label="Billing" active={dashboardData.activation.billingReady} />
+            <AutomationPill label="Widget" active={dashboardData.activation.widgetInstalled} />
+            <AutomationPill label="Pack deployed" active={dashboardData.activation.packDeployed} />
+            <AutomationPill label="Auto-deployed" active={dashboardData.activation.autoDeployed} />
+          </div>
+          {dashboardData.activation.alerts.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              {dashboardData.activation.alerts.map((alert) => (
+                <div key={alert} className="rounded-[22px] border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-amber-700 dark:text-amber-200">
+                  {alert}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-[22px] border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200">
+              No activation alerts are open. Billing, widget, and deployment signals are syncing cleanly.
+            </div>
+          )}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/settings"
+              className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-purple/90"
+            >
+              Open activation settings
+            </Link>
+            <Link
+              href="/dashboard/templates"
+              className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+            >
+              Review setup checklist
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-panel rounded-[32px] p-6">
+        <p className="page-eyebrow">Launch checklist</p>
+        <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">The pieces that turn automation into proof</h2>
+        <div className="mt-5 space-y-3">
+          {dashboardData.checklist.map((item) => (
+            <div
+              key={item.id}
+              className="flex gap-4 rounded-[24px] border border-[var(--app-border)] px-4 py-4"
+            >
+              <span
+                className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  item.complete
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-[var(--app-muted)] text-[var(--app-text-muted)]'
+                }`}
+              >
+                {item.complete ? 'OK' : 'TO'}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[var(--app-text)]">{item.label}</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--app-text-muted)]">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <LeadsTable leads={dashboardData.leads} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ConversationsPreview conversations={dashboardData.conversations} />
+        <AppointmentsList appointments={dashboardData.appointments} />
       </div>
 
-      {/* ROI dashboard */}
-      {bizId && <ROIDashboard orgId={bizId} />}
+      <ReviewsSummary reviews={dashboardData.reviews} />
     </div>
   );
 }
 
-function StatCard({ label, value, color, sub, icon }: { label: string; value: number | string; color?: string; sub?: string; icon?: React.ReactNode }) {
+function formatPlan(plan: string) {
+  return plan === 'trial' ? 'Founding setup' : plan.replace(/_/g, ' ');
+}
+
+function formatIndustry(industry: string | null) {
+  if (!industry) return 'General clinic';
+  return industry.replace(/_/g, ' ');
+}
+
+function formatRole(role: string | null) {
+  if (!role) return 'Owner';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function MiniMeta({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{label}</p>
-        {icon}
-      </div>
-      <p className={`text-3xl font-bold mt-1 ${color || 'text-gray-900'}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    <div className="rounded-[20px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p>
+      <p className="mt-2 text-sm font-semibold capitalize text-[var(--app-text)]">{value}</p>
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    new: 'bg-blue-100 text-blue-700',
-    contacted: 'bg-yellow-100 text-yellow-700',
-    booked: 'bg-green-100 text-green-700',
-    lost: 'bg-red-100 text-red-700',
-    cold: 'bg-gray-100 text-gray-600',
-  };
+function DigestCard({
+  label,
+  title,
+  detail,
+}: {
+  label: string;
+  title: string;
+  detail: string;
+}) {
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-      {status}
-    </span>
+    <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-[var(--app-text)]">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--app-text-muted)]">{detail}</p>
+    </div>
   );
 }
 
-function TrendIcon() {
+function OverviewTile({
+  label,
+  value,
+  detail,
+  accent = false,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  accent?: boolean;
+}) {
   return (
-    <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
+    <div className={accent ? 'rounded-3xl bg-brand-purple p-5 text-white shadow-[var(--app-shadow)]' : 'kpi-tile'}>
+      <p className={`text-[11px] uppercase tracking-[0.18em] ${accent ? 'text-orange-100' : 'text-[var(--app-text-muted)]'}`}>
+        {label}
+      </p>
+      <h2 className={`mt-3 text-4xl font-semibold ${accent ? 'text-white' : 'text-[var(--app-text)]'}`}>{value}</h2>
+      <p className={`mt-3 text-sm leading-6 ${accent ? 'text-orange-50' : 'text-[var(--app-text-muted)]'}`}>{detail}</p>
+    </div>
   );
+}
+
+function AutomationPill({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-[var(--app-text)]">{label}</p>
+        <span
+          className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+            active
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+              : 'bg-slate-500/12 text-[var(--app-text-muted)]'
+          }`}
+        >
+          {active ? 'Live' : 'Pending'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ProofStat({ label, value, accent = false }: { label: string; value: string | number; accent?: boolean }) {
+  return (
+    <div className={`rounded-[22px] border px-4 py-4 ${accent ? 'border-brand-purple/25 bg-brand-purple/8' : 'border-[var(--app-border)] bg-[var(--app-muted)]'}`}>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p>
+      <p className={`mt-2 text-2xl font-semibold ${accent ? 'text-brand-purple dark:text-orange-100' : 'text-[var(--app-text)]'}`}>{value}</p>
+    </div>
+  );
+}
+
+function MetaChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-[var(--app-text)]">{value}</p>
+    </div>
+  );
+}
+
+function ActionRow({ action }: { action: DashboardNextAction }) {
+  const toneClass =
+    action.tone === 'urgent'
+      ? 'border-red-500/30 bg-red-500/8'
+      : action.tone === 'focus'
+        ? 'border-amber-500/30 bg-amber-500/8'
+        : 'border-emerald-500/30 bg-emerald-500/8';
+
+  const eyebrow =
+    action.tone === 'urgent' ? 'Do this first' : action.tone === 'focus' ? 'Focus next' : 'Momentum';
+
+  return (
+    <div className={`rounded-[28px] border p-5 ${toneClass}`}>
+      <p className="page-eyebrow">{eyebrow}</p>
+      <div className="mt-3 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-semibold text-[var(--app-text)]">{action.title}</h3>
+          <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">{action.description}</p>
+          <p className="mt-2 text-xs text-[var(--app-text-soft)]">{action.helper}</p>
+        </div>
+        <span className="rounded-full bg-[var(--app-surface)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+          Next
+        </span>
+      </div>
+      <div className="mt-4">
+        <Link
+          href={action.href}
+          className="inline-flex rounded-full bg-[var(--app-surface)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+        >
+          {action.ctaLabel}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function LoopStep({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+      <p className="text-sm font-semibold text-[var(--app-text)]">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--app-text-muted)]">{detail}</p>
+    </div>
+  );
+}
+
+function formatActivityType(type: DashboardData['activityFeed'][number]['type']) {
+  if (type === 'lead') return 'Lead';
+  if (type === 'conversation') return 'Inbox';
+  if (type === 'appointment') return 'Booking';
+  return 'Review';
+}
+
+function formatTimelineStamp(timestamp: string) {
+  return new Date(timestamp).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

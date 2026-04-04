@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         .update({
           status: 'replied',
           replied_at: new Date().toISOString(),
+          next_follow_up_at: null,
         })
         .eq('id', prospect.id);
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
     case 'bounced': {
       await supabaseAdmin
         .from('prospects')
-        .update({ status: 'bounced' })
+        .update({ status: 'bounced', next_follow_up_at: null })
         .eq('id', prospect.id);
       return NextResponse.json({ processed: true, action: 'marked_bounced' });
     }
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
     case 'unsubscribed': {
       await supabaseAdmin
         .from('prospects')
-        .update({ status: 'unsubscribed' })
+        .update({ status: 'unsubscribed', next_follow_up_at: null })
         .eq('id', prospect.id);
       return NextResponse.json({ processed: true, action: 'marked_unsubscribed' });
     }

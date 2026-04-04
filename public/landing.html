@@ -462,12 +462,13 @@ footer ul a:hover{color:var(--accent-light)}
           <div class="calc-big" id="lost-val">&pound;3,900</div>
           <p class="calc-sub">per month in missed revenue.<br>Zypflow recovers up to 40% of lost leads automatically.</p>
           <!-- Lead capture form -->
-          <form onsubmit="submitLead(event)" style="text-align:left;margin-top:20px;background:var(--light);padding:24px;border-radius:var(--radius)">
+          <form data-testid="audit-form" novalidate onsubmit="submitLead(event)" style="text-align:left;margin-top:20px;background:var(--light);padding:24px;border-radius:var(--radius)">
             <p style="font-size:.88rem;font-weight:700;color:var(--ink);margin-bottom:14px">Get your free AI audit:</p>
-            <input name="name" placeholder="Your name" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
-            <input name="business" placeholder="Business name" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
-            <input name="email" type="email" placeholder="Email address" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
-            <input name="phone" type="tel" placeholder="Phone (optional)" style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:12px;outline:none">
+            <input name="name" placeholder="Your name" maxlength="80" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="business" placeholder="Business name" maxlength="120" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="email" type="email" placeholder="Email address" maxlength="120" required style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <input name="phone" type="tel" placeholder="Phone (optional)" maxlength="25" style="width:100%;padding:11px 14px;border:1px solid rgba(91,45,255,.12);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;margin-bottom:8px;outline:none">
+            <p id="audit-form-error" data-testid="audit-form-error" style="display:none;font-size:.78rem;color:#dc2626;margin:0 0 12px"></p>
             <button type="submit" class="btn btn-primary" style="width:100%">Get My Free Audit</button>
             <p style="font-size:.72rem;color:var(--faint);margin-top:8px;text-align:center">No spam. We'll email your personalised audit within 24 hours.</p>
           </form>
@@ -753,20 +754,36 @@ function setIndustry(el){
 if(!localStorage.getItem('cookies_accepted')){document.getElementById('cookie-banner').style.display='flex'}
 function acceptCookies(){localStorage.setItem('cookies_accepted','true');document.getElementById('cookie-banner').style.display='none'}
 
+const auditEmailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const auditPhonePattern=/^[+\d\s().-]{7,25}$/;
+function setAuditFormError(form,message){
+  const errorEl=form.querySelector('#audit-form-error');
+  if(!errorEl)return;
+  errorEl.textContent=message||'';
+  errorEl.style.display=message?'block':'none';
+}
+
 // Lead capture via API endpoint (no exposed keys)
 async function submitLead(e){
   e.preventDefault();
   const form=e.target;
   const btn=form.querySelector('button[type=submit]');
   const origText=btn.textContent;
-  btn.textContent='Sending...';btn.disabled=true;
   const data={
-    name:form.querySelector('[name=name]').value,
-    email:form.querySelector('[name=email]').value,
-    business:form.querySelector('[name=business]').value,
-    phone:form.querySelector('[name=phone]')?.value||'',
+    name:form.querySelector('[name=name]').value.trim(),
+    email:form.querySelector('[name=email]').value.trim().toLowerCase(),
+    business:form.querySelector('[name=business]').value.trim(),
+    phone:(form.querySelector('[name=phone]')?.value||'').trim(),
     source:'website_audit_form'
   };
+
+  if(data.name.length<2){setAuditFormError(form,'Enter your name.');return}
+  if(data.business.length<2){setAuditFormError(form,'Enter your business name.');return}
+  if(!auditEmailPattern.test(data.email)){setAuditFormError(form,'Enter a valid email address.');return}
+  if(data.phone && !auditPhonePattern.test(data.phone)){setAuditFormError(form,'Enter a valid phone number.');return}
+
+  setAuditFormError(form,'');
+  btn.textContent='Sending...';btn.disabled=true;
   try{
     const res=await fetch('/api/enquiry',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -776,6 +793,12 @@ async function submitLead(e){
       form.innerHTML='<div style="text-align:center;padding:20px"><h3 style="color:var(--teal);margin-bottom:8px">Thank you!</h3><p style="color:var(--muted);font-size:.92rem">We\'ll send your free AI audit within 24 hours.</p></div>';
       if(typeof gtag==='function')gtag('event','lead_captured',{event_category:'conversion',event_label:data.source});
     }else{
+      const payload=await res.json().catch(()=>({}));
+      if(payload.error){
+        setAuditFormError(form,payload.error);
+        btn.textContent=origText;btn.disabled=false;
+        return;
+      }
       window.open('https://calendly.com/alex-zypflow/30min','_blank');
       btn.textContent=origText;btn.disabled=false;
     }

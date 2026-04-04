@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resetPasswordFormSchema } from '@/lib/validators';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -35,18 +36,14 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    const parsed = resetPasswordFormSchema.safeParse({ password, confirm });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Please check the form and try again.');
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
 
     if (error) {
       setError(error.message);
@@ -73,7 +70,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
             <input

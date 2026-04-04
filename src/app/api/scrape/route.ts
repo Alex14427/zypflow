@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 const apify = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
 
 export async function POST(req: NextRequest) {
-  // Auth check — only allow automation sources (Vercel Cron, Make.com)
+  // Auth check - only allow automation sources (Vercel Cron, Make.com)
   const { verifyAutomationAuth } = await import('@/lib/auth-automation');
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
 
   const searchQuery = `${industry} ${city} UK`;
 
-  // Run Google Maps scraper
   const run = await apify.actor('apify/google-maps-scraper').call({
     searchStringsArray: [searchQuery],
     maxCrawledPlacesPerSearch: maxResults,
@@ -26,50 +25,71 @@ export async function POST(req: NextRequest) {
     countryCode: 'gb',
   });
 
-  // Fetch results
   const { items } = await apify.dataset(run.defaultDatasetId).listItems();
 
   let inserted = 0;
+
   try {
-  for (const item of items as Record<string, unknown>[]) {
-    const emails = item.emails as string[] | undefined;
-    const phones = item.phones as string[] | undefined;
-    const prospect = {
-      name: (item.contactName as string) || (item.title as string) || null,
-      email: (item.email as string) || emails?.[0] || null,
-      phone: (item.phone as string) || phones?.[0] || null,
-      business_name: (item.title as string) || '',
-      website: (item.website as string) || (item.url as string) || null,
-      industry,
-      city,
-      source: 'apify_google_maps',
-      status: 'new',
-    };
+    for (const item of items as Record<string, unknown>[]) {
+      const emails = item.emails as string[] | undefined;
+      const phones = item.phones as string[] | undefined;
+      const prospect = {
+        name: (item.contactName as string) || (item.title as string) || null,
+        email: (item.email as string) || emails?.[0] || null,
+        phone: (item.phone as string) || phones?.[0] || null,
+        business_name: (item.title as string) || '',
+        website: (item.website as string) || (item.url as string) || null,
+        industry,
+        city,
+        source: 'apify_google_maps',
+        status: 'new',
+        outreach_stage: 0,
+        next_follow_up_at: null,
+        sequence_name: null,
+      };
 
-    // Skip if no email and no phone
-    if (!prospect.email && !prospect.phone) continue;
+      if (!prospect.email && !prospect.phone) continue;
 
-    // Deduplicate by email or phone+business_name
-    if (prospect.email) {
-      const { data: existing } = await supabaseAdmin
-        .from('prospects')
-        .select('id')
-        .eq('email', prospect.email)
-        .limit(1)
-        .maybeSingle();
-      if (existing) continue;
+      if (prospect.email) {
+        const { data: existing } = await supabaseAdmin
+          .from('prospects')
+          .select('id')
+          .eq('email', prospect.email)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) continue;
+      } else if (prospect.website) {
+        const { data: existing } = await supabaseAdmin
+          .from('prospects')
+          .select('id')
+          .eq('website', prospect.website)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) continue;
+      } else if (prospect.phone && prospect.business_name) {
+        const { data: existing } = await supabaseAdmin
+          .from('prospects')
+          .select('id')
+          .eq('phone', prospect.phone)
+          .eq('business_name', prospect.business_name)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) continue;
+      }
+
+      await supabaseAdmin.from('prospects').insert(prospect);
+      inserted++;
     }
 
-    await supabaseAdmin.from('prospects').insert(prospect);
-    inserted++;
-  }
-
-  return NextResponse.json({
-    success: true,
-    scraped: items.length,
-    inserted,
-    duplicatesSkipped: items.length - inserted,
-  });
+    return NextResponse.json({
+      success: true,
+      scraped: items.length,
+      inserted,
+      duplicatesSkipped: items.length - inserted,
+    });
   } catch (error) {
     console.error('Scrape error:', error);
     return NextResponse.json({ error: 'Scraping failed' }, { status: 500 });

@@ -1,15 +1,17 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
+import { fetchClientHealthBundle } from '@/lib/client-health';
 import {
-  sendTrialEndingEmail,
-  sendOnboardingNudge,
   sendMilestoneEmail,
+  sendOnboardingNudge,
+  sendTrialEndingEmail,
   sendWeeklyDigest,
 } from '@/lib/email';
+import { canUseSupabaseAdmin, isLocalSmokeMode } from '@/lib/local-mode';
+import { captureException, captureMessage } from '@/lib/monitoring';
+import { supabaseAdmin } from '@/lib/supabase';
 
-// Master lifecycle cron — runs daily, handles all email sequences
-// Called by Vercel cron at 8 AM or Make.com
 export async function GET(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
@@ -17,6 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function runLifecycle() {
+  const runId = randomUUID();
   const results = {
     trialEmails: 0,
     onboardingNudges: 0,
@@ -25,138 +28,179 @@ async function runLifecycle() {
     errors: [] as string[],
   };
 
-  // Get all active businesses with trial info
-  const { data: organisations } = await supabaseAdmin
-    .from('organisations')
-    .select('id, name, email, plan, trial_ends_at, system_prompt, booking_url, google_review_link, created_at')
+  if (isLocalSmokeMode() && !canUseSupabaseAdmin()) {
+    return NextResponse.json({
+      ...results,
+      runId,
+      reason: 'Local smoke mode is active and lifecycle automation needs a real database.',
+    });
+  }
+
+  const { data: businesses, error } = await supabaseAdmin
+    .from('businesses')
+    .select(
+      'id, name, email, plan, trial_ends_at, system_prompt, booking_url, google_review_link, avg_job_value, created_at, settings'
+    )
     .eq('active', true);
 
-  if (!organisations) return NextResponse.json(results);
+  if (error) {
+    captureException(error, {
+      context: 'lifecycle-load-businesses',
+      tags: { route: 'lifecycle', runId },
+    });
+    return NextResponse.json({ error: 'Unable to load lifecycle businesses.' }, { status: 500 });
+  }
+
+  if (!businesses) {
+    return NextResponse.json({ ...results, runId });
+  }
 
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+  const todayKey = now.toISOString().slice(0, 10);
+  const dayOfWeek = now.getDay();
 
-  for (const biz of organisations) {
+  for (const business of businesses) {
     try {
-      // --- TRIAL ENDING SEQUENCE ---
-      if (biz.trial_ends_at && biz.plan === 'trial') {
-        const trialEnd = new Date(biz.trial_ends_at);
-        const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const settings = (business.settings as Record<string, unknown> | null) || {};
+      const lifecycleLog = isRecord(settings.lifecycleLog) ? (settings.lifecycleLog as Record<string, string>) : {};
+      let lifecycleChanged = false;
 
-        // Send emails at: 4 days, 2 days, 1 day, 0 days (expired), -3 days (winback)
-        if ([4, 2, 1, 0, -3].includes(daysLeft)) {
-          await sendTrialEndingEmail(biz.email, biz.name, daysLeft);
+      const markLifecycle = (key: string) => {
+        if (lifecycleLog[key]) return false;
+        lifecycleLog[key] = todayKey;
+        lifecycleChanged = true;
+        return true;
+      };
+
+      if (business.trial_ends_at && business.plan === 'trial') {
+        const trialEnd = new Date(business.trial_ends_at);
+        const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const lifecycleKey = `launch-window:${daysLeft}`;
+
+        if ([4, 2, 1, 0, -3].includes(daysLeft) && markLifecycle(lifecycleKey)) {
+          await sendTrialEndingEmail(business.email, business.name, daysLeft);
           results.trialEmails++;
         }
       }
 
-      // --- ONBOARDING NUDGES (days 1, 3, 5 after signup) ---
       const daysSinceSignup = Math.floor(
-        (now.getTime() - new Date(biz.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        (now.getTime() - new Date(business.created_at).getTime()) / (1000 * 60 * 60 * 24)
       );
 
       if ([1, 3, 5].includes(daysSinceSignup)) {
-        // Check what setup steps are completed
         const completedSteps: string[] = [];
-        if (biz.system_prompt) completedSteps.push('widget');
-        if (biz.booking_url) completedSteps.push('booking');
-        if (biz.google_review_link) completedSteps.push('review');
+        if (business.system_prompt) completedSteps.push('widget');
+        if (business.booking_url) completedSteps.push('booking');
+        if (business.google_review_link) completedSteps.push('review');
 
-        // Only nudge if setup is incomplete
         if (completedSteps.length < 3) {
           const step = daysSinceSignup === 1 ? 1 : daysSinceSignup === 3 ? 2 : 3;
-          await sendOnboardingNudge(biz.email, biz.name, step, completedSteps);
-          results.onboardingNudges++;
+          if (markLifecycle(`onboarding:${step}`)) {
+            await sendOnboardingNudge(business.email, business.name, step, completedSteps);
+            results.onboardingNudges++;
+          }
         }
       }
 
-      // --- MILESTONE EMAILS ---
-      const { count: leadCount } = await supabaseAdmin
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', biz.id);
+      const [
+        { count: leadCount, error: leadCountError },
+        { count: bookingCount, error: bookingCountError },
+        { count: reviewCount, error: reviewCountError },
+      ] = await Promise.all([
+        supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }).eq('org_id', business.id),
+        supabaseAdmin
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', business.id),
+        supabaseAdmin
+          .from('reviews')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', business.id)
+          .not('completed_at', 'is', null),
+      ]);
 
-      const { count: bookingCount } = await supabaseAdmin
-        .from('appointments')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', biz.id);
+      if (leadCountError || bookingCountError || reviewCountError) {
+        throw leadCountError || bookingCountError || reviewCountError;
+      }
 
-      const { count: reviewCount } = await supabaseAdmin
-        .from('reviews')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', biz.id)
-        .not('completed_at', 'is', null);
+      const stats = {
+        leads: leadCount || 0,
+        bookings: bookingCount || 0,
+        reviews: reviewCount || 0,
+      };
 
-      const stats = { leads: leadCount || 0, bookings: bookingCount || 0, reviews: reviewCount || 0 };
-
-      // Check milestones (only fire once — check exact count)
-      if (stats.leads === 1) {
-        await sendMilestoneEmail(biz.email, biz.name, 'first_lead', stats);
+      if (stats.leads === 1 && markLifecycle('milestone:first_lead')) {
+        await sendMilestoneEmail(business.email, business.name, 'first_lead', stats);
         results.milestones++;
-      } else if (stats.leads === 10) {
-        await sendMilestoneEmail(biz.email, biz.name, 'ten_leads', stats);
+      } else if (stats.leads === 10 && markLifecycle('milestone:ten_leads')) {
+        await sendMilestoneEmail(business.email, business.name, 'ten_leads', stats);
         results.milestones++;
-      } else if (stats.leads === 50) {
-        await sendMilestoneEmail(biz.email, biz.name, 'fifty_leads', stats);
+      } else if (stats.leads === 50 && markLifecycle('milestone:fifty_leads')) {
+        await sendMilestoneEmail(business.email, business.name, 'fifty_leads', stats);
         results.milestones++;
       }
 
-      if (stats.bookings === 1) {
-        await sendMilestoneEmail(biz.email, biz.name, 'first_booking', stats);
+      if (stats.bookings === 1 && markLifecycle('milestone:first_booking')) {
+        await sendMilestoneEmail(business.email, business.name, 'first_booking', stats);
         results.milestones++;
       }
 
-      if (stats.reviews === 1) {
-        await sendMilestoneEmail(biz.email, biz.name, 'first_review', stats);
+      if (stats.reviews === 1 && markLifecycle('milestone:first_review')) {
+        await sendMilestoneEmail(business.email, business.name, 'first_review', stats);
         results.milestones++;
       }
 
-      // --- WEEKLY DIGEST (every Monday) ---
-      if (dayOfWeek === 1) {
-        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      if (dayOfWeek === 1 && markLifecycle(`digest:${todayKey}`)) {
+        const weekReport = await fetchClientHealthBundle(
+          supabaseAdmin,
+          business.id,
+          business.avg_job_value
+        );
 
-        const [weekLeads, weekBookings, weekReviews, hotLeads] = await Promise.all([
-          supabaseAdmin
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', biz.id)
-            .gte('created_at', sevenDaysAgo.toISOString()),
-          supabaseAdmin
-            .from('appointments')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', biz.id)
-            .gte('created_at', sevenDaysAgo.toISOString()),
-          supabaseAdmin
-            .from('reviews')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', biz.id)
-            .gte('requested_at', sevenDaysAgo.toISOString()),
-          supabaseAdmin
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', biz.id)
-            .gte('score', 70)
-            .in('status', ['new', 'contacted']),
-        ]);
-
-        const weekStats = {
-          newLeads: weekLeads.count || 0,
-          bookings: weekBookings.count || 0,
-          reviewsRequested: weekReviews.count || 0,
-          avgScore: 0,
-          hotLeads: hotLeads.count || 0,
-        };
-
-        // Only send digest if there's any activity (don't spam inactive users)
-        if (weekStats.newLeads > 0 || weekStats.bookings > 0 || weekStats.hotLeads > 0) {
-          await sendWeeklyDigest(biz.email, biz.name, biz.name, weekStats);
+        if (
+          weekReport.metrics.newLeads > 0 ||
+          weekReport.metrics.bookingsCreated > 0 ||
+          weekReport.metrics.hotLeads > 0 ||
+          weekReport.metrics.followUpsSent > 0
+        ) {
+          await sendWeeklyDigest(business.email, business.name, business.name, weekReport);
           results.digests++;
         }
       }
-    } catch (err) {
-      results.errors.push(`${biz.id}: ${String(err)}`);
+
+      if (lifecycleChanged) {
+        const { error: updateError } = await supabaseAdmin
+          .from('businesses')
+          .update({
+            settings: {
+              ...settings,
+              lifecycleLog,
+            },
+          })
+          .eq('id', business.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+      }
+
+      captureMessage('Lifecycle run completed for business', {
+        context: 'lifecycle-business',
+        tags: { route: 'lifecycle', businessId: business.id, runId },
+        level: 'info',
+      });
+    } catch (error) {
+      captureException(error, {
+        context: 'lifecycle-business',
+        tags: { route: 'lifecycle', businessId: business.id, runId },
+      });
+      results.errors.push(`${business.id}: ${String(error)}`);
     }
   }
 
-  return NextResponse.json(results);
+  return NextResponse.json({ ...results, runId });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

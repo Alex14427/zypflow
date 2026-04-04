@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnthropic, MODELS } from '@/lib/ai-client';
+import { canUseAnthropic, isLocalSmokeMode } from '@/lib/local-mode';
 
 // Generates a custom AI system prompt based on business details
 // Uses Claude Haiku — following clear structured instructions, 50x cheaper than GPT-4o
@@ -16,6 +17,42 @@ export async function POST(req: NextRequest) {
 
   if (!name) {
     return NextResponse.json({ error: 'Business name is required' }, { status: 400 });
+  }
+
+  if (isLocalSmokeMode() || !canUseAnthropic()) {
+    const servicesList = Array.isArray(services) && services.length > 0
+      ? services.map((service: { name?: string; price?: string }) => `- ${service.name || 'Service'}${service.price ? ` (${service.price})` : ''}`).join('\n')
+      : '- Consultation';
+    const faqList = Array.isArray(faqs) && faqs.length > 0
+      ? faqs.map((faq: { question?: string; answer?: string }) => `- ${faq.question || 'FAQ'}: ${faq.answer || 'Answer not provided'}`).join('\n')
+      : '- Opening hours: Please ask the clinic directly if the answer is not in the workspace.';
+
+    const prompt = `You are the AI assistant for ${name}, a ${industry || 'UK private clinic'}.
+
+Your personality should feel ${personality || 'warm and professional'}.
+Keep replies under 3 sentences, use British English, and focus on helping the visitor book or ask the next useful question.
+
+Services:
+${servicesList}
+
+Clinic knowledge:
+${faqList}
+
+Booking link:
+${bookingUrl || 'Share the clinic booking link when the user is ready to book.'}
+
+Additional notes:
+${extraNotes || 'Capture name, email, phone number, and service interest when appropriate.'}
+
+Boundaries:
+- Do not diagnose or give medical, legal, or regulated advice.
+- Be honest that you are an AI assistant if asked.
+- Escalate complex questions to the clinic team.
+
+When you detect contact info (name, email, or phone), append at the END of your response:
+<!--LEAD:{"name":"...","email":"...","phone":"...","service_interest":"...","urgency":"low|medium|high"}-->`;
+
+    return NextResponse.json({ prompt, mode: 'local_smoke' });
   }
 
   try {

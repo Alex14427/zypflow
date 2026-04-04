@@ -2,14 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-// Routes that remain accessible even when trial has expired (read-only mode)
 const TRIAL_EXEMPT_PATHS = [
   '/dashboard/settings',
   '/pricing',
   '/api/',
 ];
 
-// Routes that perform write actions — blocked when trial expired
 const WRITE_ACTION_PATHS = [
   '/dashboard/leads',
   '/dashboard/bookings',
@@ -18,17 +16,12 @@ const WRITE_ACTION_PATHS = [
 ];
 
 export async function middleware(req: NextRequest) {
-  // Serve the static landing page at the root URL
-  if (req.nextUrl.pathname === '/') {
-    return NextResponse.rewrite(new URL('/landing.html', req.url));
+  const protectedPaths = ['/dashboard', '/onboarding', '/admin'];
+  const isProtected = protectedPaths.some((path) => req.nextUrl.pathname.startsWith(path));
+  if (!isProtected) {
+    return NextResponse.next();
   }
 
-  // Only protect dashboard and onboarding routes
-  const protectedPaths = ['/dashboard', '/onboarding', '/admin'];
-  const isProtected = protectedPaths.some((p) => req.nextUrl.pathname.startsWith(p));
-  if (!isProtected) return NextResponse.next();
-
-  // Create a response that we can modify (to update cookies)
   let response = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
@@ -42,40 +35,41 @@ export async function middleware(req: NextRequest) {
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookiesToSet.forEach(({ name, value, options }) => {
             req.cookies.set(name, value);
-            response.cookies.set(name, value, options as any);
+            response.cookies.set(name, value, options as never);
           });
         },
       },
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  const userEmail = user.email;
+  if (req.nextUrl.pathname.startsWith('/dashboard') && user.email) {
+    const isExempt = TRIAL_EXEMPT_PATHS.some((path) => req.nextUrl.pathname.startsWith(path));
 
-  // Trial expiry check — enforce read-only mode for expired trials
-  if (req.nextUrl.pathname.startsWith('/dashboard') && userEmail) {
-    const isExempt = TRIAL_EXEMPT_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
     if (!isExempt) {
-      const { data: biz } = await supabase
-        .from('organisations')
+      const { data: business } = await supabase
+        .from('businesses')
         .select('plan, trial_ends_at')
-        .eq('email', userEmail)
+        .eq('email', user.email)
         .maybeSingle();
 
-      if (biz?.plan === 'trial' && biz.trial_ends_at) {
-        const trialExpired = new Date(biz.trial_ends_at).getTime() < Date.now();
+      if (business?.plan === 'trial' && business.trial_ends_at) {
+        const trialExpired = new Date(business.trial_ends_at).getTime() < Date.now();
         if (trialExpired) {
-          const isWritePath = WRITE_ACTION_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
+          const isWritePath = WRITE_ACTION_PATHS.some((path) => req.nextUrl.pathname.startsWith(path));
           if (isWritePath) {
             const url = new URL('/pricing', req.url);
             url.searchParams.set('reason', 'trial_expired');
             return NextResponse.redirect(url);
           }
+
           response.headers.set('x-trial-expired', 'true');
         }
       }
@@ -86,5 +80,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/onboarding/:path*', '/admin/:path*'],
+  matcher: ['/dashboard', '/dashboard/:path*', '/onboarding', '/onboarding/:path*', '/admin', '/admin/:path*'],
 };

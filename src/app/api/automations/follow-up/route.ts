@@ -1,16 +1,12 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-import { sendEmail } from '@/lib/email';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
-import twilio from 'twilio';
+import { sendEmail } from '@/lib/email';
+import { canUseSupabaseAdmin, isLocalSmokeMode } from '@/lib/local-mode';
+import { captureException, captureMessage } from '@/lib/monitoring';
+import { supabaseAdmin } from '@/lib/supabase';
+import { sendSms } from '@/services/sms.service';
 
-const smsClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID || '',
-  process.env.TWILIO_AUTH_TOKEN || ''
-);
-
-// Follow-up sequences for leads that haven't booked
-// Called by Make.com on a schedule or Vercel cron (daily)
 export async function GET(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
@@ -26,10 +22,22 @@ export async function POST(req: NextRequest) {
 }
 
 async function runFollowUps(orgId: string | null) {
-  // Build query — optionally filter by business
+  const runId = randomUUID();
+
+  if (isLocalSmokeMode() && !canUseSupabaseAdmin()) {
+    return NextResponse.json({
+      sent: 0,
+      errors: 0,
+      runId,
+      reason: 'Local smoke mode is active and follow-up automation needs a real database.',
+    });
+  }
+
   let query = supabaseAdmin
     .from('leads')
-    .select('id, org_id, name, email, phone, status, service_interest, created_at, organisations(name, booking_url)')
+    .select(
+      'id, org_id, name, email, phone, status, service_interest, created_at, last_contact_at, businesses(name, booking_url)'
+    )
     .in('status', ['new', 'contacted'])
     .order('created_at', { ascending: true });
 
@@ -37,125 +45,151 @@ async function runFollowUps(orgId: string | null) {
     query = query.eq('org_id', orgId);
   }
 
-  const { data: leads } = await query.limit(100);
-  if (!leads) return NextResponse.json({ sent: 0 });
+  const { data: leads, error: leadsError } = await query.limit(100);
+  if (leadsError) {
+    captureException(leadsError, {
+      context: 'follow-up-load-leads',
+      tags: { route: 'follow-up', runId },
+      extra: { orgId },
+    });
+    return NextResponse.json({ error: 'Unable to load follow-up queue.' }, { status: 500 });
+  }
+
+  if (!leads) {
+    return NextResponse.json({ sent: 0, errors: 0, runId });
+  }
 
   let sent = 0;
+  let errors = 0;
 
   for (const lead of leads as Record<string, unknown>[]) {
-    const biz = lead.organisations as Record<string, string> | null;
-    if (!biz) continue;
+    const business = lead.businesses as Record<string, string> | null;
+    if (!business) continue;
 
-    const leadEmail = lead.email as string;
-    const leadPhone = lead.phone as string;
-    const leadName = (lead.name as string) || 'there';
-    const bizName = biz.name || 'us';
-    const bookingUrl = biz.booking_url || '';
-    const service = (lead.service_interest as string) || 'our services';
     const leadId = lead.id as string;
-    const orgIdVal = lead.org_id as string;
+    const businessId = lead.org_id as string;
+    const leadName = (lead.name as string) || 'there';
+    const leadEmail = lead.email as string | null;
+    const leadPhone = lead.phone as string | null;
+    const service = (lead.service_interest as string) || 'our services';
+    const businessName = business.name || 'our clinic';
+    const bookingUrl = business.booking_url || '';
 
-    // Check what follow-ups have already been sent
-    const { data: existingFollowUps } = await supabaseAdmin
+    const { data: existingFollowUps, error: historyError } = await supabaseAdmin
       .from('follow_ups')
-      .select('step_number')
+      .select('step_number, sent_at')
       .eq('lead_id', leadId)
       .order('step_number', { ascending: false })
       .limit(1);
 
-    const lastStep = existingFollowUps?.[0]?.step_number || 0;
-    const daysSinceCreated = Math.floor(
-      (Date.now() - new Date(lead.created_at as string).getTime()) / (1000 * 60 * 60 * 24)
-    );
+    if (historyError) {
+      errors++;
+      captureException(historyError, {
+        context: 'follow-up-load-history',
+        tags: { route: 'follow-up', leadId, runId },
+        extra: { businessId },
+      });
+      continue;
+    }
 
-    let smsContent = '';
-    let emailHtml = '';
-    let emailSubject = '';
+    const lastStep = existingFollowUps?.[0]?.step_number || 0;
+    const createdAt = new Date(lead.created_at as string);
+    const lastContactAt = lead.last_contact_at ? new Date(lead.last_contact_at as string) : createdAt;
+    const daysSinceCreated = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceLastTouch = Math.floor((Date.now() - lastContactAt.getTime()) / (1000 * 60 * 60 * 24));
+
     let stepNumber = 0;
+    let smsContent = '';
+    let emailSubject = '';
+    let emailHtml = '';
 
     const bookingCta = bookingUrl
       ? `<p style="margin-top:20px"><a href="${bookingUrl}" style="display:inline-block;background:#6c3cff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Book Your Appointment</a></p>`
-      : '<p style="margin-top:16px">Just reply to this email and we\'ll get you booked in!</p>';
+      : '<p style="margin-top:16px">Just reply to this email and we will help you get booked in.</p>';
 
-    // Follow-up schedule: Day 1, Day 3, Day 7
-    if (lastStep === 0 && daysSinceCreated >= 1) {
+    if (lastStep === 0 && daysSinceCreated >= 1 && daysSinceLastTouch >= 1) {
       stepNumber = 1;
-      smsContent = `Hi ${leadName}! Thanks for your interest in ${service} at ${bizName}. Would you like to book a consultation? ${bookingUrl || 'Reply YES and we\'ll get you sorted!'}`;
-      emailSubject = `${bizName} — Still interested in ${service}?`;
-      emailHtml = `<h2 style="color:#1f2937">Thanks for your interest!</h2>
+      smsContent = `Hi ${leadName}! Thanks for your interest in ${service} at ${businessName}. Would you like to book a consultation? ${bookingUrl || 'Reply YES and we will help you get sorted.'}`;
+      emailSubject = `${businessName} - Still interested in ${service}?`;
+      emailHtml = `<h2 style="color:#1f2937">Thanks for your interest</h2>
         <p>Hi ${leadName},</p>
-        <p>We noticed you recently enquired about <strong>${service}</strong> at <strong>${bizName}</strong>.</p>
-        <p>We'd love to help you take the next step. You can book a consultation at a time that suits you:</p>
+        <p>We noticed you recently enquired about <strong>${service}</strong> at <strong>${businessName}</strong>.</p>
+        <p>We would love to help you take the next step. You can book a consultation at a time that suits you:</p>
         ${bookingCta}
-        <p style="margin-top:20px;color:#6b7280;font-size:14px">If you have any questions, just reply to this email — we're happy to help.</p>`;
-    } else if (lastStep === 1 && daysSinceCreated >= 3) {
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">If you have any questions, just reply to this email and we will help.</p>`;
+    } else if (lastStep === 1 && daysSinceLastTouch >= 2) {
       stepNumber = 2;
-      smsContent = `Hi ${leadName}, just checking in! We'd love to help you with ${service}. ${bookingUrl ? `Book your slot here: ${bookingUrl}` : 'Let us know if you have any questions!'}`;
-      emailSubject = `${bizName} — A quick reminder about ${service}`;
+      smsContent = `Hi ${leadName}, just checking in. We would still love to help you with ${service}. ${bookingUrl ? `Book your slot here: ${bookingUrl}` : 'Let us know if you want help choosing the next step.'}`;
+      emailSubject = `${businessName} - A quick reminder about ${service}`;
       emailHtml = `<h2 style="color:#1f2937">Just checking in</h2>
         <p>Hi ${leadName},</p>
         <p>We wanted to follow up on your enquiry about <strong>${service}</strong>.</p>
-        <p>Many of our clients tell us they wish they'd booked sooner! We have availability coming up and would love to see you:</p>
+        <p>We still have availability coming up and would love to help you book the right appointment:</p>
         ${bookingCta}
-        <p style="margin-top:20px;color:#6b7280;font-size:14px">No pressure at all — we're here whenever you're ready.</p>`;
-    } else if (lastStep === 2 && daysSinceCreated >= 7) {
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">No pressure. We are here whenever you are ready.</p>`;
+    } else if (lastStep === 2 && daysSinceLastTouch >= 4) {
       stepNumber = 3;
-      smsContent = `Hi ${leadName}, this is our last follow-up about ${service} at ${bizName}. If you're still interested, we're here to help! ${bookingUrl || ''} Reply STOP to opt out.`;
-      emailSubject = `${bizName} — Last chance to book ${service}`;
-      emailHtml = `<h2 style="color:#1f2937">We don't want you to miss out</h2>
+      smsContent = `Hi ${leadName}, this is our last follow-up about ${service} at ${businessName}. If you are still interested, we are here to help. ${bookingUrl || ''} Reply STOP to opt out.`;
+      emailSubject = `${businessName} - Last chance to book ${service}`;
+      emailHtml = `<h2 style="color:#1f2937">We do not want you to miss out</h2>
         <p>Hi ${leadName},</p>
-        <p>This is our final follow-up about <strong>${service}</strong> at <strong>${bizName}</strong>.</p>
-        <p>If the timing isn't right, no worries at all. But if you'd still like to book, we're here:</p>
+        <p>This is our final follow-up about <strong>${service}</strong> at <strong>${businessName}</strong>.</p>
+        <p>If the timing is not right, no worries. But if you would still like to book, we are here:</p>
         ${bookingCta}
-        <p style="margin-top:20px;color:#6b7280;font-size:14px">We won't send any more follow-ups after this. Wishing you all the best!</p>`;
+        <p style="margin-top:20px;color:#6b7280;font-size:14px">We will not send any more follow-ups after this.</p>`;
     }
 
     if (!stepNumber) continue;
 
     try {
-      // Send via SMS
       if (leadPhone && smsContent) {
-        await smsClient.messages.create({
-          body: smsContent,
-          from: process.env.TWILIO_PHONE_NUMBER || '',
-          to: leadPhone,
-        });
+        await sendSms({ body: smsContent, to: leadPhone });
       }
 
-      // Send via email
       if (leadEmail && emailHtml) {
-        await sendEmail({
-          to: leadEmail,
-          subject: emailSubject,
-          html: emailHtml,
-        });
+        await sendEmail({ to: leadEmail, subject: emailSubject, html: emailHtml });
       }
 
-      // Record follow-up
-      await supabaseAdmin.from('follow_ups').insert({
-        lead_id: leadId,
-        org_id: orgIdVal,
-        sequence_name: 'new_lead_nurture',
-        step_number: stepNumber,
-        channel: leadPhone ? 'sms' : 'email',
-        message_content: smsContent,
-        sent_at: new Date().toISOString(),
+      const sentAt = new Date().toISOString();
+      const [{ error: insertError }, { error: leadError }] = await Promise.all([
+        supabaseAdmin.from('follow_ups').insert({
+          lead_id: leadId,
+          org_id: businessId,
+          business_id: businessId,
+          sequence_name: 'new_lead_nurture',
+          step_number: stepNumber,
+          channel: leadPhone ? 'sms' : 'email',
+          message_content: smsContent || emailSubject,
+          sent_at: sentAt,
+        }),
+        supabaseAdmin
+          .from('leads')
+          .update({
+            status: stepNumber === 3 ? 'cold' : 'contacted',
+            last_contact_at: sentAt,
+          })
+          .eq('id', leadId),
+      ]);
+
+      if (insertError) throw insertError;
+      if (leadError) throw leadError;
+
+      captureMessage('Follow-up sent', {
+        context: 'follow-up-sent',
+        tags: { route: 'follow-up', leadId, stepNumber, runId },
+        extra: { businessId, channel: leadPhone ? 'sms' : 'email' },
+        level: 'info',
       });
-
-      // Update lead status
-      if (stepNumber === 3) {
-        await supabaseAdmin.from('leads')
-          .update({ status: 'cold' }).eq('id', leadId);
-      } else {
-        await supabaseAdmin.from('leads')
-          .update({ status: 'contacted' }).eq('id', leadId);
-      }
-
       sent++;
-    } catch (err) {
-      console.error(`Follow-up error for lead ${leadId}:`, err);
+    } catch (error) {
+      errors++;
+      captureException(error, {
+        context: 'follow-up-send',
+        tags: { route: 'follow-up', leadId, stepNumber, runId },
+        extra: { businessId, channel: leadPhone ? 'sms' : 'email' },
+      });
     }
   }
 
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent, errors, runId });
 }

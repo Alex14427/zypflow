@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
 
-const INDUSTRIES = ['dental practices', 'aesthetic clinics', 'physiotherapy clinics', 'law firms', 'plumbing services'];
-const CITIES = ['London', 'Manchester', 'Birmingham', 'Leeds', 'Bristol', 'Edinburgh', 'Glasgow', 'Liverpool', 'Sheffield', 'Cardiff'];
+const TARGET_SEARCHES = [
+  { industry: 'aesthetic clinics', city: 'London' },
+  { industry: 'skin clinics', city: 'London' },
+  { industry: 'cosmetic clinics', city: 'London' },
+  { industry: 'medical aesthetics clinics', city: 'London' },
+  { industry: 'private dental clinics', city: 'London' },
+];
 
 export async function GET(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
-  const results = [];
 
-  // Run one industry-city combo per cron invocation (rotate daily for higher volume)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
+  const results = [];
   const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
-  const comboIndex = day % (INDUSTRIES.length * CITIES.length);
-  const industry = INDUSTRIES[Math.floor(comboIndex / CITIES.length)];
-  const city = CITIES[comboIndex % CITIES.length];
+  const target = TARGET_SEARCHES[day % TARGET_SEARCHES.length];
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/scrape`, {
+    const res = await fetch(`${appUrl}/api/scrape`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ industry, city, maxResults: 50 }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.CRON_SECRET || ''}`,
+      },
+      body: JSON.stringify({ industry: target.industry, city: target.city, maxResults: 50 }),
     });
+
     const data = await res.json();
-    results.push({ industry, city, ...data });
+    results.push({ ...target, ...data });
   } catch (error) {
-    results.push({ industry, city, error: String(error) });
+    results.push({ ...target, error: String(error) });
   }
 
   return NextResponse.json({ results });

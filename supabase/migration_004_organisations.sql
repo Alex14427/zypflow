@@ -1,12 +1,12 @@
--- Migration 004: Migrate from businesses to organisations + org_members
+-- Migration 004: Migrate from businesses to businesses + org_members
 -- This is the multi-tenant foundation. Run in Supabase SQL Editor.
 -- IMPORTANT: Run this AFTER all previous migrations.
 
 -- ============================================
--- STEP 1: Create organisations table
+-- STEP 1: Create businesses table
 -- ============================================
 
-CREATE TABLE IF NOT EXISTS organisations (
+CREATE TABLE IF NOT EXISTS businesses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT UNIQUE,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS organisations (
   avg_job_value INTEGER DEFAULT 150,
   -- Agency support
   workspace_type TEXT DEFAULT 'standard',
-  agency_id UUID REFERENCES organisations(id),
+  agency_id UUID REFERENCES businesses(id),
   -- Credits (for future metering)
   scraping_credits INTEGER DEFAULT 0,
   email_credits INTEGER DEFAULT 0,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS organisations (
 
 CREATE TABLE IF NOT EXISTS org_members (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  org_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role TEXT DEFAULT 'owner' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
   invited_email TEXT,
@@ -59,10 +59,10 @@ CREATE TABLE IF NOT EXISTS org_members (
 );
 
 -- ============================================
--- STEP 3: Migrate data from businesses → organisations
+-- STEP 3: Migrate data from businesses → businesses
 -- ============================================
 
-INSERT INTO organisations (
+INSERT INTO businesses (
   id, name, email, phone, website, industry, plan,
   stripe_customer_id, stripe_subscription_id,
   ai_personality, system_prompt, knowledge_base, services,
@@ -81,7 +81,7 @@ FROM businesses
 ON CONFLICT (id) DO NOTHING;
 
 -- Generate slugs from names
-UPDATE organisations
+UPDATE businesses
 SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]', '-', 'g')) || '-' || LEFT(id::text, 8)
 WHERE slug IS NULL;
 
@@ -92,12 +92,12 @@ WHERE slug IS NULL;
 
 INSERT INTO org_members (org_id, user_id, role)
 SELECT o.id, u.id, 'owner'
-FROM organisations o
+FROM businesses o
 JOIN auth.users u ON u.email = o.email
 ON CONFLICT (org_id, user_id) DO NOTHING;
 
--- Set owner_id on organisations
-UPDATE organisations o
+-- Set owner_id on businesses
+UPDATE businesses o
 SET owner_id = u.id
 FROM auth.users u
 WHERE u.email = o.email AND o.owner_id IS NULL;
@@ -107,18 +107,18 @@ WHERE u.email = o.email AND o.owner_id IS NULL;
 -- (keeping business_id for backwards compat during transition)
 -- ============================================
 
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
-ALTER TABLE conversations ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
-ALTER TABLE appointments ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
-ALTER TABLE follow_ups ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
-ALTER TABLE gdpr_consents ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE follow_ups ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE gdpr_consents ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
 ALTER TABLE gdpr_audit_log ADD COLUMN IF NOT EXISTS org_id UUID;
-ALTER TABLE prospects ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE CASCADE;
+ALTER TABLE prospects ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
 
 -- ============================================
 -- STEP 6: Backfill org_id from business_id
--- (business_id = organisations.id since we preserved IDs)
+-- (business_id = businesses.id since we preserved IDs)
 -- ============================================
 
 UPDATE leads SET org_id = business_id WHERE org_id IS NULL AND business_id IS NOT NULL;
@@ -147,17 +147,17 @@ CREATE INDEX IF NOT EXISTS idx_prospects_org ON prospects(org_id);
 -- STEP 8: RLS on new tables
 -- ============================================
 
-ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;
 
--- Organisations: users can see/update their own orgs via org_members
-CREATE POLICY "org_select" ON organisations FOR SELECT USING (
+-- Businesss: users can see/update their own orgs via org_members
+CREATE POLICY "org_select" ON businesses FOR SELECT USING (
   id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid())
 );
-CREATE POLICY "org_update" ON organisations FOR UPDATE USING (
+CREATE POLICY "org_update" ON businesses FOR UPDATE USING (
   id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid())
 );
-CREATE POLICY "org_insert" ON organisations FOR INSERT WITH CHECK (
+CREATE POLICY "org_insert" ON businesses FOR INSERT WITH CHECK (
   owner_id = auth.uid()
 );
 
@@ -216,7 +216,7 @@ CREATE POLICY "org_gdpr_consents" ON gdpr_consents FOR ALL USING (
 
 CREATE TABLE IF NOT EXISTS activity_log (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  org_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id),
   action TEXT NOT NULL,
   description TEXT,

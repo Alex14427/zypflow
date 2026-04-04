@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { fireWebhook } from '@/lib/webhook';
+import { websiteEnquirySchema } from '@/lib/validators';
 
 /**
  * Public endpoint for landing page lead capture form.
@@ -8,31 +9,30 @@ import { fireWebhook } from '@/lib/webhook';
  * Stores in website_enquiries table (separate from customer leads).
  */
 export async function POST(req: NextRequest) {
-  let body: Record<string, string>;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, email, business, phone, source } = body;
-
-  if (!email || !name) {
-    return NextResponse.json({ error: 'Name and email required' }, { status: 400 });
+  const parsed = websiteEnquirySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Please check the form and try again.' },
+      { status: 400 }
+    );
   }
 
-  // Basic email validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
-  }
+  const { name, email, business, phone, source } = parsed.data;
 
   // Store the enquiry
   const { error } = await supabaseAdmin.from('website_enquiries').insert({
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    business_name: (business || '').trim(),
-    phone: (phone || '').trim(),
-    source: source || 'website_audit_form',
+    name,
+    email,
+    business_name: business,
+    phone,
+    source,
   });
 
   if (error) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (process.env.MAKE_WEBHOOK_URL) {
     fireWebhook(
       process.env.MAKE_WEBHOOK_URL,
-      { name, email, business, phone, source: 'website_audit_form', type: 'website_enquiry' },
+      { name, email, business, phone, source, type: 'website_enquiry' },
       'make_website_enquiry'
     ).catch(() => {});
   }

@@ -28,12 +28,25 @@ jobs:
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Build
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          STRIPE_STARTER_PRICE_ID: price_placeholder
+          STRIPE_GROWTH_PRICE_ID: price_placeholder
+          STRIPE_ENTERPRISE_PRICE_ID: price_placeholder
+          TWILIO_ACCOUNT_SID: ACplaceholder
+          TWILIO_AUTH_TOKEN: auth_placeholder
+          TWILIO_PHONE_NUMBER: "+440000000000"
+          RESEND_API_KEY: re_placeholder
           NEXT_PUBLIC_APP_URL: https://app.zypflow.com
           NEXT_PUBLIC_POSTHOG_KEY: phc_placeholder
           SENTRY_DSN: ""
@@ -41,3 +54,52 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ""
           OPENAI_API_KEY: sk-placeholder-for-ci-build
           ANTHROPIC_API_KEY: sk-ant-placeholder-for-ci-build
+          AUTOMATION_SECRET: automation-secret-placeholder
+          CRON_SECRET: cron-secret-placeholder
+          ZYPFLOW_LOCAL_MODE: "1"
+
+      - name: Smoke test
+        run: npm run smoke:local
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          STRIPE_STARTER_PRICE_ID: price_placeholder
+          STRIPE_GROWTH_PRICE_ID: price_placeholder
+          STRIPE_ENTERPRISE_PRICE_ID: price_placeholder
+          TWILIO_ACCOUNT_SID: ACplaceholder
+          TWILIO_AUTH_TOKEN: auth_placeholder
+          TWILIO_PHONE_NUMBER: "+440000000000"
+          RESEND_API_KEY: re_placeholder
+          NEXT_PUBLIC_APP_URL: https://app.zypflow.com
+          OPENAI_API_KEY: sk-placeholder-for-ci-build
+          ANTHROPIC_API_KEY: sk-ant-placeholder-for-ci-build
+          AUTOMATION_SECRET: automation-secret-placeholder
+          CRON_SECRET: cron-secret-placeholder
+          ZYPFLOW_LOCAL_MODE: "1"
+
+      - name: Playwright
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          STRIPE_STARTER_PRICE_ID: price_placeholder
+          STRIPE_GROWTH_PRICE_ID: price_placeholder
+          STRIPE_ENTERPRISE_PRICE_ID: price_placeholder
+          TWILIO_ACCOUNT_SID: ACplaceholder
+          TWILIO_AUTH_TOKEN: auth_placeholder
+          TWILIO_PHONE_NUMBER: "+440000000000"
+          RESEND_API_KEY: re_placeholder
+          NEXT_PUBLIC_APP_URL: https://app.zypflow.com
+          OPENAI_API_KEY: sk-placeholder-for-ci-build
+          ANTHROPIC_API_KEY: sk-ant-placeholder-for-ci-build
+          AUTOMATION_SECRET: automation-secret-placeholder
+          CRON_SECRET: cron-secret-placeholder
+          ZYPFLOW_LOCAL_MODE: "1"

@@ -1,32 +1,43 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const requireEnv = (name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_ANON_KEY' | 'SUPABASE_SERVICE_ROLE_KEY'): string => {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
 
-// Lazy-initialised clients to avoid "supabaseUrl is required" errors at build time
-let _supabase: SupabaseClient | null = null;
-let _supabaseAdmin: SupabaseClient | null = null;
+  return value;
+};
 
-/** Browser client — uses @supabase/ssr so auth tokens are stored in cookies */
+const supabaseUrl = () => requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseAnonKey = () => requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+let browserClient: SupabaseClient | null = null;
+let adminClient: SupabaseClient | null = null;
+
+/** Safe client for browser/UI usage (anon key + RLS). */
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
-    if (!_supabase) {
-      _supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    if (!browserClient) {
+      browserClient = createBrowserClient(supabaseUrl(), supabaseAnonKey());
     }
-    return (_supabase as any)[prop];
+
+    return (browserClient as any)[prop];
   },
 });
 
-/** Admin client (server-side API routes ONLY — bypasses RLS) */
+/** Server-only admin client (service role key, bypasses RLS). */
 export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
-    if (!_supabaseAdmin) {
-      _supabaseAdmin = createClient(
-        supabaseUrl,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
-      );
+    if (typeof window !== 'undefined') {
+      throw new Error('supabaseAdmin is server-only and cannot run in the browser.');
     }
-    return (_supabaseAdmin as any)[prop];
+
+    if (!adminClient) {
+      adminClient = createClient(supabaseUrl(), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+    }
+
+    return (adminClient as any)[prop];
   },
 });

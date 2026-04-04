@@ -1,7 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentBusiness } from '@/lib/current-business';
+import {
+  PortalEmptyState,
+  PortalMetricCard,
+  PortalMetricGrid,
+  PortalPageHeader,
+  PortalPanel,
+  PortalSegmentedControl,
+  PortalStatusPill,
+} from '@/components/dashboard/portal-primitives';
 
 interface Appointment {
   id: string;
@@ -12,116 +22,249 @@ interface Appointment {
   leads: { name: string; email: string; phone: string } | null;
 }
 
+type BookingTab = 'upcoming' | 'past';
+
 export default function BookingsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<BookingTab>('upcoming');
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: biz } = await supabase.from('organisations').select('id').eq('email', user.email).maybeSingle();
-      if (!biz) return;
+      try {
+        setLoading(true);
+        const { business } = await resolveCurrentBusiness();
+        const orgFilter = `org_id.eq.${business.id},business_id.eq.${business.id}`;
 
-      const { data } = await supabase
-        .from('appointments')
-        .select('id, service, datetime, duration_minutes, status, leads(name, email, phone)')
-        .eq('org_id', biz.id)
-        .order('datetime', { ascending: false })
-        .limit(100);
-      setAppointments((data as unknown as Appointment[]) || []);
-      setLoading(false);
+        const { data, error: appointmentsError } = await supabase
+          .from('appointments')
+          .select('id, service, datetime, duration_minutes, status, leads(name, email, phone)')
+          .or(orgFilter)
+          .order('datetime', { ascending: false })
+          .limit(100);
+
+        if (appointmentsError) throw appointmentsError;
+        setAppointments((data as unknown as Appointment[]) || []);
+        setError(null);
+      } catch (loadError) {
+        console.error('Failed to load appointments:', loadError);
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load bookings.');
+      } finally {
+        setLoading(false);
+      }
     }
+
     load();
   }, []);
 
-  async function updateStatus(apptId: string, newStatus: string) {
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
-    setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
+  const now = useMemo(() => new Date(), []);
+  const upcoming = useMemo(
+    () => appointments.filter((appointment) => new Date(appointment.datetime) >= now),
+    [appointments, now]
+  );
+  const past = useMemo(
+    () => appointments.filter((appointment) => new Date(appointment.datetime) < now),
+    [appointments, now]
+  );
+  const shown = tab === 'upcoming' ? upcoming : past;
+  const completed = useMemo(
+    () => appointments.filter((appointment) => appointment.status === 'completed').length,
+    [appointments]
+  );
+  const noShows = useMemo(
+    () => appointments.filter((appointment) => appointment.status === 'no_show').length,
+    [appointments]
+  );
+
+  async function updateStatus(appointmentId: string, newStatus: string) {
+    await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId);
+    setAppointments((current) =>
+      current.map((appointment) =>
+        appointment.id === appointmentId ? { ...appointment, status: newStatus } : appointment
+      )
+    );
   }
 
-  const now = new Date();
-  const upcoming = appointments.filter(a => new Date(a.datetime) >= now);
-  const past = appointments.filter(a => new Date(a.datetime) < now);
-  const shown = tab === 'upcoming' ? upcoming : past;
-
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
+      </div>
+    );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Bookings</h1>
+      <PortalPageHeader
+        eyebrow="Bookings"
+        title="Protected appointments, clean schedules, fewer drop-offs."
+        description="A clinic owner should be able to glance at this page and feel in control: what is upcoming, what completed, and where reminder or confirmation friction still exists."
+        meta={
+          <>
+            <PortalStatusPill tone={noShows > 0 ? 'warning' : 'success'}>
+              {noShows > 0 ? `${noShows} no-shows logged` : 'No no-shows in this dataset'}
+            </PortalStatusPill>
+            <PortalStatusPill>{upcoming.length} upcoming appointments</PortalStatusPill>
+          </>
+        }
+      />
 
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setTab('upcoming')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition ${tab === 'upcoming' ? 'bg-white shadow text-brand-purple' : 'text-gray-500'}`}
-        >
-          Upcoming ({upcoming.length})
-        </button>
-        <button
-          onClick={() => setTab('past')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition ${tab === 'past' ? 'bg-white shadow text-brand-purple' : 'text-gray-500'}`}
-        >
-          Past ({past.length})
-        </button>
-      </div>
+      {error ? (
+        <PortalPanel title="Bookings unavailable" description="The appointment feed could not be loaded.">
+          <PortalEmptyState title="We couldn't load the booking schedule." description={error} />
+        </PortalPanel>
+      ) : (
+        <>
+          <PortalMetricGrid>
+            <PortalMetricCard
+              label="Upcoming"
+              value={upcoming.length}
+              description="Appointments still to protect with reminders and confirmations."
+              icon={<CalendarIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="Completed"
+              value={completed}
+              description="Appointments that made it through the pipeline successfully."
+              tone="success"
+              icon={<CheckIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="No-shows"
+              value={noShows}
+              description="Useful pressure signal for reminder quality and booking hygiene."
+              tone={noShows > 0 ? 'warning' : 'default'}
+              icon={<AlertIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="Visible view"
+              value={shown.length}
+              description={tab === 'upcoming' ? 'Appointments still ahead of the clinic.' : 'Historical appointments for follow-up and review requests.'}
+              icon={<StackIcon className="h-5 w-5" />}
+            />
+          </PortalMetricGrid>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Customer</th>
-              <th className="px-4 py-3 font-medium">Contact</th>
-              <th className="px-4 py-3 font-medium">Service</th>
-              <th className="px-4 py-3 font-medium">Date & Time</th>
-              <th className="px-4 py-3 font-medium">Duration</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map(appt => (
-              <tr key={appt.id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{appt.leads?.name || '\u2014'}</td>
-                <td className="px-4 py-3 text-gray-600">
-                  <div className="text-xs">{appt.leads?.email || ''}</div>
-                  <div className="text-xs text-gray-400">{appt.leads?.phone || ''}</div>
-                </td>
-                <td className="px-4 py-3">{appt.service}</td>
-                <td className="px-4 py-3">
-                  <div>{new Date(appt.datetime).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-                  <div className="text-xs text-gray-400">{new Date(appt.datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                </td>
-                <td className="px-4 py-3 text-gray-500">{appt.duration_minutes ? `${appt.duration_minutes}min` : '\u2014'}</td>
-                <td className="px-4 py-3">
-                  <select
-                    value={appt.status}
-                    onChange={e => updateStatus(appt.id, e.target.value)}
-                    className={`text-xs font-medium rounded-full px-2 py-1 border-0 cursor-pointer ${
-                      appt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                      appt.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                      appt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                      appt.status === 'no_show' ? 'bg-orange-100 text-orange-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {['confirmed', 'completed', 'cancelled', 'no_show'].map(s => (
-                      <option key={s} value={s}>{s.replace('_', ' ')}</option>
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <PortalSegmentedControl
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'upcoming', label: 'Upcoming', count: upcoming.length },
+                { value: 'past', label: 'Past', count: past.length },
+              ]}
+            />
+            <div className="text-sm text-[var(--app-text-muted)]">
+              Keep this view clean: appointment protection is one of the fastest ways to prove client ROI.
+            </div>
+          </div>
+
+          <PortalPanel
+            title={tab === 'upcoming' ? 'Upcoming appointments' : 'Past appointments'}
+            description={
+              tab === 'upcoming'
+                ? 'These are the bookings worth protecting with reminders, confirmations, and reschedules.'
+                : 'Use the historical view to track show rate, review requests, and rebooking potential.'
+            }
+          >
+            {shown.length === 0 ? (
+              <PortalEmptyState
+                title={tab === 'upcoming' ? 'No upcoming appointments yet.' : 'No past appointments logged yet.'}
+                description={
+                  tab === 'upcoming'
+                    ? 'As soon as leads start converting, booked appointments will appear here so the clinic can see what is protected and what is at risk.'
+                    : 'Once appointments have happened, this view becomes useful for follow-up, reviews, and rebooking analysis.'
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-[var(--app-muted)] text-left text-[var(--app-text-soft)]">
+                    <tr>
+                      <th className="px-5 py-4 font-semibold">Customer</th>
+                      <th className="px-5 py-4 font-semibold">Contact</th>
+                      <th className="px-5 py-4 font-semibold">Service</th>
+                      <th className="px-5 py-4 font-semibold">Date &amp; time</th>
+                      <th className="px-5 py-4 font-semibold">Duration</th>
+                      <th className="px-5 py-4 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shown.map((appointment) => (
+                      <tr key={appointment.id} className="border-t border-[var(--app-border)] transition hover:bg-[var(--app-muted)]/70">
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-[var(--app-text)]">{appointment.leads?.name || 'Anonymous booking'}</p>
+                        </td>
+                        <td className="px-5 py-4 text-[var(--app-text-muted)]">
+                          <div>{appointment.leads?.email || 'No email captured'}</div>
+                          <div className="mt-1 text-xs text-[var(--app-text-soft)]">{appointment.leads?.phone || 'No phone captured'}</div>
+                        </td>
+                        <td className="px-5 py-4 text-[var(--app-text)]">{appointment.service || 'Consultation'}</td>
+                        <td className="px-5 py-4 text-[var(--app-text-muted)]">
+                          <div>
+                            {new Date(appointment.datetime).toLocaleDateString('en-GB', {
+                              weekday: 'short',
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                          </div>
+                          <div className="mt-1 text-xs text-[var(--app-text-soft)]">
+                            {new Date(appointment.datetime).toLocaleTimeString('en-GB', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[var(--app-text-muted)]">
+                          {appointment.duration_minutes ? `${appointment.duration_minutes} min` : 'Not set'}
+                        </td>
+                        <td className="px-5 py-4">
+                          <select
+                            value={appointment.status}
+                            onChange={(event) => updateStatus(appointment.id, event.target.value)}
+                            aria-label={`Update status for ${appointment.leads?.name || 'appointment'}`}
+                            className={`rounded-full border-0 px-3 py-2 text-xs font-semibold outline-none ${statusClass(appointment.status)}`}
+                          >
+                            {['confirmed', 'completed', 'cancelled', 'no_show'].map((status) => (
+                              <option key={status} value={status}>
+                                {status.replace('_', ' ')}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
                     ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-            {shown.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">
-                {tab === 'upcoming' ? 'No upcoming bookings.' : 'No past bookings.'}
-              </td></tr>
+                  </tbody>
+                </table>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+          </PortalPanel>
+        </>
+      )}
     </div>
   );
+}
+
+function statusClass(status: string) {
+  if (status === 'confirmed') return 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300';
+  if (status === 'completed') return 'bg-sky-500/12 text-sky-700 dark:text-sky-300';
+  if (status === 'cancelled') return 'bg-rose-500/12 text-rose-700 dark:text-rose-300';
+  if (status === 'no_show') return 'bg-amber-500/12 text-amber-700 dark:text-amber-300';
+  return 'bg-[var(--app-muted)] text-[var(--app-text-muted)]';
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" /></svg>;
+}
+
+function AlertIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86l-7.84 13.6A1 1 0 003.31 19h17.38a1 1 0 00.86-1.54l-7.84-13.6a1 1 0 00-1.72 0z" /></svg>;
+}
+
+function StackIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4l8 4-8 4-8-4 8-4zm8 8-8 4-8-4m16 4-8 4-8-4" /></svg>;
 }

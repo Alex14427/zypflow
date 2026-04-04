@@ -4,7 +4,7 @@
 -- Track which templates are deployed for each org
 CREATE TABLE IF NOT EXISTS deployed_templates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  org_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   template_id TEXT NOT NULL REFERENCES workflow_templates(id),
   is_active BOOLEAN DEFAULT true,
   config JSONB DEFAULT '{}',

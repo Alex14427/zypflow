@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { forgotPasswordFormSchema } from '@/lib/validators';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
@@ -12,11 +13,17 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = forgotPasswordFormSchema.safeParse({ email });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Please check the form and try again.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
       redirectTo: `${appUrl}/reset-password`,
     });
 
@@ -49,7 +56,7 @@ export default function ForgotPasswordPage() {
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
                 <input
