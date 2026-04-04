@@ -2,8 +2,9 @@
 
 import { useState, useMemo, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
+import { signupFormSchema } from '@/lib/validators';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
   let score = 0;
@@ -34,30 +35,41 @@ function SignupContent() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const preselectedPlan = searchParams.get('plan');
+  const preselectedPlan = searchParams?.get('plan') ?? null;
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    const parsed = signupFormSchema.safeParse({
+      businessName,
+      email,
+      password,
+      acceptedTerms,
+    });
+
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Please check the form and try again.');
       return;
     }
+
+    const cleanBusinessName = parsed.data.businessName;
+    const cleanEmail = parsed.data.email;
+    const cleanPassword = parsed.data.password;
+
     setLoading(true);
     setError('');
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
+      email: cleanEmail,
+      password: cleanPassword,
     });
 
     if (authError) {
       // If user already exists, try logging them in instead
       if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('already been registered')) {
-        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
         if (loginError) {
           setError('Account already exists. Please log in with your password.');
           setLoading(false);
@@ -74,8 +86,8 @@ function SignupContent() {
     if (authData.user) {
       // Create organisation
       const { data: org, error: orgError } = await supabase.from('businesses').insert({
-        name: businessName,
-        email,
+        name: cleanBusinessName,
+        email: cleanEmail,
         owner_id: authData.user.id,
         plan: 'trial',
         trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -111,7 +123,7 @@ function SignupContent() {
           <Link href="/" className="text-3xl font-bold inline-block hover:opacity-80 transition">
             <span className="text-brand-purple">Zyp</span>flow
           </Link>
-          <p className="text-gray-500 mt-2">Start your 14-day free trial</p>
+          <p className="text-gray-500 mt-2">Create your clinic workspace</p>
           {preselectedPlan && (
             <p className="text-xs text-brand-purple mt-1 font-medium uppercase">{preselectedPlan} plan selected</p>
           )}
@@ -119,14 +131,14 @@ function SignupContent() {
 
         {/* Social proof */}
         <div className="flex items-center justify-center gap-2 mb-6 text-xs text-gray-400">
-          <span>No credit card required</span>
+          <span>Approval-led setup</span>
           <span>&middot;</span>
-          <span>Setup in 2 minutes</span>
+          <span>Launch in minutes</span>
           <span>&middot;</span>
-          <span>Cancel anytime</span>
+          <span>Billing activated after approval</span>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleSignup} noValidate className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
             <input
@@ -210,7 +222,7 @@ function SignupContent() {
             disabled={loading || !acceptedTerms}
             className="w-full bg-brand-purple hover:bg-brand-purple-dark text-white py-2.5 rounded-lg font-semibold transition disabled:opacity-50"
           >
-            {loading ? 'Creating account...' : 'Start Free Trial'}
+            {loading ? 'Creating workspace...' : 'Create Clinic Workspace'}
           </button>
         </form>
 

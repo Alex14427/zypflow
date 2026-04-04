@@ -1,7 +1,7 @@
 'use client';
 
-import * as Sentry from '@sentry/nextjs';
 import { useEffect } from 'react';
+import { captureException } from '@/lib/monitoring';
 
 export default function DashboardError({
   error,
@@ -11,7 +11,7 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    captureException(error, 'dashboard-error');
   }, [error]);
 
   return (

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabaseAdmin
     .from('businesses')
-    .select('name, industry, ai_personality, services')
+    .select('name, industry, ai_personality, services, booking_url, widget_color, settings')
     .eq('id', orgId)
     .single();
 
@@ -37,6 +37,15 @@ export async function GET(req: NextRequest) {
     name: data.name,
     industry: data.industry,
     ai_personality: data.ai_personality,
+    logoUrl:
+      typeof (data.settings as Record<string, unknown> | null)?.logo_url === 'string'
+        ? ((data.settings as Record<string, unknown>).logo_url as string)
+        : null,
+    brandColor:
+      (typeof (data.settings as Record<string, unknown> | null)?.brand_color === 'string'
+        ? ((data.settings as Record<string, unknown>).brand_color as string)
+        : data.widget_color) || '#d26645',
+    bookingUrl: data.booking_url || null,
     services: (data.services as { name: string }[])?.slice(0, 5) || [],
   }, {
     headers: {

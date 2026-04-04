@@ -7,6 +7,12 @@ const PLAN_PRICE_ENV_MAP = {
   enterprise: 'STRIPE_ENTERPRISE_PRICE_ID',
 } as const;
 
+const PLAN_SETUP_ENV_MAP = {
+  starter: 'STRIPE_STARTER_SETUP_PRICE_ID',
+  growth: 'STRIPE_GROWTH_SETUP_PRICE_ID',
+  enterprise: 'STRIPE_ENTERPRISE_SETUP_PRICE_ID',
+} as const;
+
 export type CheckoutPlan = keyof typeof PLAN_PRICE_ENV_MAP;
 
 export type CreateStripeCheckoutSessionInput = {
@@ -61,6 +67,12 @@ function getPriceIdForPlan(plan: CheckoutPlan): string {
   return priceId;
 }
 
+function getOptionalSetupPriceId(plan: CheckoutPlan): string | null {
+  const envVarName = PLAN_SETUP_ENV_MAP[plan];
+  const priceId = process.env[envVarName];
+  return priceId || null;
+}
+
 function getAppUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) {
@@ -111,16 +123,26 @@ export async function createStripeCheckoutSession({
   const priceId = getPriceIdForPlan(plan);
 
   try {
+    const setupPriceId = getOptionalSetupPriceId(plan);
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{ price: priceId, quantity: 1 }];
+
+    if (setupPriceId) {
+      lineItems.push({ price: setupPriceId, quantity: 1 });
+    }
+
     const session = await getStripeClient().checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       customer_email: email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      line_items: lineItems,
+      success_url: `${appUrl}/dashboard/settings?billing=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing`,
-      metadata: { orgId, plan },
+      metadata: { orgId, plan, checkoutType: 'managed_pilot' },
       automatic_tax: { enabled: true },
-      subscription_data: { trial_period_days: 14 },
+      allow_promotion_codes: true,
+      subscription_data: {
+        metadata: { orgId, plan, checkoutType: 'managed_pilot' },
+      },
     });
 
     return {

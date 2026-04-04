@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { z } from 'zod';
+import { syncActivationForOrganisation } from '@/lib/activation-engine';
 import { supabaseAdmin } from '@/lib/supabase';
 
 const checkoutMetadataSchema = z.object({
@@ -116,6 +117,34 @@ async function updateOrganisationByCustomerId(
   }
 }
 
+async function findOrganisationIdBySubscriptionId(subscriptionId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('businesses')
+    .select('id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
+async function findOrganisationIdByCustomerId(customerId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('businesses')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
+async function syncActivationIfPossible(orgId: string | null) {
+  if (!orgId) return;
+
+  await syncActivationForOrganisation({ orgId }).catch((error) => {
+    console.error('Activation sync failed after Stripe event:', error);
+  });
+}
+
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
   const metadata = checkoutMetadataSchema.safeParse(session.metadata ?? {});
   if (!metadata.success) {
@@ -128,6 +157,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
     stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : null,
     active: true,
   });
+  await syncActivationIfPossible(metadata.data.orgId);
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
@@ -142,6 +172,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
       stripe_subscription_id: subscriptionId,
       active: true,
     });
+    await syncActivationIfPossible(await findOrganisationIdBySubscriptionId(subscriptionId));
     return;
   }
 
@@ -149,6 +180,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     await updateOrganisationByCustomerId(customerId, {
       plan: resolvedPlan,
     });
+    await syncActivationIfPossible(await findOrganisationIdByCustomerId(customerId));
   }
 }
 
@@ -161,6 +193,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
     stripe_subscription_id: subscription.id,
     active: true,
   });
+  await syncActivationIfPossible(await findOrganisationIdBySubscriptionId(subscription.id));
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
@@ -169,6 +202,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
     stripe_subscription_id: subscription.id,
     active: false,
   });
+  await syncActivationIfPossible(await findOrganisationIdBySubscriptionId(subscription.id));
 }
 
 async function processEvent(event: Stripe.Event): Promise<void> {
@@ -190,10 +224,54 @@ async function processEvent(event: Stripe.Event): Promise<void> {
   }
 }
 
+async function reserveEvent(event: Stripe.Event): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('stripe_webhook_events').insert({
+    event_id: event.id,
+    event_type: event.type,
+  });
+
+  if (!error) {
+    return true;
+  }
+
+  if (error.code === '23505') {
+    return false;
+  }
+
+  throw new StripeWebhookError('EVENT_PROCESS_FAILED');
+}
+
+async function releaseReservedEvent(eventId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('stripe_webhook_events')
+    .delete()
+    .eq('event_id', eventId);
+
+  if (error) {
+    throw new StripeWebhookError('EVENT_PROCESS_FAILED');
+  }
+}
+
 export async function handleStripeWebhook(input: {
   rawBody: string;
   stripeSignature: string;
 }): Promise<void> {
   const event = constructEvent(input.rawBody, input.stripeSignature);
-  await processEvent(event);
+  const isNewEvent = await reserveEvent(event);
+
+  if (!isNewEvent) {
+    return;
+  }
+
+  try {
+    await processEvent(event);
+  } catch (error) {
+    await releaseReservedEvent(event.id);
+
+    if (error instanceof StripeWebhookError) {
+      throw error;
+    }
+
+    throw new StripeWebhookError('EVENT_PROCESS_FAILED');
+  }
 }

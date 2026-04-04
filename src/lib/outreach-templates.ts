@@ -1,14 +1,12 @@
-// Outreach email templates for Instantly.ai campaigns
-// Covers all target industries with 5-email sequences (days 0, 3, 7, 14, 21)
-// Each step includes A/B subject line variants for split testing
-// Unsubscribe link appended by Instantly.ai automatically
+// Outreach sequences for Zypflow's native audit-led acquisition engine.
+// These are written for a managed founding-pilot offer, not self-serve trials.
 
 export interface OutreachStep {
   day: number;
   subject: string;
-  subjectB?: string; // A/B variant
+  subjectB?: string;
   body: string;
-  smsVersion?: string; // SMS version for multi-channel
+  smsVersion?: string;
 }
 
 export interface OutreachSequence {
@@ -18,44 +16,44 @@ export interface OutreachSequence {
 
 export const OUTREACH_SEQUENCES: Record<string, OutreachSequence> = {
   dental: {
-    name: 'Dental Practice Outreach',
+    name: 'Private Dental Outreach',
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — filling your appointment book with AI',
+        subject: '{{companyName}} - reducing missed private treatment enquiries',
         subjectB: 'Quick question for {{companyName}}',
-        smsVersion: `Hi {{firstName}}, we built an AI assistant for dental practices that answers patient questions and books appointments 24/7. 14-day free trial, no card needed. Fancy a quick chat? — Alex, Zypflow`,
+        smsVersion:
+          'Hi {{firstName}}, I run Zypflow. We help private clinics fix slow response, missed enquiries, and no-shows. I can send over a quick revenue leak audit for {{companyName}} if useful. - Alex',
         body: `Hi {{firstName}},
 
-I noticed {{companyName}} has great reviews online — clearly you're doing excellent work in {{city}}.
+I was looking at {{companyName}} because we are building Zypflow specifically for private clinics in {{city}}.
 
-I'm reaching out because we've built an AI receptionist specifically for dental practices that:
+The short version: we help clinics stop losing high-intent enquiries because of slow replies, booking friction, and weak follow-up.
 
-- Answers patient questions 24/7 (treatments, pricing, availability)
-- Books consultations automatically via your existing calendar
-- Captures every enquiry — no more missed calls or late-night form fills
-- Sends automated appointment reminders (cuts no-shows by 40%)
+The managed system covers:
+- instant enquiry replies
+- booking nudges
+- reminder flows
+- review requests
+- rebooking prompts
 
-It means every enquiry gets answered instantly — even at 2am on a Sunday.
+If it helps, I can send over a quick Revenue Leak Audit for {{companyName}} and show you where the website and follow-up flow are likely costing bookings.
 
-Would you be open to a quick 10-minute demo? I can show you exactly how it works with a dental practice like yours.
-
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
-        subject: 'Re: {{companyName}} — filling your appointment book with AI',
+        subject: 'Re: {{companyName}} - reducing missed private treatment enquiries',
         body: `Hi {{firstName}},
 
-Just following up on my previous email. I know dental practices are incredibly busy, so I'll keep this brief.
+Following up in case the first note got buried.
 
-The AI handles the questions patients ask most — "How much do veneers cost?", "Do you do emergency appointments?", "Can I get a same-day crown?" — and books them straight in.
+For most private clinics, the leak is not demand. It is what happens between someone showing interest and actually booking.
 
-It takes 15 minutes to set up and there's a 14-day free trial, so there's no risk in trying it.
+That is the gap Zypflow is built to fix with a standardized managed setup, rather than more front-desk admin.
 
-Best,
+If it would be useful, I can show you the audit and the exact automation pack we deploy first.
+
 Alex`,
       },
       {
@@ -63,16 +61,11 @@ Alex`,
         subject: 'Last one from me, {{firstName}}',
         body: `Hi {{firstName}},
 
-I don't want to be a pest, so this will be my last email.
+Closing the loop from my side.
 
-If you ever want to explore how AI can help {{companyName}} capture more patient enquiries and fill your books, just reply to this email.
+If reducing missed enquiries and no-shows becomes a priority for {{companyName}}, just reply and I will send the audit over.
 
-No cost for a demo, no commitment — just a quick look at what's possible.
-
-Wishing you and the team all the best.
-
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
     ],
   },
@@ -82,36 +75,37 @@ Zypflow | zypflow.com`,
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — convert more enquiries into consultations',
+        subject: '{{companyName}} - convert more enquiries into consultations',
         body: `Hi {{firstName}},
 
-I came across {{companyName}} and was impressed by your clinic's online presence in {{city}}.
+I came across {{companyName}} while researching aesthetics clinics in {{city}}.
 
-We've built an AI assistant specifically for aesthetics clinics that handles the conversations your team doesn't have time for:
+We are building Zypflow specifically for clinics that are already getting demand but leaking bookings between first enquiry and consult.
 
-- Answers treatment questions instantly (Botox, fillers, skin treatments, body contouring)
-- Provides pricing guidance without you lifting a finger
-- Books consultations directly into your calendar
-- Captures leads from Instagram, Google, and your website — even at midnight
+The core system handles:
+- instant follow-up to new enquiries
+- booking nudges for warm leads
+- reminder flows to reduce no-shows
+- review requests and top-up reminders after treatment
 
-It means no enquiry goes unanswered — even the ones that come in at midnight via Instagram.
+It is a managed setup, not another dashboard for your team to babysit.
 
-Would a quick 10-minute call be useful? I can walk you through a live demo.
+If helpful, I can send over a quick Revenue Leak Audit for {{companyName}} and show where the biggest conversion gaps probably are.
 
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
-        subject: 'Re: {{companyName}} — convert more enquiries into consultations',
+        subject: 'Re: {{companyName}} - convert more enquiries into consultations',
         body: `Hi {{firstName}},
 
-Quick follow-up. Most aesthetics enquiries come in after 6pm — when your team has gone home. That's exactly when our AI steps in.
+Quick follow-up.
 
-It handles treatment questions, gives pricing guidance, and books consultations directly into your calendar. All while you're off the clock.
+Most clinics do not need more leads first. They need tighter follow-up, faster replies, and a cleaner path from website visit to booked consult.
 
-14-day free trial, no card required. Happy to show you how it works — takes 10 minutes.
+That is the first pack we deploy with Zypflow.
+
+If you want the audit, just reply with the best website link and I will send it over.
 
 Alex`,
       },
@@ -120,13 +114,11 @@ Alex`,
         subject: 'Last note, {{firstName}}',
         body: `Hi {{firstName}},
 
-Final email from me! If the timing isn't right, no worries at all.
+Last note from me.
 
-Whenever you're ready to explore how AI can help {{companyName}} capture more leads and fill your consultation diary, just reply here.
+If increasing consult bookings and reducing no-shows becomes a priority for {{companyName}}, just reply and I will send the audit link across.
 
-All the best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
     ],
   },
@@ -136,36 +128,27 @@ Zypflow | zypflow.com`,
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — more bookings without more admin',
+        subject: '{{companyName}} - reduce missed enquiries and follow-up gaps',
         body: `Hi {{firstName}},
 
-I noticed {{companyName}} in {{city}} and wanted to reach out.
+I noticed {{companyName}} in {{city}} and wanted to reach out because we are building Zypflow for clinics that lose bookings in the gap between enquiry and appointment.
 
-We've built an AI assistant for physiotherapy practices that handles the initial patient conversations your front desk doesn't have time for:
+The first automation pack covers instant replies, booking nudges, reminders, reviews, and rebooking prompts.
 
-- Answers common questions 24/7 ("Do you treat sports injuries?", "How much is an initial assessment?", "Do you do evening appointments?")
-- Books new patient assessments directly into your calendar
-- Captures every website and Google enquiry — even out of hours
-- Sends appointment reminders automatically (reduces no-shows by 35-40%)
+If useful, I can send a quick Revenue Leak Audit and highlight the main conversion gaps I spotted.
 
-Most physio practices lose enquiries simply because no one's free to answer. Our AI makes sure that never happens.
-
-Fancy a quick 10-minute demo? Happy to show you how it works.
-
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
-        subject: 'Re: {{companyName}} — more bookings without more admin',
+        subject: 'Re: {{companyName}} - reduce missed enquiries and follow-up gaps',
         body: `Hi {{firstName}},
 
-Quick follow-up. I know physio practices are often short-staffed at reception, which means missed calls and slow follow-ups.
+Following up in case this is relevant.
 
-Our AI assistant sits on your website and handles those conversations instantly — like a virtual receptionist that never takes a break. It knows your services, prices, and availability, and books patients straight in.
+Most clinics do not need more admin. They need a cleaner system for turning warm interest into booked appointments.
 
-Setup takes about 15 minutes (one line of code on your website). Would be happy to walk you through it.
+If you want the audit, reply here and I will send it across.
 
 Alex`,
       },
@@ -174,11 +157,11 @@ Alex`,
         subject: 'Last one from me',
         body: `Hi {{firstName}},
 
-Last email, I promise! If you ever want to explore how AI can help {{companyName}} capture more patient enquiries without adding to your admin, just reply here.
+Closing the loop from my side.
 
-Wishing you all the best,
-Alex
-Zypflow | zypflow.com`,
+If fixing missed enquiries becomes a priority for {{companyName}}, reply and I will send over the audit.
+
+Alex`,
       },
     ],
   },
@@ -188,36 +171,27 @@ Zypflow | zypflow.com`,
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — capture more client enquiries with AI',
+        subject: '{{companyName}} - capture more client enquiries cleanly',
         body: `Hi {{firstName}},
 
-I came across {{companyName}} in {{city}} and wanted to reach out.
+I came across {{companyName}} in {{city}} and wanted to reach out because we are building Zypflow for firms that lose too many warm enquiries to slow response and weak follow-up.
 
-We've built an AI assistant for law firms and legal practices that handles initial client enquiries professionally:
+The first automation pack handles instant replies, booking nudges, reminders, and follow-up without adding more admin load.
 
-- Answers common questions 24/7 ("Do you handle employment disputes?", "What are your fees?", "Can I book a free consultation?")
-- Books initial consultations directly into your diary
-- Captures every website enquiry — even the ones that come in at 11pm
-- Pre-qualifies leads so you only speak to serious prospects
+If useful, I can send over a quick Revenue Leak Audit and show the main gaps I spotted.
 
-Speed matters — potential clients who get a response in seconds are far more likely to book than those waiting hours for a callback.
-
-Would you be open to a quick 10-minute demo? I can show you exactly how it works for legal practices.
-
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
-        subject: 'Re: {{companyName}} — capture more client enquiries with AI',
+        subject: 'Re: {{companyName}} - capture more client enquiries cleanly',
         body: `Hi {{firstName}},
 
-Just following up. One thing I hear from law firms is that potential clients often enquire outside business hours — evenings, weekends — and by Monday morning they've already gone elsewhere.
+Following up in case the first note got buried.
 
-Our AI assistant responds instantly, gathers their details, and books them in. Most firms we speak to tell us they're losing enquiries to competitors who simply respond faster. Our AI responds in under 2 seconds, 24/7.
+The main pattern we see is simple: firms lose work because response speed and follow-up are weaker than they think.
 
-Happy to show you how it works in 10 minutes if you're curious.
+If you want the audit, reply here and I will send it across.
 
 Alex`,
       },
@@ -226,13 +200,11 @@ Alex`,
         subject: 'Last note from me, {{firstName}}',
         body: `Hi {{firstName}},
 
-Final email from me. If the timing isn't right, no pressure at all.
+Last note from me.
 
-Whenever you're ready to explore how AI can help {{companyName}} capture more client enquiries, just reply here. Happy to chat anytime.
+If improving enquiry conversion becomes a priority for {{companyName}}, reply and I will send over the audit.
 
-All the best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
     ],
   },
@@ -242,38 +214,27 @@ Zypflow | zypflow.com`,
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — never miss a job enquiry again',
+        subject: '{{companyName}} - stop missing job enquiries',
         body: `Hi {{firstName}},
 
-I noticed {{companyName}} in {{city}} and wanted to reach out.
+I noticed {{companyName}} in {{city}} and wanted to reach out because we are building Zypflow for service businesses that lose jobs when no one is free to reply quickly.
 
-We've built an AI assistant for home service businesses (plumbing, electrical, cleaning, landscaping, handyman, etc.) that captures every enquiry — even when you're on a job:
+The system handles instant replies, quote nudges, reminders, and follow-up automatically.
 
-- Answers customer questions 24/7 ("How much for a boiler service?", "Do you cover my area?", "Are you available this week?")
-- Books appointments automatically into your calendar
-- Follows up with leads who don't book straight away
-- Sends appointment reminders so customers don't forget
+If useful, I can send over a quick Revenue Leak Audit and show where the main gaps are.
 
-It means you never miss an enquiry while you're on a job — your AI handles it and books them straight in.
-
-Would you be open to a quick 10-minute chat? Happy to show you how it works.
-
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
-        subject: 'Re: {{companyName}}',
+        subject: 'Re: {{companyName}} - stop missing job enquiries',
         body: `Hi {{firstName}},
 
-Just a quick follow-up. I know you're busy running {{companyName}} and probably don't have time to sit at a computer answering enquiries all day.
+Quick follow-up.
 
-That's exactly the problem we solve. Our AI handles those conversations automatically — on your website, 24/7 — and books jobs straight into your diary. No extra staff, no missed calls.
+The biggest leak for most service businesses is not traffic. It is missed response windows and weak follow-up while the owner is busy doing the work.
 
-Setup takes 10 minutes and there's a 14-day free trial — no card needed, no risk.
-
-Happy to do a quick demo if you're curious.
+If you want the audit, just reply and I will send it across.
 
 Alex`,
       },
@@ -282,11 +243,11 @@ Alex`,
         subject: 'Last one from me',
         body: `Hi {{firstName}},
 
-Last email, I promise! If you ever want to explore how AI can help {{companyName}} grow without the admin headache, just reply here.
+Closing the loop from my side.
 
-Wishing you all the best,
-Alex
-Zypflow | zypflow.com`,
+If fixing missed enquiries becomes a priority for {{companyName}}, reply and I will send over the audit.
+
+Alex`,
       },
     ],
   },
@@ -296,39 +257,36 @@ Zypflow | zypflow.com`,
     steps: [
       {
         day: 0,
-        subject: '{{companyName}} — never miss a customer enquiry again',
+        subject: '{{companyName}} - reduce missed enquiries and booking drop-off',
         body: `Hi {{firstName}},
 
-I noticed {{companyName}} in {{city}} and wanted to reach out.
+I noticed {{companyName}} in {{city}} and wanted to reach out because we are building Zypflow for service businesses that already have demand but lose too much of it in follow-up.
 
-We've built an AI assistant that helps service businesses like yours:
+The system handles:
+- instant replies
+- booking nudges
+- reminders
+- review requests
+- repeat-booking prompts
 
-- Answer customer questions instantly, 24/7
-- Book appointments automatically
-- Capture every lead — even at 2am
-- Follow up with leads who don't book straight away
-- Send appointment reminders (cuts no-shows by 35%)
+It is designed to automate the repetitive part of lead conversion without turning into more admin for the owner.
 
-It installs in 5 minutes (one line of code on your website) and starts capturing leads immediately.
+If useful, I can send over a quick Revenue Leak Audit and show the first automations we would put live.
 
-Would you be open to a quick chat? I'd love to show you how it works.
-
-Best,
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
       {
         day: 3,
         subject: 'Re: {{companyName}}',
         body: `Hi {{firstName}},
 
-Just a quick follow-up. I know you're busy running {{companyName}}, so I'll be brief:
+Just a quick follow-up.
 
-Our AI assistant answers the questions your customers ask most (pricing, availability, services) and books them in automatically. No extra staff needed.
+The main thing we usually find is not a traffic problem, it is a response-speed and follow-up problem.
 
-The whole point is simple: every enquiry gets answered in under 2 seconds, 24/7. No more missed opportunities.
+That is exactly what Zypflow is meant to automate.
 
-Happy to do a quick 10-minute demo if you're curious.
+If you want the audit, just reply here and I will send it across.
 
 Alex`,
       },
@@ -338,51 +296,47 @@ Alex`,
         subjectB: '{{firstName}}, one last thing',
         body: `Hi {{firstName}},
 
-Last email, I promise! If you ever want to explore how AI can help {{companyName}} grow, just reply here.
+Closing the loop from my side.
 
-Wishing you all the best,
-Alex
-Zypflow | zypflow.com`,
+If fixing missed enquiries becomes a priority for {{companyName}}, just reply and I will send over the audit.
+
+Alex`,
       },
       {
         day: 14,
-        subject: '{{companyName}} — quick case study',
+        subject: '{{companyName}} - quick case study',
         subjectB: 'Thought of {{companyName}} when I saw this',
         body: `Hi {{firstName}},
 
-Apologies for the extra email — I wanted to share something genuinely useful.
+One more practical note.
 
-I wanted to share what Zypflow actually does in practice for businesses like {{companyName}}:
+What Zypflow does in practice for businesses like {{companyName}}:
 
-- AI chat widget answers customer questions 24/7 (takes 10 minutes to install)
-- Captures every lead — even the ones that come in at 2am
-- Automated follow-ups nudge undecided enquiries into bookings
-- Appointment reminders cut no-shows via SMS and email
+- captures more enquiries
+- follows up instantly
+- nudges bookings
+- reduces no-shows
+- brings previous customers back automatically
 
-We're offering a 14-day free trial with no card required. If you'd like to try it, just reply and I'll send you a link.
+If you want the audit and the first workflow pack breakdown, just reply and I will send it.
 
-No hard sell — just thought it might be useful for {{companyName}}.
-
-Alex
-Zypflow | zypflow.com`,
-        smsVersion: `Hi {{firstName}}, we help businesses like {{companyName}} capture every enquiry 24/7 using AI. 14-day free trial, no card needed. Want to try it? Reply YES — Alex, Zypflow`,
+Alex`,
+        smsVersion:
+          'Hi {{firstName}}, we help businesses like {{companyName}} fix missed enquiries, follow-up gaps, and no-shows. If you want a quick audit, reply YES. - Alex, Zypflow',
       },
       {
         day: 21,
         subject: 'Open invitation, {{firstName}}',
-        subjectB: '{{companyName}} — standing offer',
+        subjectB: '{{companyName}} - standing offer',
         body: `Hi {{firstName}},
 
-This is genuinely the last time I'll reach out.
+This is genuinely the last time I will reach out.
 
-If things change down the line and you want to explore how AI can help {{companyName}} capture more enquiries and grow — I'm always here. Just reply to this email anytime, even months from now.
+If things change down the line and you want to explore how Zypflow could help {{companyName}} capture more enquiries and grow, just reply any time.
 
-We're a small UK team building tools specifically for businesses like yours. No pressure, no tricks, just a standing offer to help.
+We are a small UK team building specifically around the revenue gaps most service businesses live with every week. No pressure, just a standing offer to help.
 
-Wishing you and the team all the best.
-
-Alex
-Zypflow | zypflow.com`,
+Alex`,
       },
     ],
   },

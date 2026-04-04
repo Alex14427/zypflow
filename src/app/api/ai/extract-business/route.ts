@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOpenAI, MODELS } from '@/lib/ai-client';
+import { canUseOpenAI, isLocalSmokeMode } from '@/lib/local-mode';
 
 // AI-powered business data extraction from website URL
 // Uses GPT-4o — complex HTML parsing needs capability (can't downgrade this one)
@@ -49,6 +50,48 @@ export async function POST(req: NextRequest) {
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 8000);
+
+    if (isLocalSmokeMode() || !canUseOpenAI()) {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      const businessName = host.split('.')[0].replace(/[-_]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+      const industry = /dental|dentist/.test(cleanText.toLowerCase())
+        ? 'Dental'
+        : /aesthetic|skin|beauty|laser|cosmetic/.test(cleanText.toLowerCase())
+          ? 'Aesthetics'
+          : /physio|physiotherapy/.test(cleanText.toLowerCase())
+            ? 'Physiotherapy'
+            : /legal|solicitor|law/.test(cleanText.toLowerCase())
+              ? 'Legal'
+              : /plumb|electric|clean|landscap/.test(cleanText.toLowerCase())
+                ? 'Home Services'
+                : 'Other';
+
+      return NextResponse.json({
+        success: true,
+        mode: 'local_smoke',
+        data: {
+          name: businessName || 'Local Test Business',
+          industry,
+          phone: '',
+          services: [
+            { name: 'Initial consultation', price: '', duration_minutes: '30' },
+            { name: 'Follow-up appointment', price: '', duration_minutes: '30' },
+            { name: 'Signature treatment', price: '', duration_minutes: '45' },
+          ],
+          faqs: [
+            { question: 'Do you offer consultations?', answer: 'Yes, the clinic can usually arrange an initial consultation before treatment.' },
+            { question: 'How do I book?', answer: 'Use the clinic booking link or contact the team directly.' },
+            { question: 'Where are you based?', answer: 'Please confirm the exact location from the clinic website or contact details.' },
+            { question: 'What should I expect on the first visit?', answer: 'Most first visits cover your goals, suitability, and next steps.' },
+            { question: 'Can I ask questions before booking?', answer: 'Yes, the clinic can answer common questions before you commit.' },
+          ],
+          description: `${businessName || 'This business'} appears to offer ${industry.toLowerCase()} services in the UK.`,
+          personality: 'professional and formal',
+          openingHours: '',
+          address: '',
+        },
+      });
+    }
 
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({

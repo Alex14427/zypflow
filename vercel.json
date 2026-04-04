@@ -20,6 +20,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/automations/review-request",
+      "schedule": "0 17 * * *"
+    },
+    {
       "path": "/api/outreach/cron",
       "schedule": "0 7 * * *"
     }

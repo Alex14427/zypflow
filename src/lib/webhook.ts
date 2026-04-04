@@ -1,9 +1,9 @@
-import * as Sentry from '@sentry/nextjs';
+import { captureMessage } from '@/lib/monitoring';
 
 /**
  * Fire a webhook with retry logic.
  * Retries up to 2 times with exponential backoff (1s, 3s).
- * Logs errors to console and Sentry.
+ * Logs errors locally for review.
  */
 export async function fireWebhook(
   url: string,
@@ -20,7 +20,9 @@ export async function fireWebhook(
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) return true;
+      if (res.ok) {
+        return true;
+      }
 
       console.error(`Webhook ${label} returned ${res.status} (attempt ${attempt + 1})`);
     } catch (err) {
@@ -28,14 +30,14 @@ export async function fireWebhook(
     }
 
     if (attempt < maxRetries) {
-      await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+      await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1500));
     }
   }
 
-  // All retries exhausted — report to Sentry
-  Sentry.captureMessage(`Webhook failed after ${maxRetries + 1} attempts: ${label}`, {
-    level: 'error',
-    extra: { url, payload, label },
+  captureMessage(`Webhook failed after ${maxRetries + 1} attempts: ${label}`, {
+    url,
+    payload,
+    label,
   });
 
   return false;

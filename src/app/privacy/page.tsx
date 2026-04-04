@@ -1,118 +1,95 @@
+import { LegalLayout } from '@/components/public/legal-layout';
+
 export const metadata = {
-  title: 'Privacy Policy — Zypflow',
+  title: 'Privacy Policy - Zypflow',
+  description: 'How Zypflow collects, stores, and processes clinic, prospect, and patient data.',
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-16">
-      <nav className="flex items-center justify-between mb-10">
-        <a href="/" className="text-xl font-bold hover:opacity-80 transition">
-          <span className="text-[#6c3cff]">Zyp</span>flow
-        </a>
-        <div className="flex gap-4 text-sm">
-          <a href="/terms" className="text-gray-500 hover:text-gray-900">Terms</a>
-          <a href="/login" className="text-[#6c3cff] hover:underline font-medium">Log In</a>
-        </div>
-      </nav>
-      <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-      <p className="text-gray-400 text-sm mb-8">Last updated: 19 March 2026</p>
+    <LegalLayout
+      eyebrow="Privacy policy"
+      title="How Zypflow handles clinic, lead, and patient data."
+      summary="This page explains what we collect, why we collect it, how long we keep it, and the controls available to clinics and end users. It is written to support a managed clinic-growth platform running in the UK."
+      lastUpdated="3 April 2026"
+    >
+      <section>
+        <h2>1. Who we are</h2>
+        <p>
+          Zypflow (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) provides an AI-assisted revenue and client-operations platform for UK private clinics and other appointment-led service businesses. If you have privacy or data-protection questions, email <a href="mailto:hello@zypflow.com">hello@zypflow.com</a>.
+        </p>
+      </section>
 
-      <div className="prose prose-gray max-w-none space-y-6 text-gray-700 text-sm leading-relaxed">
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">1. Who we are</h2>
-          <p>Zypflow (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is an AI-powered customer growth platform for UK service businesses. Our registered address is available upon request. For data protection queries, contact us at <a href="mailto:hello@zypflow.com" className="text-[#6c3cff]">hello@zypflow.com</a>.</p>
-        </section>
+      <section>
+        <h2>2. Data we collect</h2>
+        <p>Depending on how you use the platform, we may collect:</p>
+        <ul>
+          <li><strong>Account data:</strong> owner name, email address, phone number, clinic name, login records, and billing contacts.</li>
+          <li><strong>Clinic configuration data:</strong> services, booking links, FAQs, review links, AI prompt settings, brand assets, and launch-status information.</li>
+          <li><strong>Lead and customer data:</strong> names, emails, phone numbers, service interest, conversation history, booking status, reminder state, and follow-up history.</li>
+          <li><strong>Payment and subscription data:</strong> billing identifiers, subscription state, invoices, and limited payment metadata handled through Stripe.</li>
+          <li><strong>Usage and device data:</strong> IP address, browser information, product usage events, system logs, and operational diagnostics.</li>
+        </ul>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">2. What data we collect</h2>
-          <p>We collect the following categories of personal data:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Account data:</strong> name, email, phone number, business name when you sign up</li>
-            <li><strong>Customer lead data:</strong> name, email, phone, service interest captured via the chat widget on your website</li>
-            <li><strong>Conversation data:</strong> messages exchanged with the AI chat assistant</li>
-            <li><strong>Payment data:</strong> processed securely by Stripe — we never store card numbers</li>
-            <li><strong>Usage data:</strong> pages visited, features used, collected via PostHog analytics</li>
-            <li><strong>Device data:</strong> IP address, browser type, operating system</li>
-          </ul>
-        </section>
+      <section>
+        <h2>3. How we use data</h2>
+        <ul>
+          <li>To operate the Zypflow platform, including lead capture, booking prompts, reminders, review requests, and reporting.</li>
+          <li>To configure and improve AI-assisted workflows using the information clinics choose to provide.</li>
+          <li>To secure the platform, investigate failures, and monitor operational health.</li>
+          <li>To manage subscriptions, send service notices, and provide support.</li>
+          <li>To comply with legal, accounting, tax, and regulatory obligations.</li>
+        </ul>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">3. How we use your data</h2>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>To provide and maintain the Zypflow platform</li>
-            <li>To process payments and manage subscriptions</li>
-            <li>To send appointment reminders and follow-up messages via SMS and email</li>
-            <li>To improve our AI assistant and platform features</li>
-            <li>To send service-related communications</li>
-            <li>To comply with legal obligations</li>
-          </ul>
-        </section>
+      <section>
+        <h2>4. Legal bases for processing</h2>
+        <p>Where UK GDPR applies, we generally rely on one or more of the following bases:</p>
+        <ul>
+          <li><strong>Contract:</strong> where processing is necessary to provide the platform or managed services a clinic has signed up for.</li>
+          <li><strong>Legitimate interests:</strong> for product security, fraud prevention, operational monitoring, analytics, and product improvement.</li>
+          <li><strong>Consent:</strong> where consent is required for particular communications or tracking.</li>
+          <li><strong>Legal obligation:</strong> where we must retain or disclose information to comply with law.</li>
+        </ul>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">4. Legal basis for processing (GDPR)</h2>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Contract:</strong> processing necessary to provide our services</li>
-            <li><strong>Legitimate interest:</strong> analytics, security, and service improvements</li>
-            <li><strong>Consent:</strong> marketing communications (you can opt out at any time)</li>
-            <li><strong>Legal obligation:</strong> tax, accounting, and regulatory requirements</li>
-          </ul>
-        </section>
+      <section>
+        <h2>5. Processors and service providers</h2>
+        <p>We use specialist infrastructure providers to operate the service. Depending on configuration, these may include Supabase, Stripe, Twilio, Resend, Vercel, OpenAI, Anthropic, PostHog, and Sentry. We use these providers to store data, send messages, process payments, host the application, and support AI-assisted workflows.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">5. Third-party services</h2>
-          <p>We share data with the following trusted processors:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Supabase</strong> (EU) — database hosting</li>
-            <li><strong>Stripe</strong> — payment processing</li>
-            <li><strong>Twilio</strong> — SMS messaging</li>
-            <li><strong>Resend</strong> — email delivery</li>
-            <li><strong>OpenAI / Anthropic</strong> — AI conversation processing</li>
-            <li><strong>Vercel</strong> — application hosting</li>
-            <li><strong>PostHog</strong> — product analytics</li>
-            <li><strong>Sentry</strong> — error tracking</li>
-          </ul>
-        </section>
+      <section>
+        <h2>6. Retention</h2>
+        <p>We keep account and clinic configuration data while an account is active. We keep lead, booking, review, and conversation data for as long as needed to operate the service and provide reporting, unless a shorter retention policy is agreed or required by law. After cancellation, we aim to remove or anonymize data within a reasonable period unless retention is legally required.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">6. Data retention</h2>
-          <p>We retain your data for as long as your account is active. If you cancel your subscription, we delete your data within 90 days unless required by law to retain it longer. Lead data captured via the chat widget is retained for the duration of your subscription.</p>
-        </section>
+      <section>
+        <h2>7. Your rights</h2>
+        <p>Where applicable, you may have rights to access, correct, erase, restrict, object to, or export personal data. Email <a href="mailto:hello@zypflow.com">hello@zypflow.com</a> to make a request. We may ask for verification before acting on a request.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">7. Your rights</h2>
-          <p>Under GDPR, you have the right to:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Access your personal data</li>
-            <li>Correct inaccurate data</li>
-            <li>Request deletion of your data</li>
-            <li>Restrict or object to processing</li>
-            <li>Data portability</li>
-            <li>Withdraw consent at any time</li>
-          </ul>
-          <p>To exercise any of these rights, email <a href="mailto:hello@zypflow.com" className="text-[#6c3cff]">hello@zypflow.com</a>.</p>
-        </section>
+      <section>
+        <h2>8. Messaging and opt-out controls</h2>
+        <p>Clinics are responsible for using Zypflow in line with UK GDPR and PECR, including consent and suppression requirements. Where supported, we process STOP and unsubscribe actions automatically and expose suppression controls in the system.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">8. Cookies</h2>
-          <p>We use essential cookies for authentication and analytics cookies (PostHog, Google Analytics) to understand how you use our platform. You can manage cookie preferences via the cookie consent banner shown on first visit.</p>
-        </section>
+      <section>
+        <h2>9. Security</h2>
+        <p>We use a combination of access controls, environment-based secrets, operational diagnostics, and third-party infrastructure safeguards to protect data. No online service is completely risk-free, but we aim to apply reasonable technical and organisational measures relative to the service we provide.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">9. SMS opt-out</h2>
-          <p>You can opt out of SMS messages at any time by replying STOP to any message. We will immediately cease sending SMS communications.</p>
-        </section>
+      <section>
+        <h2>10. Changes</h2>
+        <p>We may update this policy from time to time. Material changes will be reflected on this page and, where appropriate, communicated directly.</p>
+      </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">10. Changes to this policy</h2>
-          <p>We may update this policy from time to time. We will notify you of significant changes via email or through the platform.</p>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900">11. Contact</h2>
-          <p>For any privacy-related questions, contact us at <a href="mailto:hello@zypflow.com" className="text-[#6c3cff]">hello@zypflow.com</a>.</p>
-          <p>If you are unsatisfied with our response, you have the right to lodge a complaint with the <a href="https://ico.org.uk" className="text-[#6c3cff]" target="_blank" rel="noopener noreferrer">Information Commissioner&apos;s Office (ICO)</a>.</p>
-        </section>
-      </div>
-    </div>
+      <section>
+        <h2>11. Contact and complaints</h2>
+        <p>
+          For privacy questions, contact <a href="mailto:hello@zypflow.com">hello@zypflow.com</a>. If you are unhappy with our response and UK data-protection law applies, you may also contact the <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer">Information Commissioner&apos;s Office</a>.
+        </p>
+      </section>
+    </LegalLayout>
   );
 }

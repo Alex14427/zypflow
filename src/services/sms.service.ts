@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { canUseTwilio, isLocalSmokeMode } from '@/lib/local-mode';
 
 export type SendSmsInput = {
   to: string;
@@ -29,6 +30,11 @@ function getSmsClient() {
 }
 
 export async function sendSms({ to, body }: SendSmsInput): Promise<{ sid: string }> {
+  if (isLocalSmokeMode() || !canUseTwilio()) {
+    console.info(`[local-sms] ${to}: ${body}`);
+    return { sid: `local-sms-${Date.now()}` };
+  }
+
   const client = getSmsClient();
   const from = requireEnv('TWILIO_PHONE_NUMBER');
 

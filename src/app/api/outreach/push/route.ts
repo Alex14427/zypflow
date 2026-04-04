@@ -1,135 +1,197 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
-import { OUTREACH_SEQUENCES } from '@/lib/outreach-templates';
+import { buildOutreachStep, buildProspectAudit } from '@/lib/outreach-engine';
 
-const INSTANTLY_API = 'https://api.instantly.ai/api/v1';
+const pushSchema = z.object({
+  industry: z.string().trim().optional().nullable(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
 
-// Push new prospects to Instantly.ai email campaigns
-// Called by Make.com or manually from dashboard
+const OUTREACH_READY_STATUSES = new Set([
+  'new',
+  'retry_required',
+  'outreach_sent',
+  'follow_up_scheduled',
+  'opened',
+  'clicked',
+]);
+
+// Send native Zypflow outreach emails with audit-led personalization.
+// This replaces the old "push into Instantly" behavior with direct sending plus tracked follow-up state.
 export async function POST(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
 
-  const { industry, campaignId, limit: maxLeads = 50 } = await req.json().catch(() => ({
-    industry: null,
-    campaignId: null,
-    limit: 50,
-  }));
-
-  const apiKey = process.env.INSTANTLY_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'INSTANTLY_API_KEY not configured' }, { status: 500 });
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
   }
 
-  // Get prospects that haven't been pushed yet
+  const body = await req.json().catch(() => ({}));
+  const parsed = pushSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid outreach payload' }, { status: 400 });
+  }
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const maxLeads = parsed.data.limit ?? 25;
+
   let query = supabaseAdmin
     .from('prospects')
-    .select('id, name, email, business_name, website, industry, city')
-    .eq('status', 'new')
-    .not('email', 'is', null);
+    .select(
+      'id, name, email, phone, business_name, website, industry, city, status, audit_id, audit_score, audit_top_leak, outreach_stage, sequence_name, next_follow_up_at'
+    )
+    .not('email', 'is', null)
+    .or(`next_follow_up_at.is.null,next_follow_up_at.lte.${nowIso}`)
+    .order('created_at', { ascending: true });
 
-  if (industry) {
-    query = query.ilike('industry', `%${industry}%`);
+  if (parsed.data.industry) {
+    query = query.ilike('industry', `%${parsed.data.industry}%`);
   }
 
-  const { data: prospects } = await query.limit(maxLeads);
-  if (!prospects || prospects.length === 0) {
-    return NextResponse.json({ pushed: 0, message: 'No new prospects to push' });
+  const { data: prospects, error } = await query.limit(Math.min(200, Math.max(maxLeads * 4, 50)));
+
+  if (error) {
+    console.error('Prospect query failed:', error);
+    return NextResponse.json({ error: 'Failed to load prospects for outreach' }, { status: 500 });
   }
 
-  // Get or determine the campaign ID
-  let targetCampaignId = campaignId;
-  if (!targetCampaignId) {
-    // Try to find an existing campaign for this industry
-    const campaigns = await listCampaigns(apiKey);
-    const industryKey = industry || 'general';
-    const existing = campaigns.find((c: { name: string }) =>
-      c.name.toLowerCase().includes(industryKey.toLowerCase())
-    );
-    targetCampaignId = existing?.id || null;
+  const readyProspects = (prospects || [])
+    .filter((prospect) => {
+      if (!prospect.status) return true;
+      return OUTREACH_READY_STATUSES.has(prospect.status);
+    })
+    .slice(0, maxLeads);
+
+  if (readyProspects.length === 0) {
+    return NextResponse.json({ sent: 0, message: 'No prospects ready for outreach' });
   }
 
-  let pushed = 0;
+  let sent = 0;
+  let auditsGenerated = 0;
   const errors: string[] = [];
 
-  for (const prospect of prospects) {
+  for (const prospect of readyProspects) {
     if (!prospect.email) continue;
 
     try {
-      // Determine which sequence to use
-      const industryKey = mapIndustry(prospect.industry);
-      const sequence = OUTREACH_SEQUENCES[industryKey as keyof typeof OUTREACH_SEQUENCES] || OUTREACH_SEQUENCES.general;
+      let auditContext: { id: string; report: Awaited<ReturnType<typeof buildProspectAudit>>['report'] } | null = null;
+      let auditId = prospect.audit_id ?? null;
+      let auditScore = prospect.audit_score ?? null;
+      let auditTopLeak = prospect.audit_top_leak ?? null;
 
-      // Personalise variables
-      const firstName = extractFirstName(prospect.name || prospect.business_name || '');
-      const variables = {
-        firstName: firstName || 'there',
-        companyName: prospect.business_name || 'your business',
-        city: prospect.city || '',
-        website: prospect.website || '',
-      };
+      if (prospect.website && !auditId) {
+        const audit = await buildProspectAudit({
+          website: prospect.website,
+          businessName: prospect.business_name || prospect.name || prospect.email,
+          email: prospect.email,
+        });
 
-      // Add lead to Instantly
-      const addRes = await fetch(`${INSTANTLY_API}/lead/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: apiKey,
-          campaign_id: targetCampaignId,
-          skip_if_in_workspace: true,
-          leads: [{
-            email: prospect.email,
-            first_name: variables.firstName,
-            company_name: variables.companyName,
-            custom_variables: variables,
-          }],
-        }),
+        const { data: savedAudit, error: auditError } = await supabaseAdmin
+          .from('audits')
+          .insert(audit.insertPayload)
+          .select('id')
+          .single();
+
+        if (!auditError && savedAudit?.id) {
+          auditId = savedAudit.id;
+          auditScore = audit.report.overallScore;
+          auditTopLeak = audit.report.summary.topLeak;
+          auditsGenerated++;
+          auditContext = {
+            id: savedAudit.id,
+            report: audit.report,
+          };
+        } else if (auditError) {
+          console.error('Prospect audit insert failed:', auditError);
+        }
+      } else if (auditId) {
+        const { data: existingAudit } = await supabaseAdmin
+          .from('audits')
+          .select('id, raw_results')
+          .eq('id', auditId)
+          .maybeSingle();
+
+        if (existingAudit?.id) {
+          auditContext = {
+            id: existingAudit.id,
+            report: existingAudit.raw_results as Awaited<ReturnType<typeof buildProspectAudit>>['report'],
+          };
+        }
+      }
+
+      const outreachStep = buildOutreachStep({
+        prospect: {
+          ...prospect,
+          audit_id: auditId,
+          audit_score: auditScore,
+          audit_top_leak: auditTopLeak,
+        },
+        audit: auditContext,
       });
 
-      if (addRes.ok) {
-        // Mark prospect as pushed
-        await supabaseAdmin.from('prospects')
+      if (!outreachStep) {
+        await supabaseAdmin
+          .from('prospects')
           .update({
-            status: 'outreach_sent',
-            instantly_campaign_id: targetCampaignId,
+            status: 'sequence_complete',
+            next_follow_up_at: null,
           })
           .eq('id', prospect.id);
-        pushed++;
-      } else {
-        const err = await addRes.text();
-        errors.push(`${prospect.email}: ${err}`);
+        continue;
       }
-    } catch (err) {
-      errors.push(`${prospect.email}: ${String(err)}`);
+
+      const emailResult = await outreachStep.send();
+      if (emailResult.error) {
+        errors.push(`${prospect.email}: ${emailResult.error.message}`);
+        await supabaseAdmin
+          .from('prospects')
+          .update({
+            status: 'retry_required',
+            audit_id: auditId,
+            audit_score: auditScore,
+            audit_top_leak: auditTopLeak,
+          })
+          .eq('id', prospect.id);
+        continue;
+      }
+
+      const nextStatus = outreachStep.nextFollowUpAt
+        ? outreachStep.stageIndex === 0
+          ? 'outreach_sent'
+          : 'follow_up_scheduled'
+        : 'sequence_complete';
+
+      await supabaseAdmin
+        .from('prospects')
+        .update({
+          status: nextStatus,
+          audit_id: auditId,
+          audit_score: auditScore,
+          audit_top_leak: auditTopLeak,
+          outreach_stage: outreachStep.stageIndex + 1,
+          sequence_name: outreachStep.sequenceName,
+          last_contacted_at: nowIso,
+          next_follow_up_at: outreachStep.nextFollowUpAt,
+          last_email_subject: outreachStep.subject,
+          last_email_preview: outreachStep.preview,
+          last_email_provider: 'resend',
+        })
+        .eq('id', prospect.id);
+
+      sent++;
+    } catch (sendError) {
+      console.error('Prospect outreach failed:', sendError);
+      errors.push(`${prospect.email}: ${String(sendError)}`);
     }
   }
 
   return NextResponse.json({
-    pushed,
-    total: prospects.length,
-    campaignId: targetCampaignId,
-    errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
+    sent,
+    total: readyProspects.length,
+    auditsGenerated,
+    errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
   });
-}
-
-async function listCampaigns(apiKey: string) {
-  try {
-    const res = await fetch(`${INSTANTLY_API}/campaign/list?api_key=${apiKey}`);
-    if (res.ok) return await res.json();
-  } catch {}
-  return [];
-}
-
-function mapIndustry(industry: string | null): string {
-  if (!industry) return 'general';
-  const lower = industry.toLowerCase();
-  if (lower.includes('dental')) return 'dental';
-  if (lower.includes('aestheti') || lower.includes('beauty') || lower.includes('skin')) return 'aesthetics';
-  return 'general';
-}
-
-function extractFirstName(name: string): string {
-  if (!name) return '';
-  return name.split(/\s+/)[0].replace(/[^a-zA-Z'-]/g, '');
 }

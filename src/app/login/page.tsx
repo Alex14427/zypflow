@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { loginFormSchema } from '@/lib/validators';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
 
@@ -14,17 +14,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [failCount, setFailCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-  const router = useRouter();
 
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (isLocked) return;
+    const parsed = loginFormSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Please check the form and try again.');
+      return;
+    }
+
+    const cleanEmail = parsed.data.email;
+    const cleanPassword = parsed.data.password;
+
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
     if (error) {
       const newCount = failCount + 1;
       setFailCount(newCount);
@@ -38,7 +46,7 @@ export default function LoginPage() {
       }
     } else {
       // Admins go to the owner command center, customers go to dashboard
-      const destination = ADMIN_EMAILS.includes(email.toLowerCase()) ? '/admin' : '/dashboard';
+      const destination = ADMIN_EMAILS.includes(cleanEmail) ? '/admin' : '/dashboard';
       window.location.href = destination;
     }
   }
@@ -53,7 +61,7 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-2">Log in to your dashboard</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} noValidate className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -95,7 +103,7 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500">
             No account yet?{' '}
             <Link href="/signup" className="text-brand-purple hover:underline font-medium">
-              Start free trial
+              Create clinic workspace
             </Link>
           </p>
         </div>

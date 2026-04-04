@@ -1,16 +1,27 @@
 import type { Metadata } from 'next';
+import { Fraunces, Manrope } from 'next/font/google';
 import { Providers } from './providers';
 import './globals.css';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zypflow.co.uk';
+const sans = Manrope({ subsets: ['latin'], variable: '--font-sans' });
+const serif = Fraunces({ subsets: ['latin'], variable: '--font-serif' });
 
 export const metadata: Metadata = {
-  title: 'Zypflow — AI Customer Growth Platform',
-  description: 'AI-powered customer acquisition and retention for UK service businesses. Capture leads, book appointments, and grow revenue on autopilot.',
+  title: {
+    default: 'Zypflow | Clinic Revenue OS',
+    template: '%s | Zypflow',
+  },
+  description:
+    'Convert more enquiries, protect more appointments, and bring patients back automatically with Zypflow.',
   metadataBase: new URL(APP_URL),
+  alternates: {
+    canonical: APP_URL,
+  },
+  applicationName: 'Zypflow',
   openGraph: {
-    title: 'Zypflow — AI Customer Growth Platform',
-    description: 'Capture leads, book appointments, and grow revenue on autopilot with AI.',
+    title: 'Zypflow | Clinic Revenue OS',
+    description: 'The automated revenue operating system for London aesthetics clinics.',
     url: APP_URL,
     siteName: 'Zypflow',
     locale: 'en_GB',
@@ -18,8 +29,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Zypflow — AI Customer Growth Platform',
-    description: 'Capture leads, book appointments, and grow revenue on autopilot with AI.',
+    title: 'Zypflow | Clinic Revenue OS',
+    description: 'Automated enquiry conversion, appointment protection, and patient reactivation for clinics.',
   },
   robots: {
     index: true,
@@ -37,8 +48,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${sans.variable} ${serif.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

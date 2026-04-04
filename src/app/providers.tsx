@@ -3,6 +3,7 @@
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
+import { ThemeProvider } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,9 +18,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <PHProvider client={posthog}>
-      <ToastProvider>
-        {children}
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ThemeProvider>
     </PHProvider>
   );
 }

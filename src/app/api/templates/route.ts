@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   if (industry && industry !== 'all') {
     // Show templates for this industry + universal templates
-    query = query.or(`industry.eq.${industry},industry.eq.all`);
+    query = query.or(`industry.eq.${industry},industry.eq.general`);
   }
 
   const { data: templates } = await query;

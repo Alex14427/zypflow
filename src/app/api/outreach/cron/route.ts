@@ -2,45 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
 import { supabaseAdmin } from '@/lib/supabase';
 
-/**
- * Daily cron: auto-push new prospects to Instantly.ai outreach.
- * Runs every day at 7 AM — picks up prospects scraped by the weekly scrape cron
- * and pushes them to Instantly for cold email campaigns.
- */
+const OUTREACH_READY_STATUSES = ['new', 'retry_required', 'outreach_sent', 'follow_up_scheduled', 'opened', 'clicked'];
+
+// Daily cron: send due outreach emails natively through Zypflow.
 export async function GET(req: NextRequest) {
   const authError = verifyAutomationAuth(req);
   if (authError) return authError;
 
-  const apiKey = process.env.INSTANTLY_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ skipped: true, reason: 'INSTANTLY_API_KEY not configured' });
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json({ skipped: true, reason: 'RESEND_API_KEY not configured' });
   }
 
-  // Count how many new prospects are waiting
+  const nowIso = new Date().toISOString();
+
   const { count } = await supabaseAdmin
     .from('prospects')
     .select('id', { count: 'exact', head: true })
-    .eq('status', 'new')
-    .not('email', 'is', null);
+    .not('email', 'is', null)
+    .in('status', OUTREACH_READY_STATUSES)
+    .or(`next_follow_up_at.is.null,next_follow_up_at.lte.${nowIso}`);
 
   if (!count || count === 0) {
-    return NextResponse.json({ pushed: 0, message: 'No new prospects to push' });
+    return NextResponse.json({ sent: 0, message: 'No prospects ready for outreach' });
   }
 
-  // Call the outreach push endpoint internally
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com';
+
   try {
     const res = await fetch(`${appUrl}/api/outreach/push`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.CRON_SECRET || ''}`,
+        Authorization: `Bearer ${process.env.CRON_SECRET || ''}`,
       },
       body: JSON.stringify({ limit: 50 }),
     });
 
     const data = await res.json();
-    return NextResponse.json({ cron: 'outreach_push', ...data });
+    return NextResponse.json({ cron: 'native_outreach_send', queued: count, ...data });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

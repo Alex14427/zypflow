@@ -1,6 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { readActivationSnapshot } from '@/lib/activation-state';
+import { resolveCurrentBusiness } from '@/lib/current-business';
+import { buildLaunchReadiness, getRecommendedLaunchPack, normalizeIndustryKey } from '@/lib/launch-pack';
 
 interface Template {
   id: string;
@@ -17,6 +21,18 @@ interface DeployedTemplate {
   template_id: string;
   is_active: boolean;
   deployed_at: string;
+}
+
+interface WorkspaceBusiness {
+  id: string;
+  name: string;
+  industry: string | null;
+  website: string | null;
+  booking_url: string | null;
+  google_review_link: string | null;
+  settings?: Record<string, unknown> | null;
+  services?: unknown[] | null;
+  knowledge_base?: unknown[] | null;
 }
 
 const INDUSTRIES = [
@@ -48,12 +64,12 @@ function CheckIcon({ className }: { className?: string }) {
 function IndustryBadge({ industry }: { industry: string }) {
   const label = INDUSTRIES.find((i) => i.value === industry)?.label ?? industry;
   const colors: Record<string, string> = {
-    dental: 'bg-blue-100 text-blue-700',
-    aesthetics: 'bg-pink-100 text-pink-700',
-    legal: 'bg-amber-100 text-amber-700',
-    home_services: 'bg-green-100 text-green-700',
-    physiotherapy: 'bg-teal-100 text-teal-700',
-    general: 'bg-brand-purple/10 text-brand-purple',
+    dental: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200',
+    aesthetics: 'bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-200',
+    legal: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200',
+    home_services: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-200',
+    physiotherapy: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200',
+    general: 'bg-brand-purple/10 text-brand-purple dark:text-purple-200',
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[industry] || colors.general}`}>
@@ -73,7 +89,7 @@ function TriggerBadge({ trigger }: { trigger: string }) {
     manual: 'Manual Trigger',
   };
   return (
-    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+    <span className="inline-flex items-center rounded-full bg-[var(--app-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--app-text-muted)]">
       {labels[trigger] || trigger}
     </span>
   );
@@ -93,48 +109,48 @@ function TemplateCard({
   onDeactivate: () => void;
 }) {
   return (
-    <div className={`relative flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${isDeployed ? 'border-green-300 ring-1 ring-green-200' : 'border-gray-200'}`}>
+    <div className={`relative flex flex-col rounded-[28px] border bg-[var(--app-surface)] p-5 shadow-sm transition-shadow hover:shadow-md ${isDeployed ? 'border-green-300 ring-1 ring-green-200 dark:border-green-500/40 dark:ring-green-500/20' : 'border-[var(--app-border)]'}`}>
       {template.featured && (
-        <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-700">
+        <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-200">
           <StarFillIcon className="h-3 w-3 text-yellow-500" />
           Featured
         </div>
       )}
 
       {isDeployed && (
-        <div className="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+        <div className="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-200">
           <CheckIcon className="h-3 w-3" />
           Active
         </div>
       )}
 
       <div className="mb-4 flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${isDeployed ? 'bg-green-100 text-green-600' : 'bg-brand-purple/10 text-brand-purple'}`}>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${isDeployed ? 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-200' : 'bg-brand-purple/10 text-brand-purple dark:text-purple-200'}`}>
           <ZapIcon className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-gray-900">
+          <h3 className="truncate text-sm font-semibold text-[var(--app-text)]">
             {template.name}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <IndustryBadge industry={template.industry} />
             <TriggerBadge trigger={template.trigger_type} />
           </div>
         </div>
       </div>
 
-      <p className="mb-5 flex-1 text-sm leading-relaxed text-gray-500">
+      <p className="mb-5 flex-1 text-sm leading-relaxed text-[var(--app-text-muted)]">
         {template.description}
       </p>
 
-      <div className="flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500">
+      <div className="flex items-center justify-between border-t border-[var(--app-border)] pt-4 text-xs text-[var(--app-text-muted)]">
         <div className="flex items-center gap-1">
-          <ClockIcon className="h-3.5 w-3.5 text-gray-400" />
+          <ClockIcon className="h-3.5 w-3.5" />
           <span>Setup: {template.setup_minutes} min</span>
         </div>
         <div className="flex items-center gap-1">
           <TrendUpIcon className="h-3.5 w-3.5 text-green-500" />
-          <span className="font-medium text-green-600">
+          <span className="font-medium text-green-600 dark:text-green-200">
             Saves {template.minutes_saved_per_run} min/run
           </span>
         </div>
@@ -144,7 +160,7 @@ function TemplateCard({
         <button
           onClick={onDeactivate}
           disabled={deploying}
-          className="mt-4 w-full rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+          className="mt-4 w-full rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50 dark:border-red-500/30 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/10"
         >
           {deploying ? 'Deactivating...' : 'Deactivate'}
         </button>
@@ -166,103 +182,341 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [deployedIds, setDeployedIds] = useState<Set<string>>(new Set());
   const [deployingId, setDeployingId] = useState<string | null>(null);
+  const [workspace, setWorkspace] = useState<WorkspaceBusiness | null>(null);
   const [loading, setLoading] = useState(true);
+  const [packBusy, setPackBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch templates + deployed state on mount
-  useEffect(() => {
-    async function load() {
-      const [templatesRes, deployedRes] = await Promise.all([
-        fetch('/api/templates'),
-        fetch('/api/templates/deploy'),
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const [{ business }, templatesRes, deployedRes] = await Promise.all([
+        resolveCurrentBusiness(),
+        fetch('/api/templates', { cache: 'no-store' }),
+        fetch('/api/templates/deploy', { cache: 'no-store' }),
       ]);
-      const templatesData = await templatesRes.json();
-      const deployedData = await deployedRes.json();
+
+      const templatesData = await templatesRes.json().catch(() => ({}));
+      const deployedData = await deployedRes.json().catch(() => ({}));
+
+      setWorkspace({
+        id: business.id,
+        name: business.name,
+        industry: business.industry,
+        website: business.website || null,
+        booking_url: business.booking_url || null,
+        google_review_link: business.google_review_link || null,
+        settings: business.settings || null,
+        services: business.services || [],
+        knowledge_base: business.knowledge_base || [],
+      });
 
       setTemplates(templatesData.templates || []);
       setDeployedIds(
         new Set(
           (deployedData.deployed || [])
-            .filter((d: DeployedTemplate) => d.is_active)
-            .map((d: DeployedTemplate) => d.template_id)
+            .filter((item: DeployedTemplate) => item.is_active)
+            .map((item: DeployedTemplate) => item.template_id)
         )
       );
+
+      const industryKey = normalizeIndustryKey(business.industry);
+      if (INDUSTRIES.some((industry) => industry.value === industryKey)) {
+        setActiveIndustry((current) => current || industryKey);
+      }
+    } catch (error) {
+      console.error('Failed to load templates workspace:', error);
+      setErrorMessage('Unable to load your setup checklist right now. Please refresh and try again.');
+    } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  const deployTemplate = useCallback(async (templateId: string) => {
-    setDeployingId(templateId);
-    try {
-      const res = await fetch('/api/templates/deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId }),
-      });
-      if (res.ok) {
-        setDeployedIds(prev => new Set(prev).add(templateId));
-      }
-    } finally {
-      setDeployingId(null);
-    }
-  }, []);
+  const launchPack = useMemo(() => getRecommendedLaunchPack(workspace?.industry), [workspace?.industry]);
 
-  const deactivateTemplate = useCallback(async (templateId: string) => {
-    setDeployingId(templateId);
-    try {
-      const res = await fetch(`/api/templates/deploy?templateId=${templateId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setDeployedIds(prev => {
-          const next = new Set(prev);
-          next.delete(templateId);
-          return next;
-        });
-      }
-    } finally {
-      setDeployingId(null);
-    }
-  }, []);
+  const readiness = useMemo(
+    () =>
+      buildLaunchReadiness({
+        industry: workspace?.industry,
+        website: workspace?.website,
+        bookingUrl: workspace?.booking_url,
+        reviewLink: workspace?.google_review_link,
+        widgetInstalled: readActivationSnapshot(workspace?.settings || null).widgetInstalled,
+        services: workspace?.services,
+        knowledgeBase: workspace?.knowledge_base,
+        activeTemplateIds: deployedIds,
+      }),
+    [deployedIds, workspace]
+  );
+
+  const packIsActive = useMemo(
+    () => launchPack.templateIds.every((templateId) => deployedIds.has(templateId)),
+    [deployedIds, launchPack.templateIds]
+  );
 
   const filtered = useMemo(() => {
     if (!activeIndustry) return templates;
-    return templates.filter(t => t.industry === activeIndustry || t.industry === 'general');
+    return templates.filter((template) => template.industry === activeIndustry || template.industry === 'general');
   }, [activeIndustry, templates]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      // Deployed first, then featured, then by name
       const aDeployed = deployedIds.has(a.id) ? 1 : 0;
       const bDeployed = deployedIds.has(b.id) ? 1 : 0;
       if (bDeployed !== aDeployed) return bDeployed - aDeployed;
       if (b.featured !== a.featured) return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-      return 0;
+      return a.name.localeCompare(b.name);
     });
   }, [filtered, deployedIds]);
+
+  const deployTemplate = useCallback(async (templateId: string) => {
+    setDeployingId(templateId);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch('/api/templates/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to deploy template.');
+      }
+
+      setDeployedIds((previous) => new Set(previous).add(templateId));
+      setFeedback('Template deployed.');
+      await load();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to deploy template.');
+    } finally {
+      setDeployingId(null);
+    }
+  }, [load]);
+
+  const deactivateTemplate = useCallback(async (templateId: string) => {
+    setDeployingId(templateId);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`/api/templates/deploy?templateId=${templateId}`, {
+        method: 'DELETE',
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to deactivate template.');
+      }
+
+      setDeployedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(templateId);
+        return next;
+      });
+      setFeedback('Template deactivated.');
+      await load();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to deactivate template.');
+    } finally {
+      setDeployingId(null);
+    }
+  }, [load]);
+
+  const deployPack = useCallback(async () => {
+    setPackBusy(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch('/api/templates/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packId: launchPack.id }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to deploy the setup checklist.');
+      }
+
+      const deployedTemplateIds =
+        (payload.deployed as DeployedTemplate[] | undefined)?.map((item) => item.template_id) ?? launchPack.templateIds;
+
+      setDeployedIds((previous) => {
+        const next = new Set(previous);
+        deployedTemplateIds.forEach((templateId) => next.add(templateId));
+        return next;
+      });
+      setFeedback(`${launchPack.name} deployed successfully.`);
+      await load();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to deploy the setup checklist.');
+    } finally {
+      setPackBusy(false);
+    }
+  }, [launchPack, load]);
+
+  const deactivatePack = useCallback(async () => {
+    setPackBusy(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`/api/templates/deploy?packId=${launchPack.id}`, {
+        method: 'DELETE',
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to deactivate the setup checklist.');
+      }
+
+      setDeployedIds((previous) => {
+        const next = new Set(previous);
+        launchPack.templateIds.forEach((templateId) => next.delete(templateId));
+        return next;
+      });
+      setFeedback(`${launchPack.name} deactivated.`);
+      await load();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to deactivate the setup checklist.');
+    } finally {
+      setPackBusy(false);
+    }
+  }, [launchPack, load]);
 
   const activeCount = deployedIds.size;
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Workflow Templates</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Pre-built automation workflows for your industry. Click &quot;Use Template&quot; to activate.
-          {activeCount > 0 && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-              {activeCount} active
-            </span>
-          )}
+    <div className="space-y-8">
+      <div>
+        <span className="page-eyebrow">Setup checklist</span>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
+          Deploy the automation system that makes the clinic feel owner-light
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--app-text-muted)]">
+          This page recommends the right workflow for the current clinic, scores setup readiness, and lets you switch
+          the core automation spine on in one move.
         </p>
       </div>
 
-      {/* Industry filter tabs */}
-      <div className="mb-8 flex flex-wrap gap-2">
+      {errorMessage && (
+        <div className="rounded-[24px] border border-red-500/30 bg-red-500/8 p-4 text-sm text-red-600 dark:text-red-300">
+          {errorMessage}
+        </div>
+      )}
+
+      {feedback && (
+        <div className="rounded-[24px] border border-emerald-500/30 bg-emerald-500/8 p-4 text-sm text-emerald-700 dark:text-emerald-200">
+          {feedback}
+        </div>
+      )}
+
+      <section className="surface-panel rounded-[32px] p-6">
+        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <IndustryBadge industry={launchPack.industry} />
+              <span className="rounded-full bg-brand-purple px-3 py-1 text-xs font-semibold text-white">
+                {readiness.score}% ready
+              </span>
+              {packIsActive && (
+                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-200">
+                  Pack live
+                </span>
+              )}
+            </div>
+            <h2 className="mt-4 text-3xl font-semibold text-[var(--app-text)]">{launchPack.name}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--app-text-muted)]">{launchPack.description}</p>
+            <p className="mt-3 text-sm font-semibold text-[var(--app-text)]">{launchPack.promise}</p>
+
+            <div className="mt-6 h-3 rounded-full bg-[var(--app-muted)]">
+              <div className="h-3 rounded-full bg-brand-purple transition-all" style={{ width: `${readiness.score}%` }} />
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              {packIsActive ? (
+                <button
+                  onClick={deactivatePack}
+                  disabled={packBusy}
+                  className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"
+                >
+                  {packBusy ? 'Stopping workflow...' : 'Deactivate setup checklist'}
+                </button>
+              ) : (
+                <button
+                  onClick={deployPack}
+                  disabled={packBusy}
+                  className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-purple/90 disabled:opacity-50"
+                >
+                  {packBusy ? 'Deploying pack...' : `Deploy ${launchPack.name}`}
+                </button>
+              )}
+              <Link
+                href="/onboarding"
+                className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+              >
+                Finish clinic setup
+              </Link>
+              <Link
+                href="/dashboard/settings"
+                className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:border-brand-purple hover:text-brand-purple"
+              >
+                Open settings
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard label="Launch steps complete" value={`${readiness.completedCount}/${readiness.totalCount}`} />
+            <StatCard label="Templates in pack" value={String(launchPack.templateIds.length)} />
+            <StatCard label="Active automations" value={String(activeCount)} />
+            <StatCard label="Missing setup items" value={String(readiness.missingItems.length)} />
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 lg:grid-cols-2">
+          {readiness.checklist.map((item) => (
+            <div key={item.id} className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+              <div className="flex items-start gap-3">
+                <span
+                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                    item.complete
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-500/12 text-[var(--app-text-muted)]'
+                  }`}
+                >
+                  {item.complete ? 'OK' : 'TO'}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--app-text)]">{item.label}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--app-text-muted)]">{item.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2">
         {INDUSTRIES.map((industry) => {
           const isActive = activeIndustry === industry.value;
           const count = industry.value
-            ? templates.filter(t => t.industry === industry.value).length
+            ? templates.filter((template) => template.industry === industry.value || template.industry === 'general').length
             : templates.length;
           return (
             <button
@@ -271,11 +525,11 @@ export default function TemplatesPage() {
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-brand-purple text-white shadow-sm'
-                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-brand-purple/5 hover:text-brand-purple'
+                  : 'bg-[var(--app-surface)] text-[var(--app-text-muted)] ring-1 ring-[var(--app-border)] hover:bg-brand-purple/5 hover:text-brand-purple'
               }`}
             >
               {industry.label}
-              <span className={`ml-1.5 text-xs ${isActive ? 'text-purple-200' : 'text-gray-400'}`}>
+              <span className={`ml-1.5 text-xs ${isActive ? 'text-purple-200' : 'text-[var(--app-text-muted)]'}`}>
                 {count}
               </span>
             </button>
@@ -285,8 +539,8 @@ export default function TemplatesPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-64 animate-pulse rounded-xl bg-gray-100" />
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-64 animate-pulse rounded-[28px] bg-[var(--app-muted)]" />
           ))}
         </div>
       ) : (
@@ -303,6 +557,15 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--app-text)]">{value}</p>
     </div>
   );
 }

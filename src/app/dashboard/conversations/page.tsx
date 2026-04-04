@@ -1,7 +1,17 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentBusiness } from '@/lib/current-business';
+import {
+  PortalEmptyState,
+  PortalMetricCard,
+  PortalMetricGrid,
+  PortalPageHeader,
+  PortalPanel,
+  PortalSegmentedControl,
+  PortalStatusPill,
+} from '@/components/dashboard/portal-primitives';
 
 interface Message {
   role: string;
@@ -17,13 +27,21 @@ interface Conversation {
   created_at: string;
   updated_at: string;
   lead_id: string | null;
-  leads: { name: string; email: string; phone: string; score: number; status: string; service_interest: string } | null;
+  leads: {
+    name: string;
+    email: string;
+    phone: string;
+    score: number;
+    status: string;
+    service_interest: string;
+  } | null;
 }
 
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [channelFilter, setChannelFilter] = useState<'all' | 'chat' | 'sms'>('all');
@@ -31,346 +49,532 @@ export default function ConversationsPage() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [businessName, setBusinessName] = useState('');
+  const [replyError, setReplyError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const businessIdRef = useRef<string | null>(null);
 
   const loadConversations = useCallback(async (isInitial = false) => {
-    if (isInitial) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: biz } = await supabase.from('businesses').select('id, name').eq('email', user.email).maybeSingle();
-      if (!biz) return;
-      setBusinessName(biz.name || '');
-      businessIdRef.current = biz.id;
-    }
-    if (!businessIdRef.current) return;
+    try {
+      if (isInitial) {
+        setLoading(true);
+      }
 
-    const { data } = await supabase
-      .from('conversations')
-      .select('id, channel, messages, created_at, updated_at, lead_id, leads(name, email, phone, score, status, service_interest)')
-      .eq('business_id', businessIdRef.current)
-      .order('updated_at', { ascending: false })
-      .limit(200);
-    const convs = (data as unknown as Conversation[]) || [];
-    setConversations(convs);
-    if (isInitial && convs.length > 0) setSelected(convs[0]);
-    // Update selected conversation with fresh data (new messages from customers)
-    if (!isInitial) {
-      setSelected(prev => {
-        if (!prev) return prev;
-        const updated = convs.find(c => c.id === prev.id);
-        return updated || prev;
-      });
+      if (isInitial) {
+        const { business } = await resolveCurrentBusiness();
+        setBusinessName(business.name || '');
+        businessIdRef.current = business.id;
+      }
+
+      if (!businessIdRef.current) return;
+
+      const { data, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('id, channel, messages, created_at, updated_at, lead_id, leads(name, email, phone, score, status, service_interest)')
+        .or(`org_id.eq.${businessIdRef.current},business_id.eq.${businessIdRef.current}`)
+        .order('updated_at', { ascending: false })
+        .limit(200);
+
+      if (conversationsError) throw conversationsError;
+
+      const nextConversations = (data as unknown as Conversation[]) || [];
+      setConversations(nextConversations);
+
+      if (nextConversations.length > 0) {
+        setSelected((current) => {
+          if (!current) return nextConversations[0];
+          return nextConversations.find((conversation) => conversation.id === current.id) || nextConversations[0];
+        });
+      } else {
+        setSelected(null);
+      }
+
+      setError(null);
+    } catch (loadError) {
+      console.error('Failed to load conversations:', loadError);
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load conversations right now.');
+    } finally {
+      if (isInitial) {
+        setLoading(false);
+      }
     }
-    if (isInitial) setLoading(false);
   }, []);
 
   useEffect(() => {
     loadConversations(true);
-    // Auto-refresh every 15 seconds
     const interval = setInterval(() => loadConversations(false), 15000);
     return () => clearInterval(interval);
   }, [loadConversations]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selected?.messages]);
 
-  // Fetch AI suggestions when conversation changes
-  const fetchSuggestions = useCallback(async (conv: Conversation) => {
-    if (!conv.messages?.length) return;
-    setLoadingSuggestions(true);
-    setSuggestions([]);
-    try {
-      const res = await fetch('/api/ai/suggest-replies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: conv.messages,
-          leadName: conv.leads?.name,
-          businessName,
-          service: conv.leads?.service_interest,
-        }),
-      });
-      if (res.ok) {
-        const { suggestions: s } = await res.json();
-        setSuggestions(s || []);
-      }
-    } catch {
-      // Fail silently
-    }
-    setLoadingSuggestions(false);
-  }, [businessName]);
+  const fetchSuggestions = useCallback(
+    async (conversation: Conversation) => {
+      if (!conversation.messages?.length) return;
 
-  useEffect(() => {
-    if (selected) fetchSuggestions(selected);
-  }, [selected?.id, fetchSuggestions, selected]);
+      setLoadingSuggestions(true);
+      setSuggestions([]);
 
-  async function sendReply() {
-    if (!selected || !replyText.trim()) return;
-    setSending(true);
-
-    const hasPhone = !!selected.leads?.phone;
-
-    // Send via SMS if phone available
-    if (hasPhone) {
       try {
-        await fetch('/api/sms/send', {
+        const response = await fetch('/api/ai/suggest-replies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: selected.leads!.phone,
+            messages: conversation.messages,
+            leadName: conversation.leads?.name,
+            businessName,
+            service: conversation.leads?.service_interest,
+          }),
+        });
+
+        if (response.ok) {
+          const { suggestions: nextSuggestions } = await response.json();
+          setSuggestions(nextSuggestions || []);
+        }
+      } catch (suggestionError) {
+        console.error('Failed to generate suggestions:', suggestionError);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    },
+    [businessName]
+  );
+
+  useEffect(() => {
+    if (selected) {
+      fetchSuggestions(selected);
+    }
+  }, [fetchSuggestions, selected]);
+
+  const filteredConversations = useMemo(() => {
+    return conversations.filter((conversation) => {
+      if (channelFilter !== 'all' && conversation.channel !== channelFilter) return false;
+      if (!searchQuery) return true;
+
+      const query = searchQuery.toLowerCase();
+      return (
+        (conversation.leads?.name || '').toLowerCase().includes(query) ||
+        (conversation.leads?.email || '').toLowerCase().includes(query) ||
+        (conversation.leads?.phone || '').includes(query) ||
+        conversation.messages?.some((message) => message.content.toLowerCase().includes(query))
+      );
+    });
+  }, [channelFilter, conversations, searchQuery]);
+
+  const smsThreads = useMemo(() => conversations.filter((conversation) => conversation.channel === 'sms').length, [conversations]);
+  const replyReady = useMemo(
+    () =>
+      conversations.filter((conversation) => {
+        const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+        return lastMessage && lastMessage.role !== 'assistant';
+      }).length,
+    [conversations]
+  );
+
+  async function sendReply() {
+    if (!selected || !replyText.trim()) return;
+
+    setSending(true);
+    setReplyError(null);
+
+    try {
+      const hasPhone = !!selected.leads?.phone;
+
+      if (hasPhone) {
+        const smsResponse = await fetch('/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: selected.leads?.phone,
             body: replyText.trim(),
           }),
         });
-      } catch (err) {
-        console.error('SMS send failed:', err);
+        const smsPayload = await smsResponse.json().catch(() => ({}));
+        if (!smsResponse.ok) {
+          throw new Error(smsPayload.error || 'Unable to send the SMS reply right now.');
+        }
       }
+
+      const newMessage: Message = {
+        role: 'assistant',
+        content: replyText.trim(),
+        timestamp: new Date().toISOString(),
+        channel: hasPhone ? 'sms' : 'chat',
+      };
+
+      const updatedMessages = [...(selected.messages || []), newMessage];
+
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
+        .eq('id', selected.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const nextConversation = { ...selected, messages: updatedMessages, updated_at: new Date().toISOString() };
+      setSelected(nextConversation);
+      setConversations((current) =>
+        current.map((conversation) => (conversation.id === selected.id ? nextConversation : conversation))
+      );
+      setReplyText('');
+      setSuggestions([]);
+    } catch (sendError) {
+      console.error('Failed to send reply:', sendError);
+      setReplyError(sendError instanceof Error ? sendError.message : 'Unable to send the reply right now.');
+    } finally {
+      setSending(false);
     }
-
-    // Append to conversation
-    const newMsg: Message = {
-      role: 'assistant',
-      content: replyText.trim(),
-      timestamp: new Date().toISOString(),
-      channel: hasPhone ? 'sms' : 'chat',
-    };
-    const updatedMessages = [...(selected.messages || []), newMsg];
-
-    // Update in DB
-    await supabase.from('conversations')
-      .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
-      .eq('id', selected.id);
-
-    setSelected({ ...selected, messages: updatedMessages });
-    setConversations(prev => prev.map(c => c.id === selected.id ? { ...c, messages: updatedMessages, updated_at: new Date().toISOString() } : c));
-    setReplyText('');
-    setSending(false);
-    setSuggestions([]);
   }
 
-  // Filter conversations
-  const filteredConversations = conversations.filter(c => {
-    if (channelFilter !== 'all' && c.channel !== channelFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        (c.leads?.name || '').toLowerCase().includes(q) ||
-        (c.leads?.email || '').toLowerCase().includes(q) ||
-        (c.leads?.phone || '').includes(q) ||
-        c.messages?.some(m => m.content.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
-
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
+      </div>
+    );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Conversations</h1>
+      <PortalPageHeader
+        eyebrow="Inbox"
+        title="One command center for every live conversation."
+        description="Clients should feel like the system is attentive and controlled here: who messaged, where they came from, what the AI suggested, and what still needs a human reply."
+        meta={
+          <>
+            <PortalStatusPill tone={replyReady > 0 ? 'warning' : 'success'}>
+              {replyReady > 0 ? `${replyReady} replies need attention` : 'No waiting customer replies'}
+            </PortalStatusPill>
+            <PortalStatusPill>{smsThreads} SMS threads</PortalStatusPill>
+          </>
+        }
+        actions={
+          <label className="flex min-w-[240px] items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-sm text-[var(--app-text-muted)]">
+            <SearchIcon className="h-4 w-4" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search people, messages, or channels..."
+              className="w-full bg-transparent text-[var(--app-text)] outline-none placeholder:text-[var(--app-text-soft)]"
+            />
+          </label>
+        }
+      />
 
-      {conversations.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-brand-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">No conversations yet</h3>
-          <p className="text-sm text-gray-400">Conversations will appear here when customers use the chat widget on your website.</p>
+      <PortalMetricGrid>
+        <PortalMetricCard
+          label="Open threads"
+          value={conversations.length}
+          description="Every live conversation attached to this clinic workspace."
+          icon={<InboxIcon className="h-5 w-5" />}
+        />
+        <PortalMetricCard
+          label="Reply-ready"
+          value={replyReady}
+          description="Conversations where the latest message is still from the customer."
+          tone={replyReady > 0 ? 'warning' : 'default'}
+          icon={<BoltIcon className="h-5 w-5" />}
+        />
+        <PortalMetricCard
+          label="SMS coverage"
+          value={smsThreads}
+          description="Threads with a phone number available for direct follow-up."
+          icon={<PhoneIcon className="h-5 w-5" />}
+        />
+        <PortalMetricCard
+          label="AI suggestions"
+          value={selected ? suggestions.length : 0}
+          description="Instant draft replies generated for the active thread."
+          tone="brand"
+          icon={<SparkIcon className="h-5 w-5" />}
+        />
+      </PortalMetricGrid>
+
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <PortalSegmentedControl
+          value={channelFilter}
+          onChange={setChannelFilter}
+          options={[
+            { value: 'all', label: 'All channels', count: conversations.length },
+            { value: 'chat', label: 'Widget chat', count: conversations.filter((conversation) => conversation.channel === 'chat').length },
+            { value: 'sms', label: 'SMS', count: smsThreads },
+          ]}
+        />
+        <div className="text-sm text-[var(--app-text-muted)]">
+          Tip: keep this page human-first. The AI should shorten response time, not hide the customer context.
         </div>
+      </div>
+
+      {error ? (
+        <PortalPanel title="Inbox unavailable" description="We couldn't load the current conversation feed.">
+          <PortalEmptyState
+            title="The conversation feed is temporarily unavailable."
+            description={error}
+            action={
+              <button
+                onClick={() => loadConversations(true)}
+                className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-purple-dark"
+              >
+                Reload inbox
+              </button>
+            }
+          />
+        </PortalPanel>
+      ) : conversations.length === 0 ? (
+        <PortalPanel title="No conversations yet" description="Once the widget and follow-up automation are live, every inbound message will appear here.">
+          <PortalEmptyState
+            title="The inbox is waiting for its first real enquiry."
+            description="Right after launch, customers will land here with their latest message, contact details, score, and suggested replies so a clinic owner can step in when needed."
+            action={
+              <a
+                href="/dashboard/templates"
+                className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-purple-dark"
+              >
+                Finish automation setup
+              </a>
+            }
+          />
+        </PortalPanel>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-          {/* Conversation list */}
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-            {/* Search and filter */}
-            <div className="p-3 border-b space-y-2">
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple"
-              />
-              <div className="flex gap-1">
-                {(['all', 'chat', 'sms'] as const).map(ch => (
-                  <button
-                    key={ch}
-                    onClick={() => setChannelFilter(ch)}
-                    className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition ${
-                      channelFilter === ch ? 'bg-brand-purple text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    {ch} {ch === 'all' ? `(${conversations.length})` : `(${conversations.filter(c => c.channel === ch).length})`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto divide-y">
-              {filteredConversations.map(conv => (
-                <button
-                  key={conv.id}
-                  onClick={() => { setSelected(conv); setSuggestions([]); }}
-                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition ${
-                    selected?.id === conv.id ? 'bg-brand-purple/5 border-l-2 border-brand-purple' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium truncate">{conv.leads?.name || 'Anonymous'}</span>
-                    <div className="flex items-center gap-1.5">
-                      {conv.leads?.score !== undefined && conv.leads.score > 0 && (
-                        <span className={`text-[10px] font-bold ${conv.leads.score >= 70 ? 'text-orange-500' : 'text-gray-400'}`}>
-                          {conv.leads.score}
+        <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <PortalPanel
+            title="Conversation queue"
+            description="Newest threads, recent updates, and channel coverage."
+            className="h-[calc(100vh-280px)]"
+            contentClassName="flex h-full flex-col"
+          >
+            <div className="flex-1 divide-y divide-[var(--app-border)] overflow-y-auto">
+              {filteredConversations.length === 0 ? (
+                <PortalEmptyState
+                  title="No conversations match these filters."
+                  description="Clear the search or switch back to all channels to see the full inbox again."
+                  action={
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setChannelFilter('all');
+                      }}
+                      className="rounded-full border border-[var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-text)] transition hover:bg-[var(--app-muted)]"
+                    >
+                      Reset inbox view
+                    </button>
+                  }
+                />
+              ) : (
+                filteredConversations.map((conversation) => {
+                  const active = selected?.id === conversation.id;
+                  const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+                  const needsReply = lastMessage?.role !== 'assistant';
+
+                  return (
+                    <button
+                      key={conversation.id}
+                      onClick={() => {
+                        setSelected(conversation);
+                        setSuggestions([]);
+                      }}
+                      className={`w-full px-5 py-4 text-left transition ${
+                        active ? 'bg-brand-purple/10' : 'hover:bg-[var(--app-muted)]/70'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate font-semibold text-[var(--app-text)]">
+                              {conversation.leads?.name || 'Anonymous visitor'}
+                            </p>
+                            {conversation.leads?.score ? (
+                              <PortalStatusPill tone={conversation.leads.score >= 70 ? 'warning' : 'default'}>
+                                {conversation.leads.score}
+                              </PortalStatusPill>
+                            ) : null}
+                          </div>
+                          <p className="mt-2 truncate text-sm text-[var(--app-text-muted)]">
+                            {lastMessage?.content || 'No messages yet'}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <PortalStatusPill tone={conversation.channel === 'sms' ? 'success' : 'brand'}>
+                            {conversation.channel}
+                          </PortalStatusPill>
+                          {needsReply ? <PortalStatusPill tone="warning">Reply needed</PortalStatusPill> : null}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-[var(--app-text-soft)]">
+                        <span>{conversation.leads?.service_interest || 'General enquiry'}</span>
+                        <span>
+                          {new Date(conversation.updated_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}{' '}
+                          {new Date(conversation.updated_at).toLocaleTimeString('en-GB', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
-                      )}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                        conv.channel === 'chat' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {conv.channel}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {conv.messages?.[conv.messages.length - 1]?.content || 'No messages'}
-                  </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-[10px] text-gray-300">
-                      {new Date(conv.updated_at).toLocaleDateString('en-GB')} {new Date(conv.updated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    {conv.leads?.status && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                        conv.leads.status === 'booked' ? 'bg-green-100 text-green-700' :
-                        conv.leads.status === 'new' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {conv.leads.status}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-              {filteredConversations.length === 0 && (
-                <p className="p-4 text-sm text-gray-400 text-center">No conversations match your search.</p>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
-          </div>
+          </PortalPanel>
 
-          {/* Message viewer */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border flex flex-col">
-            {selected ? (
+          <PortalPanel
+            title={selected?.leads?.name || 'Select a conversation'}
+            description={
+              selected
+                ? `${selected.leads?.service_interest || 'General enquiry'} • ${selected.channel.toUpperCase()} • ${
+                    selected.leads?.email || selected.leads?.phone || 'Anonymous visitor'
+                  }`
+                : 'Pick a thread to review the history and reply.'
+            }
+            action={
+              selected?.leads?.status ? (
+                <PortalStatusPill tone={selected.leads.status === 'booked' ? 'success' : 'brand'}>
+                  {selected.leads.status}
+                </PortalStatusPill>
+              ) : null
+            }
+            className="h-[calc(100vh-280px)]"
+            contentClassName="flex h-full flex-col"
+          >
+            {!selected ? (
+              <PortalEmptyState
+                title="Pick a conversation to inspect the full thread."
+                description="This panel becomes the command center for that lead: thread history, AI suggestions, and manual replies."
+              />
+            ) : (
               <>
-                {/* Header with lead info */}
-                <div className="p-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">{selected.leads?.name || 'Anonymous'}</p>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
-                        {selected.leads?.email && <span>{selected.leads.email}</span>}
-                        {selected.leads?.phone && <span>{selected.leads.phone}</span>}
-                        <span className="capitalize">{selected.channel}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selected.leads?.service_interest && (
-                        <span className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full">
-                          {selected.leads.service_interest}
-                        </span>
-                      )}
-                      {selected.leads?.score !== undefined && selected.leads.score > 0 && (
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                          selected.leads.score >= 70 ? 'bg-orange-50 text-orange-600' :
-                          selected.leads.score >= 40 ? 'bg-yellow-50 text-yellow-600' :
-                          'bg-gray-50 text-gray-500'
-                        }`}>
-                          Score: {selected.leads.score}
-                        </span>
-                      )}
-                    </div>
+                <div className="border-b border-[var(--app-border)] px-5 py-4">
+                  <div className="flex flex-wrap gap-2">
+                    {selected.leads?.email ? <PortalStatusPill>{selected.leads.email}</PortalStatusPill> : null}
+                    {selected.leads?.phone ? <PortalStatusPill tone="success">{selected.leads.phone}</PortalStatusPill> : null}
+                    {selected.leads?.score ? (
+                      <PortalStatusPill tone={selected.leads.score >= 70 ? 'warning' : 'default'}>
+                        Lead score {selected.leads.score}
+                      </PortalStatusPill>
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {(selected.messages || []).map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
-                        msg.role === 'assistant'
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-brand-purple text-white'
-                      }`}>
-                        {msg.channel && msg.role === 'assistant' && (
-                          <span className="text-[10px] font-medium text-gray-400 block mb-1 uppercase">{msg.channel}</span>
-                        )}
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        {msg.timestamp && (
-                          <p className={`text-[10px] mt-1 ${msg.role === 'assistant' ? 'text-gray-400' : 'text-white/60'}`}>
-                            {new Date(msg.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* AI Smart Reply Suggestions */}
-                {(suggestions.length > 0 || loadingSuggestions) && (
-                  <div className="px-4 py-2 border-t bg-purple-50/50">
-                    <p className="text-[10px] font-medium text-purple-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-                      AI Suggested Replies
-                    </p>
-                    {loadingSuggestions ? (
-                      <div className="flex items-center gap-2 py-1">
-                        <span className="animate-spin w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full" />
-                        <span className="text-xs text-purple-500">Generating suggestions...</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {suggestions.map((s, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setReplyText(s)}
-                            className="text-xs bg-white border border-purple-200 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-50 transition text-left max-w-[280px] truncate"
+                <div className="flex-1 overflow-y-auto px-5 py-5">
+                  <div className="space-y-4">
+                    {(selected.messages || []).map((message, index) => {
+                      const outbound = message.role === 'assistant';
+                      return (
+                        <div key={`${message.timestamp || message.content}-${index}`} className={`flex ${outbound ? 'justify-end' : 'justify-start'}`}>
+                          <div
+                            className={`max-w-[78%] rounded-[24px] px-4 py-3 text-sm leading-6 ${
+                              outbound
+                                ? 'bg-brand-purple text-white shadow-[0_18px_36px_rgba(210,102,69,0.22)]'
+                                : 'border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)]'
+                            }`}
                           >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] opacity-70">
+                              {outbound ? 'Team / AI' : 'Customer'}
+                            </p>
+                            <p className="whitespace-pre-wrap">{message.content}</p>
+                            {message.timestamp ? (
+                              <p className={`mt-2 text-[11px] ${outbound ? 'text-white/70' : 'text-[var(--app-text-soft)]'}`}>
+                                {new Date(message.timestamp).toLocaleTimeString('en-GB', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
                   </div>
-                )}
+                </div>
 
-                {/* Reply input */}
-                <div className="p-3 border-t flex gap-2">
-                  <input
-                    type="text"
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendReply()}
-                    placeholder={selected.leads?.phone ? `Reply via SMS to ${selected.leads.phone}...` : 'Type a reply...'}
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple"
-                  />
-                  <button
-                    onClick={sendReply}
-                    disabled={sending || !replyText.trim()}
-                    className="bg-brand-purple text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition disabled:opacity-50"
-                  >
-                    {sending ? 'Sending...' : 'Send'}
-                  </button>
+                <div className="border-t border-[var(--app-border)] bg-[var(--app-muted)]/50 px-5 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">
+                    AI suggested replies
+                  </p>
+                  {loadingSuggestions ? (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-[var(--app-text-muted)]">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-purple border-t-transparent" />
+                      Generating reply drafts...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion}-${index}`}
+                          onClick={() => setReplyText(suggestion)}
+                          className="rounded-full border border-[var(--app-card-border)] bg-[var(--app-surface-strong)] px-4 py-2 text-left text-sm text-[var(--app-text)] transition hover:border-brand-purple/40 hover:bg-brand-purple/5"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-[var(--app-text-muted)]">
+                      Suggestions will appear here once the selected thread has enough context.
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-[var(--app-border)] px-5 py-4">
+                  {replyError ? (
+                    <div className="mb-3 rounded-[20px] border border-rose-500/20 bg-rose-500/8 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+                      {replyError}
+                    </div>
+                  ) : null}
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <textarea
+                      value={replyText}
+                      onChange={(event) => setReplyText(event.target.value)}
+                      placeholder={
+                        selected.leads?.phone
+                          ? `Reply via SMS to ${selected.leads.phone}...`
+                          : 'Type a reply back to this lead...'
+                      }
+                      rows={3}
+                      className="min-h-[92px] flex-1 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3 text-sm text-[var(--app-text)] outline-none transition focus:border-brand-purple/50 focus:ring-2 focus:ring-brand-purple/10"
+                    />
+                    <button
+                      onClick={sendReply}
+                      disabled={sending || !replyText.trim()}
+                      className="rounded-[24px] bg-brand-purple px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-purple-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {sending ? 'Sending...' : 'Send reply'}
+                    </button>
+                  </div>
                 </div>
               </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-                Select a conversation
-              </div>
             )}
-          </div>
+          </PortalPanel>
         </div>
       )}
     </div>
   );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-4.35-4.35m1.85-4.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z" /></svg>;
+}
+
+function InboxIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5h16v10h-4l-2 3h-4l-2-3H4V5z" /></svg>;
+}
+
+function BoltIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>;
+}
+
+function PhoneIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
+}
+
+function SparkIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>;
 }

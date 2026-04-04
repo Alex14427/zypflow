@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getApiUser } from '@/lib/api-auth';
+import { resolveServerBusinessForUser } from '@/lib/server-current-business';
 import {
   createStripeCheckoutSession,
   StripeCheckoutError,
@@ -20,7 +22,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 });
     }
 
-    const result = await createStripeCheckoutSession(parsed.data);
+    let payload = parsed.data;
+
+    if (!payload.orgId || !payload.email) {
+      const user = await getApiUser(req);
+      if (user?.id) {
+        const current = await resolveServerBusinessForUser(user);
+        if (current?.business.id && current.business.email) {
+          payload = {
+            ...payload,
+            orgId: payload.orgId || current.business.id,
+            email: payload.email || current.business.email,
+          };
+        }
+      }
+    }
+
+    const result = await createStripeCheckoutSession(payload);
 
     return NextResponse.json(
       {

@@ -1,7 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentBusiness } from '@/lib/current-business';
+import { formatCompactNumber, formatCurrencyGBP } from '@/lib/formatting';
+import {
+  PortalEmptyState,
+  PortalMetricCard,
+  PortalMetricGrid,
+  PortalPageHeader,
+  PortalPanel,
+  PortalSegmentedControl,
+  PortalStatusPill,
+} from '@/components/dashboard/portal-primitives';
 
 interface DailyData {
   date: string;
@@ -10,298 +21,415 @@ interface DailyData {
   conversations: number;
 }
 
+type DateRange = '7d' | '30d' | '90d';
+
 export default function AnalyticsPage() {
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
-  const [totals, setTotals] = useState({ leads: 0, bookings: 0, conversations: 0, reviews: 0, followUpsSent: 0 });
+  const [totals, setTotals] = useState({
+    leads: 0,
+    bookings: 0,
+    conversations: 0,
+    reviews: 0,
+    followUpsSent: 0,
+  });
   const [sourceBreakdown, setSourceBreakdown] = useState<{ source: string; count: number }[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<{ status: string; count: number }[]>([]);
-  const [roiMetrics, setRoiMetrics] = useState({ estimatedRevenue: 0, costPerLead: 0, avgLeadValue: 0, chatToLeadRate: 0, leadToBookRate: 0 });
+  const [roiMetrics, setRoiMetrics] = useState({
+    estimatedRevenue: 0,
+    costPerLead: 0,
+    avgLeadValue: 0,
+    chatToLeadRate: 0,
+    leadToBookRate: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>('30d');
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: biz } = await supabase.from('businesses').select('id, plan').eq('email', user.email).maybeSingle();
-      if (!biz) return;
+      try {
+        setLoading(true);
+        const { business } = await resolveCurrentBusiness();
+        const orgFilter = `org_id.eq.${business.id},business_id.eq.${business.id}`;
 
-      const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;
-      const since = new Date();
-      since.setDate(since.getDate() - days);
-      const sinceStr = since.toISOString();
+        const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;
+        const since = new Date();
+        since.setDate(since.getDate() - days);
+        const sinceStr = since.toISOString();
 
-      const [leadsRes, apptsRes, convsRes, reviewsRes, allLeadsRes, followUpsRes, bookedLeadsRes] = await Promise.all([
-        supabase.from('leads').select('id, created_at, source, status, score, service_interest').eq('business_id', biz.id).gte('created_at', sinceStr),
-        supabase.from('appointments').select('id, datetime, service, status').eq('business_id', biz.id).gte('datetime', sinceStr),
-        supabase.from('conversations').select('id, created_at, messages').eq('business_id', biz.id).gte('created_at', sinceStr),
-        supabase.from('reviews').select('id, rating', { count: 'exact' }).eq('business_id', biz.id),
-        supabase.from('leads').select('id, source, status, score').eq('business_id', biz.id),
-        supabase.from('follow_ups').select('id', { count: 'exact' }).eq('business_id', biz.id),
-        supabase.from('leads').select('id').eq('business_id', biz.id).eq('status', 'booked'),
-      ]);
+        const [leadsRes, appointmentsRes, conversationsRes, reviewsRes, allLeadsRes, followUpsRes, bookedLeadsRes] =
+          await Promise.all([
+            supabase.from('leads').select('id, created_at, source, status, score, service_interest').or(orgFilter).gte('created_at', sinceStr),
+            supabase.from('appointments').select('id, datetime, service, status').or(orgFilter).gte('datetime', sinceStr),
+            supabase.from('conversations').select('id, created_at, messages').or(orgFilter).gte('created_at', sinceStr),
+            supabase.from('reviews').select('id, rating', { count: 'exact' }).or(orgFilter),
+            supabase.from('leads').select('id, source, status, score').or(orgFilter),
+            supabase.from('follow_ups').select('id', { count: 'exact' }).or(orgFilter),
+            supabase.from('leads').select('id').or(orgFilter).eq('status', 'booked'),
+          ]);
 
-      const leads = leadsRes.data || [];
-      const appts = apptsRes.data || [];
-      const convs = convsRes.data || [];
-      const allLeads = allLeadsRes.data || [];
-      const bookedLeads = bookedLeadsRes.data || [];
+        const leads = leadsRes.data || [];
+        const appointments = appointmentsRes.data || [];
+        const conversations = conversationsRes.data || [];
+        const allLeads = allLeadsRes.data || [];
+        const bookedLeads = bookedLeadsRes.data || [];
 
-      setTotals({
-        leads: allLeads.length,
-        bookings: appts.length,
-        conversations: convs.length,
-        reviews: reviewsRes.count || 0,
-        followUpsSent: followUpsRes.count || 0,
-      });
+        setTotals({
+          leads: allLeads.length,
+          bookings: appointments.length,
+          conversations: conversations.length,
+          reviews: reviewsRes.count || 0,
+          followUpsSent: followUpsRes.count || 0,
+        });
 
-      // ROI Calculations
-      const planCosts: Record<string, number> = { starter: 149, growth: 299, enterprise: 499 };
-      const monthlyCost = planCosts[biz.plan] || 149;
-      const avgServiceValue = 150; // Conservative UK service business average
-      const bookedCount = bookedLeads.length;
-      const estimatedRevenue = bookedCount * avgServiceValue;
-      const costPerLead = allLeads.length > 0 ? Math.round(monthlyCost / allLeads.length) : 0;
-      const chatToLeadRate = convs.length > 0 ? Math.round((leads.length / convs.length) * 100) : 0;
-      const leadToBookRate = allLeads.length > 0 ? Math.round((bookedCount / allLeads.length) * 100) : 0;
+        const planCosts: Record<string, number> = {
+          trial: 995,
+          starter: 995,
+          growth: 1250,
+          enterprise: 1500,
+        };
+        const monthlyCost = planCosts[business.plan] || 995;
+        const avgServiceValue = 150;
+        const bookedCount = bookedLeads.length;
+        const estimatedRevenue = bookedCount * avgServiceValue;
+        const costPerLead = allLeads.length > 0 ? Math.round(monthlyCost / allLeads.length) : 0;
+        const chatToLeadRate = conversations.length > 0 ? Math.round((leads.length / conversations.length) * 100) : 0;
+        const leadToBookRate = allLeads.length > 0 ? Math.round((bookedCount / allLeads.length) * 100) : 0;
 
-      setRoiMetrics({
-        estimatedRevenue,
-        costPerLead,
-        avgLeadValue: bookedCount > 0 ? Math.round(estimatedRevenue / bookedCount) : avgServiceValue,
-        chatToLeadRate,
-        leadToBookRate,
-      });
+        setRoiMetrics({
+          estimatedRevenue,
+          costPerLead,
+          avgLeadValue: bookedCount > 0 ? Math.round(estimatedRevenue / bookedCount) : avgServiceValue,
+          chatToLeadRate,
+          leadToBookRate,
+        });
 
-      // Build daily data for chart
-      const dayMap: Record<string, DailyData> = {};
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        dayMap[key] = { date: key, leads: 0, bookings: 0, conversations: 0 };
+        const dayMap: Record<string, DailyData> = {};
+        for (let index = days - 1; index >= 0; index -= 1) {
+          const date = new Date();
+          date.setDate(date.getDate() - index);
+          const key = date.toISOString().split('T')[0];
+          dayMap[key] = { date: key, leads: 0, bookings: 0, conversations: 0 };
+        }
+
+        leads.forEach((lead) => {
+          const key = new Date(lead.created_at).toISOString().split('T')[0];
+          if (dayMap[key]) dayMap[key].leads += 1;
+        });
+        appointments.forEach((appointment) => {
+          const key = new Date(appointment.datetime).toISOString().split('T')[0];
+          if (dayMap[key]) dayMap[key].bookings += 1;
+        });
+        conversations.forEach((conversation) => {
+          const key = new Date(conversation.created_at).toISOString().split('T')[0];
+          if (dayMap[key]) dayMap[key].conversations += 1;
+        });
+
+        const sources: Record<string, number> = {};
+        allLeads.forEach((lead) => {
+          const source = (lead as { source?: string }).source || 'unknown';
+          sources[source] = (sources[source] || 0) + 1;
+        });
+
+        const statuses: Record<string, number> = {};
+        allLeads.forEach((lead) => {
+          const status = (lead as { status?: string }).status || 'unknown';
+          statuses[status] = (statuses[status] || 0) + 1;
+        });
+
+        setDailyData(Object.values(dayMap));
+        setSourceBreakdown(
+          Object.entries(sources)
+            .map(([source, count]) => ({ source, count }))
+            .sort((a, b) => b.count - a.count)
+        );
+        setStatusBreakdown(
+          Object.entries(statuses)
+            .map(([status, count]) => ({ status, count }))
+            .sort((a, b) => b.count - a.count)
+        );
+        setError(null);
+      } catch (loadError) {
+        console.error('Failed to load analytics:', loadError);
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load analytics.');
+      } finally {
+        setLoading(false);
       }
-
-      leads.forEach(l => {
-        const key = new Date(l.created_at).toISOString().split('T')[0];
-        if (dayMap[key]) dayMap[key].leads++;
-      });
-      appts.forEach(a => {
-        const key = new Date(a.datetime).toISOString().split('T')[0];
-        if (dayMap[key]) dayMap[key].bookings++;
-      });
-      convs.forEach(c => {
-        const key = new Date(c.created_at).toISOString().split('T')[0];
-        if (dayMap[key]) dayMap[key].conversations++;
-      });
-
-      setDailyData(Object.values(dayMap));
-
-      // Source breakdown
-      const sources: Record<string, number> = {};
-      allLeads.forEach(l => {
-        const src = (l as { source?: string }).source || 'unknown';
-        sources[src] = (sources[src] || 0) + 1;
-      });
-      setSourceBreakdown(Object.entries(sources).map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count));
-
-      // Status breakdown
-      const statuses: Record<string, number> = {};
-      allLeads.forEach(l => {
-        const st = (l as { status?: string }).status || 'unknown';
-        statuses[st] = (statuses[st] || 0) + 1;
-      });
-      setStatusBreakdown(Object.entries(statuses).map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count));
-
-      setLoading(false);
     }
+
     load();
   }, [dateRange]);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
-  }
+  const maxLeads = useMemo(() => Math.max(...dailyData.map((day) => day.leads), 1), [dailyData]);
+  const bookedCount = useMemo(
+    () => statusBreakdown.find((entry) => entry.status === 'booked')?.count || 0,
+    [statusBreakdown]
+  );
 
-  const maxLeads = Math.max(...dailyData.map(d => d.leads), 1);
-  const bookedCount = statusBreakdown.find(s => s.status === 'booked')?.count || 0;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-          {(['7d', '30d', '90d'] as const).map(range => (
-            <button
-              key={range}
-              onClick={() => setDateRange(range)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                dateRange === range ? 'bg-white shadow text-brand-purple' : 'text-gray-500 hover:text-gray-700'
-              }`}
+      <PortalPageHeader
+        eyebrow="Analytics"
+        title="Proof that the automation is producing commercial outcomes."
+        description="This page should reassure a buyer quickly: how many leads were captured, how efficiently they converted, what the system recovered, and where the next improvement lives."
+        meta={
+          <>
+            <PortalStatusPill tone="brand">{formatCompactNumber(totals.leads)} leads tracked</PortalStatusPill>
+            <PortalStatusPill tone={roiMetrics.leadToBookRate >= 25 ? 'success' : 'warning'}>
+              {roiMetrics.leadToBookRate}% lead-to-book rate
+            </PortalStatusPill>
+          </>
+        }
+        actions={
+          <PortalSegmentedControl
+            value={dateRange}
+            onChange={setDateRange}
+            options={[
+              { value: '7d', label: '7 days' },
+              { value: '30d', label: '30 days' },
+              { value: '90d', label: '90 days' },
+            ]}
+          />
+        }
+      />
+
+      {error ? (
+        <PortalPanel title="Analytics unavailable" description="The reporting layer could not load the latest activity.">
+          <PortalEmptyState title="We couldn't calculate analytics right now." description={error} />
+        </PortalPanel>
+      ) : (
+        <>
+          <PortalMetricGrid>
+            <PortalMetricCard
+              label="Estimated revenue"
+              value={formatCurrencyGBP(roiMetrics.estimatedRevenue)}
+              description="A conservative model based on booked appointments and average service value."
+              tone="brand"
+              icon={<CashIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="Cost per lead"
+              value={formatCurrencyGBP(roiMetrics.costPerLead)}
+              description="Monthly platform cost spread across total tracked leads."
+              icon={<TargetIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="Chat to lead"
+              value={`${roiMetrics.chatToLeadRate}%`}
+              description="How often the conversation layer turns sessions into captured leads."
+              icon={<ChatIcon className="h-5 w-5" />}
+            />
+            <PortalMetricCard
+              label="Lead to booking"
+              value={`${roiMetrics.leadToBookRate}%`}
+              description="A useful health indicator for whether follow-up is converting intent."
+              tone={roiMetrics.leadToBookRate >= 25 ? 'success' : 'default'}
+              icon={<FunnelIcon className="h-5 w-5" />}
+            />
+          </PortalMetricGrid>
+
+          <div className="mb-6 grid gap-4 xl:grid-cols-5">
+            <MiniMetric label="Total leads" value={totals.leads} />
+            <MiniMetric label="Bookings" value={totals.bookings} tone="success" />
+            <MiniMetric label="Conversations" value={totals.conversations} tone="brand" />
+            <MiniMetric label="Follow-ups sent" value={totals.followUpsSent} tone="warning" />
+            <MiniMetric label="Reviews" value={totals.reviews} tone="default" />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+            <PortalPanel
+              title={`Lead volume over the last ${dateRange === '7d' ? '7' : dateRange === '90d' ? '90' : '30'} days`}
+              description="A quick visual read of lead capture and booking flow over time."
             >
-              {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
-            </button>
-          ))}
-        </div>
-      </div>
+              {dailyData.length === 0 ? (
+                <PortalEmptyState
+                  title="No trend data yet."
+                  description="Once traffic and follow-up are live, this chart becomes one of the fastest ways to prove momentum to a clinic owner."
+                />
+              ) : (
+                <div className="px-5 py-6">
+                  <div className="flex h-56 items-end gap-2">
+                    {dailyData.map((day) => (
+                      <div key={day.date} className="group flex flex-1 flex-col items-center">
+                        <div className="mb-2 rounded-full bg-[var(--app-surface-strong)] px-2 py-1 text-[10px] font-medium text-[var(--app-text-soft)] opacity-0 shadow-sm transition group-hover:opacity-100">
+                          {day.leads} leads · {day.bookings} bookings
+                        </div>
+                        <div className="relative flex w-full flex-col items-center justify-end gap-1 rounded-[20px] bg-[var(--app-muted)] px-1 pb-1 pt-4">
+                          <div
+                            className="w-full rounded-[14px] bg-brand-purple/25"
+                            style={{ height: `${Math.max((day.conversations / maxLeads) * 120, day.conversations ? 12 : 2)}px` }}
+                          />
+                          <div
+                            className="w-full rounded-[14px] bg-brand-purple"
+                            style={{ height: `${Math.max((day.leads / maxLeads) * 120, day.leads ? 12 : 2)}px` }}
+                          />
+                        </div>
+                        <span className="mt-2 text-[10px] text-[var(--app-text-soft)]">
+                          {new Date(day.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--app-text-muted)]">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-brand-purple" />
+                      Leads captured
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-brand-purple/25" />
+                      Conversations started
+                    </span>
+                  </div>
+                </div>
+              )}
+            </PortalPanel>
 
-      {/* ROI Metrics — the money row */}
-      <div className="bg-gradient-to-r from-brand-purple to-purple-600 rounded-2xl p-6 mb-8 text-white">
-        <h2 className="text-sm font-medium text-white/70 mb-4 uppercase tracking-wide">Revenue Attribution</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <div>
-            <p className="text-3xl font-bold">&pound;{roiMetrics.estimatedRevenue.toLocaleString()}</p>
-            <p className="text-sm text-white/70">Estimated Revenue</p>
-          </div>
-          <div>
-            <p className="text-3xl font-bold">&pound;{roiMetrics.costPerLead}</p>
-            <p className="text-sm text-white/70">Cost Per Lead</p>
-          </div>
-          <div>
-            <p className="text-3xl font-bold">{roiMetrics.chatToLeadRate}%</p>
-            <p className="text-sm text-white/70">Chat &rarr; Lead Rate</p>
-          </div>
-          <div>
-            <p className="text-3xl font-bold">{roiMetrics.leadToBookRate}%</p>
-            <p className="text-sm text-white/70">Lead &rarr; Booking Rate</p>
-          </div>
-        </div>
-      </div>
+            <PortalPanel
+              title="Conversion funnel"
+              description="Where the workflow creates value and where it still leaks."
+            >
+              <div className="space-y-4 px-5 py-6">
+                <div className="rounded-[24px] bg-[var(--app-muted)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">
+                    Current lead-to-book conversion
+                  </p>
+                  <p className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-[var(--app-text)]">
+                    {totals.leads > 0 ? ((bookedCount / totals.leads) * 100).toFixed(1) : '0'}%
+                  </p>
+                </div>
 
-      {/* Totals */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Total Leads" value={totals.leads} />
-        <StatCard label="Bookings" value={totals.bookings} color="text-green-600" />
-        <StatCard label="Conversations" value={totals.conversations} color="text-purple-600" />
-        <StatCard label="Follow-ups Sent" value={totals.followUpsSent} color="text-yellow-600" />
-        <StatCard label="Reviews" value={totals.reviews} color="text-orange-500" />
-      </div>
-
-      {/* Leads chart */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
-        <h2 className="font-semibold mb-4">Leads — Last {dateRange === '7d' ? '7' : dateRange === '90d' ? '90' : '30'} Days</h2>
-        <div className="flex items-end gap-1 h-40">
-          {dailyData.map(d => (
-            <div key={d.date} className="flex-1 flex flex-col items-center group relative">
-              <div className="absolute -top-8 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10">
-                {new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}: {d.leads} lead{d.leads !== 1 ? 's' : ''}, {d.bookings} booking{d.bookings !== 1 ? 's' : ''}
+                {[
+                  { label: 'Conversations', count: totals.conversations, color: 'bg-slate-400' },
+                  { label: 'Leads captured', count: totals.leads, color: 'bg-brand-purple' },
+                  { label: 'Follow-ups sent', count: totals.followUpsSent, color: 'bg-amber-500' },
+                  { label: 'Booked', count: bookedCount, color: 'bg-emerald-500' },
+                  { label: 'Reviews collected', count: totals.reviews, color: 'bg-sky-500' },
+                ].map((step) => {
+                  const maxCount = Math.max(totals.conversations, totals.leads, 1);
+                  return (
+                    <div key={step.label}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="text-[var(--app-text)]">{step.label}</span>
+                        <span className="font-medium text-[var(--app-text-muted)]">{step.count}</span>
+                      </div>
+                      <div className="h-3 rounded-full bg-[var(--app-muted)]">
+                        <div
+                          className={`h-3 rounded-full ${step.color}`}
+                          style={{ width: `${Math.max((step.count / maxCount) * 100, 2)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div
-                className="w-full bg-brand-purple/80 rounded-t hover:bg-brand-purple transition-all min-h-[2px]"
-                style={{ height: `${(d.leads / maxLeads) * 100}%` }}
+            </PortalPanel>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <PortalPanel title="Lead sources" description="Which channels are creating captured demand.">
+              <BreakdownList
+                items={sourceBreakdown}
+                emptyTitle="No source data yet."
+                emptyDescription="As soon as leads come in from your widget, audit funnel, or manual sources, they will be grouped here."
               />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] text-gray-400 mt-2">
-          <span>{dailyData[0] && new Date(dailyData[0].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-          <span>Today</span>
-        </div>
-      </div>
+            </PortalPanel>
 
-      {/* Conversion Funnel */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
-        <h2 className="font-semibold mb-4">Conversion Funnel</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 mb-4 p-3 bg-brand-purple/5 rounded-lg">
-            <span className="text-sm text-gray-600">Lead-to-Booking Conversion Rate:</span>
-            <span className="text-2xl font-bold text-brand-purple">
-              {totals.leads > 0 ? ((bookedCount / totals.leads) * 100).toFixed(1) : '0'}%
-            </span>
+            <PortalPanel title="Lead status mix" description="A quick read on pipeline quality and follow-up health.">
+              <BreakdownList
+                items={statusBreakdown}
+                emptyTitle="No status data yet."
+                emptyDescription="Once leads are captured and moved through the workflow, the status distribution will appear here."
+              />
+            </PortalPanel>
           </div>
-          {[
-            { label: 'Conversations', count: totals.conversations, color: 'bg-purple-500' },
-            { label: 'Leads Captured', count: totals.leads, color: 'bg-blue-500' },
-            { label: 'Follow-ups Sent', count: totals.followUpsSent, color: 'bg-yellow-500' },
-            { label: 'Booked', count: bookedCount, color: 'bg-green-500' },
-            { label: 'Reviews Collected', count: totals.reviews, color: 'bg-orange-500' },
-          ].map(step => {
-            const maxCount = Math.max(totals.conversations, totals.leads, 1);
-            return (
-              <div key={step.label}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>{step.label}</span>
-                  <span className="text-gray-500 font-medium">{step.count}</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div
-                    className={`${step.color} h-3 rounded-full transition-all`}
-                    style={{ width: `${Math.max((step.count / maxCount) * 100, 2)}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Two columns: Source + Status breakdown */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="font-semibold mb-4">Lead Sources</h2>
-          {sourceBreakdown.length > 0 ? (
-            <div className="space-y-3">
-              {sourceBreakdown.map(s => (
-                <div key={s.source}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="capitalize">{s.source}</span>
-                    <span className="text-gray-500">{s.count}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="bg-brand-purple h-2 rounded-full"
-                      style={{ width: `${(s.count / (sourceBreakdown[0]?.count || 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">No data yet</p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="font-semibold mb-4">Lead Status Breakdown</h2>
-          {statusBreakdown.length > 0 ? (
-            <div className="space-y-3">
-              {statusBreakdown.map(s => {
-                const colors: Record<string, string> = {
-                  new: 'bg-blue-500',
-                  contacted: 'bg-yellow-500',
-                  booked: 'bg-green-500',
-                  cold: 'bg-gray-400',
-                  lost: 'bg-red-500',
-                };
-                return (
-                  <div key={s.status}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="capitalize">{s.status}</span>
-                      <span className="text-gray-500">{s.count}</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${colors[s.status] || 'bg-gray-400'}`}
-                        style={{ width: `${(s.count / (statusBreakdown[0]?.count || 1)) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">No data yet</p>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+function BreakdownList({
+  items,
+  emptyTitle,
+  emptyDescription,
+}: {
+  items: { source?: string; status?: string; count: number }[];
+  emptyTitle: string;
+  emptyDescription: string;
+}) {
+  if (items.length === 0) {
+    return <PortalEmptyState title={emptyTitle} description={emptyDescription} />;
+  }
+
+  const maxCount = items[0]?.count || 1;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className={`text-3xl font-bold mt-1 ${color || 'text-gray-900'}`}>{value}</p>
+    <div className="space-y-4 px-5 py-6">
+      {items.map((item, index) => {
+        const label = item.source || item.status || 'unknown';
+        return (
+          <div key={`${label}-${index}`}>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="capitalize text-[var(--app-text)]">{label.replace(/_/g, ' ')}</span>
+              <span className="font-medium text-[var(--app-text-muted)]">{item.count}</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-[var(--app-muted)]">
+              <div
+                className="h-2.5 rounded-full bg-brand-purple"
+                style={{ width: `${(item.count / maxCount) * 100}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+function MiniMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: number;
+  tone?: 'default' | 'brand' | 'success' | 'warning';
+}) {
+  const toneMap: Record<typeof tone, string> = {
+    default: 'text-[var(--app-text)]',
+    brand: 'text-brand-purple',
+    success: 'text-emerald-600 dark:text-emerald-300',
+    warning: 'text-amber-600 dark:text-amber-300',
+  };
+
+  return (
+    <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">{label}</p>
+      <p className={`mt-2 text-2xl font-semibold tracking-[-0.03em] ${toneMap[tone]}`}>{value}</p>
+    </div>
+  );
+}
+
+function CashIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 9V7a4 4 0 10-8 0v2m-3 0h14a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7a2 2 0 012-2h14z" /></svg>;
+}
+
+function TargetIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15l6-6m0 0h-4m4 0v4m-6 6a9 9 0 110-18 9 9 0 010 18z" /></svg>;
+}
+
+function ChatIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+}
+
+function FunnelIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5h16l-6 7v5l-4 2v-7L4 5z" /></svg>;
 }

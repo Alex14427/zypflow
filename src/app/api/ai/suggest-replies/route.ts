@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnthropic, MODELS } from '@/lib/ai-client';
+import { canUseAnthropic, isLocalSmokeMode } from '@/lib/local-mode';
 
 // Generates 3 smart reply suggestions for a conversation
 // Uses Claude Haiku — simple structured output, 50x cheaper than GPT-4o
@@ -16,6 +17,18 @@ export async function POST(req: NextRequest) {
 
   if (!messages?.length) {
     return NextResponse.json({ error: 'Messages required' }, { status: 400 });
+  }
+
+  if (isLocalSmokeMode() || !canUseAnthropic()) {
+    const customerName = leadName || 'there';
+    const biz = businessName || 'the clinic';
+    const replies = [
+      `Hi ${customerName}, thanks for reaching out to ${biz}. I can help you with the next step and make sure the team sees this quickly.`,
+      `Hi ${customerName}, if you would like, I can send over the best booking link for ${service || 'the consultation'} so you can pick a suitable time.`,
+      `Hi ${customerName}, just checking in - if you still want help with ${service || 'this enquiry'}, we can get you booked in or answer any remaining questions.`,
+    ];
+
+    return NextResponse.json({ suggestions: replies, mode: 'local_smoke' });
   }
 
   try {

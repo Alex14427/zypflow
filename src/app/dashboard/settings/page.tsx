@@ -1,7 +1,13 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivationSnapshot, formatActivationStatus } from '@/lib/activation-state';
+import { DEFAULT_BRAND_COLOR, resolveBrandAssets } from '@/lib/brand-theme';
+import { resolveCurrentBusiness } from '@/lib/current-business';
+import { formatCurrencyGBP } from '@/lib/formatting';
 import { supabase } from '@/lib/supabase';
+import { businessSettingsSchema, whatsappConfigSchema } from '@/lib/validators';
 
 interface Organisation {
   id: string;
@@ -9,7 +15,6 @@ interface Organisation {
   email: string;
   phone: string;
   website: string;
-  industry: string;
   plan: string;
   booking_url: string;
   google_review_link: string;
@@ -17,384 +22,392 @@ interface Organisation {
   stripe_customer_id: string | null;
   wa_phone_number_id: string | null;
   wa_access_token: string | null;
+  widget_color: string | null;
+  settings: Record<string, unknown> | null;
 }
 
 interface AutomationStatus {
   followUps: { sentLast7Days: number; leadsInPipeline: number; status: string };
   reminders: { upcomingAppointments: number; remindersSent: number; status: string };
-  reviews: { requestedLast7Days: number; completedLast7Days: number; avgRating: number; status: string };
+  reviews: { requestedLast7Days: number; completedLast7Days: number; status: string };
+}
+
+interface ActivationResponse {
+  activation: ActivationSnapshot;
+  launchReadiness: {
+    score: number;
+    status: 'not_ready' | 'almost_ready' | 'launch_ready';
+    completedCount: number;
+    totalCount: number;
+    packName: string;
+  };
 }
 
 export default function SettingsPage() {
   const [business, setBusiness] = useState<Organisation | null>(null);
+  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null);
+  const [activation, setActivation] = useState<ActivationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<'business' | 'billing' | 'widget' | 'integrations'>('business');
-  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [tab, setTab] = useState<'profile' | 'billing' | 'widget' | 'integrations'>('profile');
 
-  // Editable fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
   const [bookingUrl, setBookingUrl] = useState('');
   const [googleReviewLink, setGoogleReviewLink] = useState('');
-  const [aiPersonality, setAiPersonality] = useState('');
+  const [aiPersonality, setAiPersonality] = useState('warm and friendly');
+  const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR);
+  const [logoUrl, setLogoUrl] = useState('');
   const [waPhoneNumberId, setWaPhoneNumberId] = useState('');
   const [waAccessToken, setWaAccessToken] = useState('');
-  const [waSaving, setWaSaving] = useState(false);
-  const [waSaved, setWaSaved] = useState(false);
+
+  const brandPreview = useMemo(
+    () => resolveBrandAssets({ brand_color: brandColor, logo_url: logoUrl }, brandColor),
+    [brandColor, logoUrl]
+  );
+
+  const loadActivation = useCallback(async () => {
+    const response = await fetch('/api/activation', { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setActivation(payload as ActivationResponse);
+    }
+  }, []);
+
+  const syncActivation = useCallback(async (options?: { confirmWidgetInstalled?: boolean; forceWidgetCheck?: boolean }) => {
+    const response = await fetch('/api/activation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options || {}),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setActivation(payload as ActivationResponse);
+    }
+  }, []);
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('businesses')
-        .select('id, name, email, phone, website, industry, plan, booking_url, google_review_link, ai_personality, stripe_customer_id, wa_phone_number_id, wa_access_token')
-        .eq('email', user.email)
-        .maybeSingle();
-      if (data) {
-        setBusiness(data as Organisation);
-        setName(data.name || '');
-        setPhone(data.phone || '');
-        setWebsite(data.website || '');
-        setBookingUrl(data.booking_url || '');
-        setGoogleReviewLink(data.google_review_link || '');
-        setAiPersonality(data.ai_personality || 'warm and friendly');
-        setWaPhoneNumberId(data.wa_phone_number_id || '');
-        setWaAccessToken(data.wa_access_token || '');
+      try {
+        const { business: currentBusiness } = await resolveCurrentBusiness();
+        const { data } = await supabase
+          .from('businesses')
+          .select('id, name, email, phone, website, plan, booking_url, google_review_link, ai_personality, stripe_customer_id, wa_phone_number_id, wa_access_token, widget_color, settings')
+          .eq('id', currentBusiness.id)
+          .maybeSingle();
 
-        // Fetch automation health status
-        fetch(`/api/automations/status?orgId=${data.id}`)
-          .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
-          .then(d => { if (d.followUps) setAutomationStatus(d); })
-          .catch(() => {});
+        if (data) {
+          const organisation = data as Organisation;
+          setBusiness(organisation);
+          setName(organisation.name || '');
+          setPhone(organisation.phone || '');
+          setWebsite(organisation.website || '');
+          setBookingUrl(organisation.booking_url || '');
+          setGoogleReviewLink(organisation.google_review_link || '');
+          setAiPersonality(organisation.ai_personality || 'warm and friendly');
+          setBrandColor(typeof organisation.settings?.brand_color === 'string' ? organisation.settings.brand_color : organisation.widget_color || DEFAULT_BRAND_COLOR);
+          setLogoUrl(typeof organisation.settings?.logo_url === 'string' ? organisation.settings.logo_url : '');
+          setWaPhoneNumberId(organisation.wa_phone_number_id || '');
+          setWaAccessToken(organisation.wa_access_token || '');
+
+          fetch(`/api/automations/status?orgId=${organisation.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((payload) => payload?.followUps && setAutomationStatus(payload))
+            .catch(() => {});
+        }
+
+        await loadActivation();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-    load();
-  }, []);
 
-  async function handleSave() {
+    load().catch((error) => {
+      console.error(error);
+      setMessage('Unable to load settings.');
+      setLoading(false);
+    });
+  }, [loadActivation]);
+
+  async function saveProfile() {
     if (!business) return;
+    const parsed = businessSettingsSchema.safeParse({
+      name,
+      phone,
+      website,
+      bookingUrl,
+      googleReviewLink,
+      aiPersonality,
+      brandColor,
+      logoUrl,
+    });
+    if (!parsed.success) {
+      setMessage(parsed.error.issues[0]?.message ?? 'Please check the form.');
+      return;
+    }
+
     setSaving(true);
-    await supabase.from('businesses').update({
-      name, phone, website, booking_url: bookingUrl,
-      google_review_link: googleReviewLink, ai_personality: aiPersonality,
+    setMessage('');
+    const nextSettings = { ...(business.settings || {}), brand_color: parsed.data.brandColor, logo_url: parsed.data.logoUrl || null };
+
+    const { error } = await supabase.from('businesses').update({
+      name: parsed.data.name,
+      phone: parsed.data.phone,
+      website: parsed.data.website,
+      booking_url: parsed.data.bookingUrl,
+      google_review_link: parsed.data.googleReviewLink,
+      ai_personality: parsed.data.aiPersonality,
+      widget_color: parsed.data.brandColor,
+      settings: nextSettings,
     }).eq('id', business.id);
+
+    if (error) {
+      setSaving(false);
+      setMessage(error.message || 'Unable to save clinic settings.');
+      return;
+    }
+
+    setBusiness({ ...business, name: parsed.data.name, phone: parsed.data.phone, website: parsed.data.website, booking_url: parsed.data.bookingUrl, google_review_link: parsed.data.googleReviewLink, ai_personality: parsed.data.aiPersonality, widget_color: parsed.data.brandColor, settings: nextSettings });
+    await syncActivation();
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setMessage('Clinic settings saved.');
+  }
+
+  async function saveWhatsapp() {
+    if (!business) return;
+    const parsed = whatsappConfigSchema.safeParse({ phoneNumberId: waPhoneNumberId, accessToken: waAccessToken });
+    if (!parsed.success) {
+      setMessage(parsed.error.issues[0]?.message ?? 'Please check the WhatsApp credentials.');
+      return;
+    }
+    const { error } = await supabase.from('businesses').update({
+      wa_phone_number_id: parsed.data.phoneNumberId || null,
+      wa_access_token: parsed.data.accessToken || null,
+    }).eq('id', business.id);
+    if (error) {
+      setMessage(error.message || 'Unable to save WhatsApp config.');
+      return;
+    }
+    setBusiness({ ...business, wa_phone_number_id: parsed.data.phoneNumberId || null, wa_access_token: parsed.data.accessToken || null });
+    setMessage('WhatsApp config saved.');
+  }
+
+  async function startCheckout() {
+    setBillingLoading(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'starter', orgId: business?.id, email: business?.email }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'Unable to start checkout.');
+      window.location.href = payload.url;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to start checkout.');
+    } finally {
+      setBillingLoading(false);
+    }
   }
 
   async function openBillingPortal() {
-    const res = await fetch('/api/stripe/portal', { method: 'POST' });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
+    setBillingLoading(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/stripe/portal', { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'Unable to open billing portal.');
+      window.location.href = payload.url;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to open billing portal.');
+    } finally {
+      setBillingLoading(false);
+    }
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full" /></div>;
+    return <div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" /></div>;
   }
 
   const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zypflow.com'}/v1.js" data-org-id="${business?.id}"></script>`;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
-        {(['business', 'billing', 'widget', 'integrations'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition ${
-              tab === t ? 'bg-white shadow text-brand-purple' : 'text-gray-500'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* Business info */}
-      {tab === 'business' && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 max-w-2xl">
-          <h2 className="font-semibold mb-4">Business Information</h2>
-          <div className="space-y-4">
-            <Field label="Business Name" value={name} onChange={setName} />
-            <Field label="Phone Number" value={phone} onChange={setPhone} placeholder="+44 7700 900000" />
-            <Field label="Website" value={website} onChange={setWebsite} placeholder="https://www.example.com" />
-            <Field label="Booking URL" value={bookingUrl} onChange={setBookingUrl} placeholder="https://calendly.com/..." />
-            <Field label="Google Review Link" value={googleReviewLink} onChange={setGoogleReviewLink} placeholder="https://g.page/r/..." />
+    <div className="space-y-6" style={brandPreview.cssVariables}>
+      <header className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <span className="page-eyebrow">Clinic controls</span>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">Brand, billing, widget, and integration controls in one place.</h1>
+        </div>
+        <div className="surface-panel rounded-[32px] p-5">
+          <p className="page-eyebrow">Clinic preview</p>
+          <div className="mt-4 flex items-center gap-4 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] p-4">
+            {brandPreview.logoUrl ? <img src={brandPreview.logoUrl} alt="Clinic logo" className="h-12 w-12 rounded-full object-cover" /> : <div className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: brandPreview.brandColor }}>{(name || 'Z').charAt(0).toUpperCase()}</div>}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">AI Personality</label>
-              <select
-                value={aiPersonality}
-                onChange={e => setAiPersonality(e.target.value)}
-                className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
-              >
-                <option value="warm and friendly">Warm and friendly</option>
-                <option value="professional and formal">Professional and formal</option>
-                <option value="casual and approachable">Casual and approachable</option>
-                <option value="luxury and sophisticated">Luxury and sophisticated</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-brand-purple text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-purple-dark transition disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-              {saved && <span className="text-green-600 text-sm">Saved!</span>}
+              <p className="text-sm font-semibold text-[var(--app-text)]">{name || 'Your clinic'}</p>
+              <p className="text-xs text-[var(--app-text-muted)]">{brandPreview.brandColor} - {formatPlanLabel(business?.plan)}</p>
             </div>
           </div>
         </div>
+      </header>
+
+      {activation && (
+        <section className="surface-panel rounded-[32px] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="page-eyebrow">Launch status</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[var(--app-text)]">{formatActivationStatus(activation.activation.status)}</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge label={`${activation.activation.score}% synced`} tone="brand" />
+              <Badge label={activation.activation.widgetInstalled ? 'Widget ready' : 'Widget pending'} tone={activation.activation.widgetInstalled ? 'good' : 'warn'} />
+              <Badge label={activation.activation.billingReady ? 'Billing active' : 'Awaiting payment'} tone={activation.activation.billingReady ? 'good' : 'muted'} />
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-[var(--app-text-muted)]">{activation.launchReadiness.packName} is {activation.activation.packDeployed ? 'deployed' : 'not deployed yet'}.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button onClick={() => syncActivation({ forceWidgetCheck: tab === 'widget' })} className="rounded-full bg-brand-purple px-4 py-2 text-sm font-semibold text-white">Run activation check</button>
+            <span className="text-sm text-[var(--app-text-muted)]">{activation.launchReadiness.completedCount}/{activation.launchReadiness.totalCount} launch steps complete</span>
+          </div>
+        </section>
       )}
 
-      {/* Billing */}
-      {tab === 'billing' && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 max-w-2xl">
-          <h2 className="font-semibold mb-4">Billing & Subscription</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium">Current Plan</p>
-                <p className="text-sm text-gray-500">You are on the <span className="font-semibold uppercase text-brand-purple">{business?.plan}</span> plan.</p>
-              </div>
-              <span className="bg-brand-purple text-white text-xs px-3 py-1 rounded-full uppercase font-semibold">
-                {business?.plan}
-              </span>
-            </div>
+      <section className="flex flex-wrap gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] p-1">
+        {(['profile', 'billing', 'widget', 'integrations'] as const).map((item) => (
+          <button key={item} onClick={() => setTab(item)} className={`rounded-full px-4 py-2.5 text-sm font-semibold capitalize ${tab === item ? 'bg-brand-purple text-white' : 'text-[var(--app-text-muted)]'}`}>{item}</button>
+        ))}
+      </section>
 
-            {business?.stripe_customer_id ? (
-              <button
-                onClick={openBillingPortal}
-                className="bg-brand-purple text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-purple-dark transition"
-              >
-                Manage Subscription
-              </button>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500 mb-3">Upgrade to a paid plan to unlock all features.</p>
-                <a
-                  href="/pricing"
-                  className="inline-block bg-brand-purple text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-purple-dark transition"
-                >
-                  View Plans
-                </a>
+      {tab === 'profile' && (
+        <section className="grid gap-6 xl:grid-cols-2">
+          <div className="surface-panel rounded-[32px] p-6 space-y-4">
+            <Field label="Clinic name" value={name} onChange={setName} />
+            <Field label="Phone" value={phone} onChange={setPhone} />
+            <Field label="Website" value={website} onChange={setWebsite} />
+            <Field label="Booking URL" value={bookingUrl} onChange={setBookingUrl} />
+            <Field label="Google review link" value={googleReviewLink} onChange={setGoogleReviewLink} />
+            <Field label="AI personality" value={aiPersonality} onChange={setAiPersonality} />
+          </div>
+          <div className="surface-panel rounded-[32px] p-6 space-y-4">
+            <Field label="Logo URL" value={logoUrl} onChange={setLogoUrl} />
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">Brand color</label>
+              <div className="flex items-center gap-3 rounded-[18px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] px-3 py-2">
+                <input type="color" value={brandColor} onChange={(event) => setBrandColor(event.target.value)} className="h-10 w-12 bg-transparent" />
+                <input type="text" value={brandColor} onChange={(event) => setBrandColor(event.target.value)} className="flex-1 bg-transparent text-sm text-[var(--app-text)] outline-none" />
+              </div>
+            </div>
+            <button onClick={saveProfile} disabled={saving} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">{saving ? 'Saving...' : 'Save clinic settings'}</button>
+          </div>
+        </section>
+      )}
+
+      {tab === 'billing' && (
+        <section className="grid gap-6 xl:grid-cols-2">
+          <div className="surface-panel rounded-[32px] p-6">
+            <p className="page-eyebrow">Managed pilot terms</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <MetricTile label="Pilot fee" value={`${formatCurrencyGBP(995)}/mo`} />
+              <MetricTile label="Setup fee" value={formatCurrencyGBP(495)} />
+              <MetricTile label="Term" value="60 days" />
+              <MetricTile label="Scope" value="1 clinic, 1 pack" />
+            </div>
+          </div>
+          <div className="surface-panel rounded-[32px] p-6">
+            <p className="page-eyebrow">Billing controls</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {business?.stripe_customer_id ? (
+                <button onClick={openBillingPortal} disabled={billingLoading} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">{billingLoading ? 'Opening...' : 'Open billing portal'}</button>
+              ) : (
+                <button onClick={startCheckout} disabled={billingLoading} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">{billingLoading ? 'Starting...' : 'Activate approved clinic'}</button>
+              )}
+            </div>
+            <p className="mt-4 text-sm text-[var(--app-text-muted)]">{business?.email}</p>
+          </div>
+        </section>
+      )}
+
+      {tab === 'widget' && (
+        <section className="grid gap-6 xl:grid-cols-2">
+          <div className="surface-panel rounded-[32px] p-6">
+            <p className="page-eyebrow">Install code</p>
+            <div className="mt-4 overflow-x-auto rounded-[24px] bg-slate-950 p-4 font-mono text-sm text-emerald-300">{embedCode}</div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button onClick={() => navigator.clipboard.writeText(embedCode)} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">Copy install code</button>
+              <button onClick={() => syncActivation({ forceWidgetCheck: true })} className="rounded-full border border-[var(--app-border)] px-5 py-3 text-sm font-semibold text-[var(--app-text)]">Verify widget</button>
+            </div>
+          </div>
+          <div className="surface-panel rounded-[32px] p-6">
+            <p className="page-eyebrow">Platform notes</p>
+            <div className="mt-4 space-y-3 text-sm text-[var(--app-text-muted)]">
+              <p>WordPress - Insert Headers and Footers - Footer.</p>
+              <p>Wix - Settings - Custom Code - Body End.</p>
+              <p>Squarespace - Settings - Advanced - Code Injection - Footer.</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === 'integrations' && (
+        <section className="grid gap-6 xl:grid-cols-2">
+          <div className="surface-panel rounded-[32px] p-6 space-y-4">
+            <Field label="WhatsApp Phone Number ID" value={waPhoneNumberId} onChange={setWaPhoneNumberId} />
+            <Field label="WhatsApp Access Token" value={waAccessToken} onChange={setWaAccessToken} />
+            <button onClick={saveWhatsapp} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">Save WhatsApp config</button>
+          </div>
+          <div className="space-y-4">
+            {automationStatus && (
+              <div className="surface-panel rounded-[32px] p-6">
+                <p className="page-eyebrow">Automation health</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <MetricTile label="Follow-ups" value={`${automationStatus.followUps.sentLast7Days}`} />
+                  <MetricTile label="Reminders" value={`${automationStatus.reminders.remindersSent}`} />
+                  <MetricTile label="Reviews" value={`${automationStatus.reviews.completedLast7Days}`} />
+                </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Widget */}
-      {tab === 'widget' && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 max-w-2xl">
-          <h2 className="font-semibold mb-4">Chat Widget</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Add this code to your website, just before the closing <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">&lt;/body&gt;</code> tag:
-          </p>
-          <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm font-mono break-all mb-4">
-            {embedCode}
-          </div>
-          <button
-            onClick={() => navigator.clipboard.writeText(embedCode)}
-            className="bg-brand-purple text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition"
-          >
-            Copy to Clipboard
-          </button>
-
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-2">
-            <p><strong>WordPress:</strong> &quot;Insert Headers and Footers&quot; plugin &rarr; paste in Footer</p>
-            <p><strong>Wix:</strong> Settings &rarr; Custom Code &rarr; Body End</p>
-            <p><strong>Squarespace:</strong> Settings &rarr; Advanced &rarr; Code Injection &rarr; Footer</p>
-          </div>
-        </div>
-      )}
-
-      {/* Integrations */}
-      {tab === 'integrations' && (
-        <div className="space-y-4 max-w-2xl">
-          {/* Automation Health Panel */}
-          {automationStatus && (
-            <div className="bg-white rounded-xl shadow-sm border p-6 mb-2">
-              <h2 className="font-semibold mb-4">Automation Health</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <AutomationStatusCard
-                  label="Follow-ups"
-                  status={automationStatus.followUps.status}
-                  detail={`${automationStatus.followUps.sentLast7Days} sent (7d) · ${automationStatus.followUps.leadsInPipeline} in pipeline`}
-                />
-                <AutomationStatusCard
-                  label="Reminders"
-                  status={automationStatus.reminders.status}
-                  detail={`${automationStatus.reminders.upcomingAppointments} upcoming · ${automationStatus.reminders.remindersSent} reminded`}
-                />
-                <AutomationStatusCard
-                  label="Reviews"
-                  status={automationStatus.reviews.status}
-                  detail={`${automationStatus.reviews.requestedLast7Days} requested (7d) · ${automationStatus.reviews.completedLast7Days} completed`}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* WhatsApp Connect */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium">WhatsApp Business</h3>
-                <span className={`w-2 h-2 rounded-full ${business?.wa_phone_number_id ? 'bg-green-500' : 'bg-gray-300'}`} />
-              </div>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                business?.wa_phone_number_id ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {business?.wa_phone_number_id ? 'Connected' : 'Not connected'}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">Send automated WhatsApp messages to leads. Get credentials from your Meta Business Suite.</p>
-            <div className="space-y-3">
-              <Field label="Phone Number ID" value={waPhoneNumberId} onChange={setWaPhoneNumberId} placeholder="e.g. 100234567890" />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
-                <input
-                  type="password"
-                  value={waAccessToken}
-                  onChange={e => setWaAccessToken(e.target.value)}
-                  placeholder="Your permanent access token"
-                  className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={async () => {
-                    if (!business) return;
-                    setWaSaving(true);
-                    await supabase.from('businesses').update({
-                      wa_phone_number_id: waPhoneNumberId || null,
-                      wa_access_token: waAccessToken || null,
-                    }).eq('id', business.id);
-                    setWaSaving(false);
-                    setWaSaved(true);
-                    setTimeout(() => setWaSaved(false), 2000);
-                  }}
-                  disabled={waSaving}
-                  className="bg-brand-purple text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-purple-dark transition disabled:opacity-50"
-                >
-                  {waSaving ? 'Saving...' : 'Save WhatsApp Config'}
-                </button>
-                {waSaved && <span className="text-green-600 text-sm">Saved!</span>}
-              </div>
+            <div className="surface-panel rounded-[32px] p-6 text-sm text-[var(--app-text-muted)]">
+              Stripe, Twilio, Resend, Sentry, and workflow jobs are all surfaced here so the clinic setup stays commercially clean.
             </div>
           </div>
-
-          <IntegrationCard
-            name="Stripe"
-            description="Payment processing for subscriptions"
-            connected={!!business?.stripe_customer_id}
-          />
-          <IntegrationCard
-            name="Twilio"
-            description="SMS messaging for reminders and follow-ups"
-            connected={true}
-            details="SMS & appointment reminders active"
-          />
-          <IntegrationCard
-            name="Resend"
-            description="Transactional email delivery"
-            connected={true}
-            details="Email notifications active"
-          />
-          <IntegrationCard
-            name="Cal.com"
-            description="Online booking system"
-            connected={!!bookingUrl}
-            details={bookingUrl || 'Add your booking URL above'}
-          />
-          <IntegrationCard
-            name="PostHog"
-            description="Product analytics"
-            connected={true}
-          />
-          <IntegrationCard
-            name="Sentry"
-            description="Error tracking and monitoring"
-            connected={true}
-          />
-          <IntegrationCard
-            name="Make.com"
-            description="Automation workflows (lead notifications, reminders, follow-ups)"
-            connected={true}
-            details="3 active scenarios"
-          />
-        </div>
+        </section>
       )}
+
+      {message && <p className="text-sm text-[var(--app-text-muted)]">{message}</p>}
     </div>
   );
 }
 
-function Field({ label, value, onChange, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
-}) {
+function formatPlanLabel(plan: string | null | undefined) {
+  if (!plan || plan === 'trial') {
+    return 'Founding setup';
+  }
+
+  return plan.replace(/_/g, ' ');
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
-      />
+      <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">{label}</label>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-[18px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] px-4 py-3 text-sm text-[var(--app-text)] outline-none" />
     </div>
   );
 }
 
-function AutomationStatusCard({ label, status, detail }: {
-  label: string; status: string; detail: string;
-}) {
-  const statusConfig: Record<string, { color: string; text: string }> = {
-    healthy: { color: 'bg-green-100 text-green-700', text: 'Healthy' },
-    warning: { color: 'bg-yellow-100 text-yellow-700', text: 'Needs attention' },
-    idle: { color: 'bg-gray-100 text-gray-500', text: 'Idle' },
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-muted)]">{label}</p><p className="mt-2 text-lg font-semibold text-[var(--app-text)]">{value}</p></div>;
+}
+
+function Badge({ label, tone }: { label: string; tone: 'brand' | 'good' | 'warn' | 'muted' }) {
+  const styles = {
+    brand: 'bg-brand-purple text-white',
+    good: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-200',
+    warn: 'bg-amber-500/15 text-amber-600 dark:text-amber-200',
+    muted: 'bg-slate-500/12 text-[var(--app-text-muted)]',
   };
-  const cfg = statusConfig[status] || statusConfig.idle;
-
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-1">
-        <span className="font-medium text-sm">{label}</span>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.text}</span>
-      </div>
-      <p className="text-xs text-gray-500">{detail}</p>
-    </div>
-  );
-}
-
-function IntegrationCard({ name, description, connected, details }: {
-  name: string; description: string; connected: boolean; details?: string;
-}) {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border p-5 flex items-center justify-between">
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium">{name}</h3>
-          <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
-        </div>
-        <p className="text-sm text-gray-500">{description}</p>
-        {details && <p className="text-xs text-gray-400 mt-1">{details}</p>}
-      </div>
-      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-        connected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-      }`}>
-        {connected ? 'Connected' : 'Not connected'}
-      </span>
-    </div>
-  );
+  return <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${styles[tone]}`}>{label}</span>;
 }
