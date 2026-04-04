@@ -10,27 +10,28 @@ const PLAN_LIMITS = {
 type CreditType = 'scraping' | 'email' | 'ai';
 type PlanKey = keyof typeof PLAN_LIMITS;
 
-const COLUMN_MAP: Record<CreditType, string> = {
+const COLUMN_MAP: Record<CreditType, 'scraping_credits' | 'email_credits' | 'ai_credits'> = {
   scraping: 'scraping_credits',
   email: 'email_credits',
   ai: 'ai_credits',
 };
+
+interface OrgCredits {
+  plan: string | null;
+  scraping_credits: number | null;
+  email_credits: number | null;
+  ai_credits: number | null;
+}
 
 function getPlanKey(plan: string): PlanKey {
   if (plan in PLAN_LIMITS) return plan as PlanKey;
   return 'starter';
 }
 
-export async function checkCredits(
-  orgId: string,
-  type: CreditType,
-  amount: number = 1
-): Promise<{ allowed: boolean; remaining: number; plan: string }> {
-  const column = COLUMN_MAP[type];
-
+async function fetchOrgCredits(orgId: string): Promise<OrgCredits> {
   const { data, error } = await supabaseAdmin
     .from('organisations')
-    .select(`plan, ${column}`)
+    .select('plan, scraping_credits, email_credits, ai_credits')
     .eq('id', orgId)
     .single();
 
@@ -38,13 +39,23 @@ export async function checkCredits(
     throw new Error(`Failed to fetch org credits: ${error?.message ?? 'not found'}`);
   }
 
-  const plan: string = data.plan ?? 'starter';
+  return data as unknown as OrgCredits;
+}
+
+export async function checkCredits(
+  orgId: string,
+  type: CreditType,
+  amount: number = 1
+): Promise<{ allowed: boolean; remaining: number; plan: string }> {
+  const org = await fetchOrgCredits(orgId);
+  const plan = org.plan ?? 'starter';
 
   if (plan === 'enterprise') {
     return { allowed: true, remaining: Infinity, plan };
   }
 
-  const remaining: number = data[column] ?? 0;
+  const column = COLUMN_MAP[type];
+  const remaining: number = org[column] ?? 0;
   return {
     allowed: remaining >= amount,
     remaining,
@@ -57,20 +68,10 @@ export async function deductCredits(
   type: CreditType,
   amount: number = 1
 ): Promise<{ success: boolean; remaining: number }> {
+  const org = await fetchOrgCredits(orgId);
+  const plan = org.plan ?? 'starter';
   const column = COLUMN_MAP[type];
-
-  const { data, error } = await supabaseAdmin
-    .from('organisations')
-    .select(`plan, ${column}`)
-    .eq('id', orgId)
-    .single();
-
-  if (error || !data) {
-    throw new Error(`Failed to fetch org credits: ${error?.message ?? 'not found'}`);
-  }
-
-  const plan: string = data.plan ?? 'starter';
-  const current: number = data[column] ?? 0;
+  const current: number = org[column] ?? 0;
 
   if (plan !== 'enterprise' && current < amount) {
     return { success: false, remaining: current };
@@ -95,17 +96,8 @@ export async function deductCredits(
 }
 
 export async function resetMonthlyCredits(orgId: string): Promise<void> {
-  const { data, error } = await supabaseAdmin
-    .from('organisations')
-    .select('plan')
-    .eq('id', orgId)
-    .single();
-
-  if (error || !data) {
-    throw new Error(`Failed to fetch org plan: ${error?.message ?? 'not found'}`);
-  }
-
-  const planKey = getPlanKey(data.plan ?? 'starter');
+  const org = await fetchOrgCredits(orgId);
+  const planKey = getPlanKey(org.plan ?? 'starter');
   const limits = PLAN_LIMITS[planKey];
 
   const { error: updateError } = await supabaseAdmin
@@ -127,22 +119,13 @@ export async function getCreditUsage(orgId: string): Promise<{
   email: { used: number; limit: number };
   ai: { used: number; limit: number };
 }> {
-  const { data, error } = await supabaseAdmin
-    .from('organisations')
-    .select('plan, scraping_credits, email_credits, ai_credits')
-    .eq('id', orgId)
-    .single();
-
-  if (error || !data) {
-    throw new Error(`Failed to fetch org usage: ${error?.message ?? 'not found'}`);
-  }
-
-  const planKey = getPlanKey(data.plan ?? 'starter');
+  const org = await fetchOrgCredits(orgId);
+  const planKey = getPlanKey(org.plan ?? 'starter');
   const limits = PLAN_LIMITS[planKey];
 
-  const scrapingRemaining: number = data.scraping_credits ?? 0;
-  const emailRemaining: number = data.email_credits ?? 0;
-  const aiRemaining: number = data.ai_credits ?? 0;
+  const scrapingRemaining: number = org.scraping_credits ?? 0;
+  const emailRemaining: number = org.email_credits ?? 0;
+  const aiRemaining: number = org.ai_credits ?? 0;
 
   return {
     scraping: {
