@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import ROIDashboard from '@/components/roi-dashboard';
 
 interface Stats {
   totalLeads: number;
@@ -49,6 +50,7 @@ export default function DashboardOverview() {
   const [setup, setSetup] = useState<SetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState('');
+  const [bizId, setBizId] = useState<string>('');
 
   const bizIdRef = useRef<string | null>(null);
 
@@ -65,6 +67,7 @@ export default function DashboardOverview() {
       if (!biz) return;
       setBusinessName(biz.name || '');
       bizIdRef.current = biz.id;
+      setBizId(biz.id);
 
       // Check setup completion
       const services = biz.services as unknown[] | null;
@@ -281,6 +284,9 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      {/* ROI dashboard */}
+      {bizId && <ROIDashboard orgId={bizId} />}
     </div>
   );
 }
