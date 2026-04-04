@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   // Fetch org details
   const { data: org, error: orgError } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('id, name, website')
     .eq('id', orgId)
     .single();

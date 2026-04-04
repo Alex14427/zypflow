@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentBusiness } from '@/lib/current-business';
 
 interface Lead {
   id: string;
@@ -100,15 +101,13 @@ export default function CallPriorityPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: org } = await supabase
-        .from('organisations')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-      if (!org) return;
+      let org: { id: string };
+      try {
+        const { business } = await resolveCurrentBusiness();
+        org = { id: business.id };
+      } catch {
+        return;
+      }
 
       const { data: leadsData } = await supabase
         .from('leads')

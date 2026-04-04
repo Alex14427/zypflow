@@ -524,7 +524,7 @@ export async function executeWorkflow(params: {
 
   // ---- 2. Fetch org ----
   const { data: org, error: orgErr } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('id, name, email, phone, booking_url, google_review_link')
     .eq('id', orgId)
     .single();

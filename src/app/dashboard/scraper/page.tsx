@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentBusiness } from '@/lib/current-business';
 
 interface Prospect {
   id: string;
@@ -84,16 +85,19 @@ export default function ScraperPage() {
   // Load org on mount
   useEffect(() => {
     async function loadOrg() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: org } = await supabase
-        .from('organisations')
-        .select('id, scraping_credits')
-        .eq('email', user.email)
-        .maybeSingle();
-      if (org) {
-        setOrgId(org.id);
-        setScrapingCredits(org.scraping_credits ?? null);
+      try {
+        const { business } = await resolveCurrentBusiness();
+        setOrgId(business.id);
+        // scraping_credits is on the businesses table but not in CurrentBusiness type,
+        // so fetch it separately
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('scraping_credits')
+          .eq('id', business.id)
+          .single();
+        if (biz) setScrapingCredits((biz as { scraping_credits: number | null }).scraping_credits ?? null);
+      } catch {
+        // not authenticated
       }
     }
     loadOrg();
@@ -147,12 +151,12 @@ export default function ScraperPage() {
       if (typeof data.creditsRemaining === 'number') {
         setScrapingCredits(data.creditsRemaining);
       } else {
-        const { data: org } = await supabase
-          .from('organisations')
+        const { data: biz } = await supabase
+          .from('businesses')
           .select('scraping_credits')
           .eq('id', orgId)
           .maybeSingle();
-        if (org) setScrapingCredits(org.scraping_credits ?? null);
+        if (biz) setScrapingCredits((biz as { scraping_credits: number | null }).scraping_credits ?? null);
       }
       loadProspects(orgId);
     } catch (err: unknown) {

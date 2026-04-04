@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   ] = await Promise.allSettled([
     // Total active organisations
     supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id', { count: 'exact', head: true })
       .eq('active', true),
 
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     // Active trials
     supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id', { count: 'exact', head: true })
       .eq('plan', 'trial')
       .eq('active', true)
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
     // Paid subscribers (any non-trial active plan)
     supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id', { count: 'exact', head: true })
       .neq('plan', 'trial')
       .eq('active', true),
