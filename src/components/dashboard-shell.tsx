@@ -21,6 +21,8 @@ const NAV_ITEMS = [
   { href: '/dashboard/conversations', label: 'Inbox', icon: ChatIcon },
   { href: '/dashboard/reviews', label: 'Reviews', icon: StarIcon },
   { href: '/dashboard/templates', label: 'Automations', icon: TemplateIcon },
+  { href: '/dashboard/scraper', label: 'Lead Scraper', icon: MagnetIcon },
+  { href: '/dashboard/calls', label: 'Call Priority', icon: PhoneIcon },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartIcon },
   { href: '/dashboard/settings', label: 'Settings', icon: GearIcon },
 ];
@@ -32,6 +34,8 @@ const SECTION_SUMMARIES: Record<string, string> = {
   '/dashboard/conversations': 'Inbox visibility across every active enquiry and follow-up thread.',
   '/dashboard/reviews': 'Review volume, completion rate, and the reputation loop after appointments.',
   '/dashboard/templates': 'Launch checklist, automation coverage, and deployment control.',
+  '/dashboard/scraper': 'Find, audit, and pipeline new leads from Google Maps.',
+  '/dashboard/calls': 'Leads ranked by score and engagement — call the hottest ones first.',
   '/dashboard/analytics': 'Commercial proof that the workflow is turning activity into measurable outcomes.',
   '/dashboard/settings': 'Brand, billing, widget, and clinic details that keep the system trustworthy.',
 };
@@ -310,4 +314,10 @@ function SearchIcon({ className }: { className?: string }) {
 }
 function MenuIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16M4 12h16M4 17h16" /></svg>;
+}
+function MagnetIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
+}
+function PhoneIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 }
