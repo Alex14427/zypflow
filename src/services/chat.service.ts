@@ -4,6 +4,9 @@ import { scoreLead } from '@/lib/scoring';
 import { getSystemPrompt } from '@/lib/prompts';
 import { fireWebhook } from '@/lib/webhook';
 import { sendLeadNotification } from '@/lib/email';
+import { onNewLead } from '@/lib/workflow-triggers';
+import { trackLeadCreated, trackConversationStarted } from '@/lib/posthog-events';
+import { resolveModelTier, getChatModel, getMaxTokens, getTemperature } from '@/lib/model-router';
 
 export type ChatServiceInput = {
   orgId: string;
@@ -52,26 +55,48 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
 
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
-  // 4. Call AI — GPT-4o primary, Claude Sonnet fallback
+  // 4. Call AI — model selected based on lead score, message count, channel
   const recentMessages = messages.slice(-20);
   let reply = '';
   const chatMessages = recentMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+  const tier = resolveModelTier({
+    isFirstMessage: !conversationId,
+    messageCount: messages.length,
+  });
+  const selectedModel = getChatModel(tier);
+  const maxTokens = getMaxTokens(tier);
+  const temperature = getTemperature(tier);
+
   try {
-    const openai = getOpenAI();
-    const completion = await openai.chat.completions.create({
-      model: MODELS.chat,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...chatMessages,
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
-    });
-    reply = completion.choices[0].message.content || '';
-  } catch (openaiError) {
-    console.error('OpenAI failed, falling back to Claude:', openaiError);
+    if (selectedModel.startsWith('gpt')) {
+      const openai = getOpenAI();
+      const completion = await openai.chat.completions.create({
+        model: selectedModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...chatMessages,
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      });
+      reply = completion.choices[0].message.content || '';
+    } else {
+      // Claude model path (cheap tier)
+      const anthropic = getAnthropic();
+      const claudeResponse = await anthropic.messages.create({
+        model: selectedModel,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: chatMessages,
+      });
+      const textBlock = claudeResponse.content.find((b) => b.type === 'text');
+      reply = textBlock ? textBlock.text : '';
+    }
+  } catch (primaryError) {
+    console.error(`Primary model (${selectedModel}) failed, falling back:`, primaryError);
     try {
+      // Always fall back to Claude Sonnet as secondary
       const anthropic = getAnthropic();
       const claudeResponse = await anthropic.messages.create({
         model: MODELS.chatFallback,
@@ -81,9 +106,10 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
       });
       const textBlock = claudeResponse.content.find((b) => b.type === 'text');
       reply = textBlock ? textBlock.text : '';
-    } catch (claudeError) {
-      console.error('Claude also failed:', claudeError);
-      reply = "I'm sorry, I'm having trouble right now. Please try again in a moment.";
+    } catch (fallbackError) {
+      console.error('All AI models failed:', fallbackError);
+      // Rescue flow: give a helpful human-like response that still captures intent
+      reply = `I apologise — I'm experiencing a brief technical issue. Your message is important to us! You can:\n\n• Call us directly${biz.email ? `\n• Email us at ${biz.email}` : ''}${biz.booking_url ? `\n• Book online at ${biz.booking_url}` : ''}\n\nOr simply reply here and we'll get back to you shortly.`;
     }
   }
 
@@ -104,6 +130,7 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
       .insert({ org_id: orgId, messages, channel: 'chat' })
       .select('id').single();
     convId = data?.id;
+    if (convId) trackConversationStarted(orgId, convId, 'chat');
   } else {
     await supabaseAdmin.from('conversations')
       .update({ messages, updated_at: new Date().toISOString() }).eq('id', convId);
@@ -159,6 +186,14 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
         },
         'make_new_lead'
       ).catch(() => {});
+    }
+
+    // Track + fire workflow automations for new lead
+    if (currentLeadId) {
+      trackLeadCreated(orgId, currentLeadId, 'chat', scoreLead(extractedLead));
+      onNewLead(orgId, currentLeadId).catch((err) =>
+        console.error('Workflow trigger onNewLead failed:', err)
+      );
     }
   }
 

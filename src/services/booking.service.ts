@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
+import { onAppointmentCreated } from '@/lib/workflow-triggers';
+import { trackAppointmentBooked } from '@/lib/posthog-events';
 
 export type CalBookingPayload = {
   attendees: Array<{ email?: string; name?: string }>;
@@ -110,17 +112,29 @@ export async function handleBookingCreatedWebhook({ payload }: HandleBookingInpu
   }
 
   try {
-    const { error: appointmentError } = await supabaseAdmin.from('appointments').insert({
-      org_id: orgId,
-      lead_id: leadId,
-      service,
-      datetime: payload.startTime,
-      duration_minutes: durationMinutes,
-      status: 'confirmed',
-    });
+    const { data: appointment, error: appointmentError } = await supabaseAdmin
+      .from('appointments')
+      .insert({
+        org_id: orgId,
+        lead_id: leadId,
+        service,
+        datetime: payload.startTime,
+        duration_minutes: durationMinutes,
+        status: 'confirmed',
+      })
+      .select('id')
+      .single();
 
     if (appointmentError) {
       throw appointmentError;
+    }
+
+    // Track + fire workflow automations for new appointment
+    if (appointment?.id) {
+      trackAppointmentBooked(orgId, appointment.id, leadId ?? undefined, service);
+      onAppointmentCreated(orgId, appointment.id, leadId ?? undefined).catch((err) =>
+        console.error('Workflow trigger onAppointmentCreated failed:', err)
+      );
     }
   } catch (error) {
     console.error('Failed to create appointment from Cal.com booking webhook:', error);

@@ -26,6 +26,18 @@
     {
       "path": "/api/outreach/cron",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/automations/execute",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/automations/watchdog",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/automations/lead-score-refresh",
+      "schedule": "0 3 * * *"
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendEmail } from '@/lib/email';
+import { trackWorkflowExecuted } from '@/lib/posthog-events';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +41,48 @@ interface VariableContext {
 
 // A generic action step parsed from actions_json
 type ActionStep = Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
+// Timezone-aware sending window
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if current time is within a reasonable sending window for the
+ * business timezone. If outside window, return the delay in ms until
+ * the next window opens. UK businesses default to Europe/London.
+ */
+function getSendingDelay(timezone: string = 'Europe/London'): number {
+  try {
+    const now = new Date();
+    const localTime = new Date(now.toLocaleString('en-GB', { timeZone: timezone }));
+    const hour = localTime.getHours();
+    const day = localTime.getDay(); // 0 = Sunday
+
+    // Don't send on Sundays before 10am or after 6pm
+    // Don't send any day before 8am or after 9pm
+    const isSunday = day === 0;
+    const tooEarly = isSunday ? hour < 10 : hour < 8;
+    const tooLate = isSunday ? hour >= 18 : hour >= 21;
+
+    if (tooEarly) {
+      const openHour = isSunday ? 10 : 8;
+      const delayMs = (openHour - hour) * 60 * 60 * 1000;
+      return delayMs;
+    }
+
+    if (tooLate) {
+      // Delay until next morning 8am (or 10am Sunday)
+      const hoursUntilMidnight = 24 - hour;
+      const nextDay = (day + 1) % 7;
+      const nextOpenHour = nextDay === 0 ? 10 : 8;
+      return (hoursUntilMidnight + nextOpenHour) * 60 * 60 * 1000;
+    }
+
+    return 0; // Within sending window
+  } catch {
+    return 0; // If timezone is invalid, send immediately
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Variable replacement
@@ -525,7 +568,7 @@ export async function executeWorkflow(params: {
   // ---- 2. Fetch org ----
   const { data: org, error: orgErr } = await supabaseAdmin
     .from('businesses')
-    .select('id, name, email, phone, booking_url, google_review_link')
+    .select('id, name, email, phone, booking_url, google_review_link, timezone')
     .eq('id', orgId)
     .single();
 
@@ -602,12 +645,41 @@ export async function executeWorkflow(params: {
         }
 
         case 'send_email': {
-          stepResult = await handleSendEmail(action, ctx.lead_email);
+          const emailDelay = getSendingDelay((org as Record<string, unknown>).timezone as string | undefined);
+          if (emailDelay > 0) {
+            // Outside sending window — defer to scheduled_actions
+            await supabaseAdmin.from('scheduled_actions').insert({
+              org_id: orgId,
+              lead_id: leadId ?? null,
+              template_id: templateId,
+              action_type: 'send_email',
+              action_data: { to: (action.to as string) || ctx.lead_email, subject: action.subject, body: action.body },
+              scheduled_for: new Date(Date.now() + emailDelay).toISOString(),
+              status: 'pending',
+            });
+            stepResult = { action: 'send_email', success: true, message: `Email deferred — outside sending window, scheduled for ${Math.round(emailDelay / 3600000)}h later` };
+          } else {
+            stepResult = await handleSendEmail(action, ctx.lead_email);
+          }
           break;
         }
 
         case 'send_sms': {
-          stepResult = await handleSendSms(action, ctx.lead_phone);
+          const smsDelay = getSendingDelay((org as Record<string, unknown>).timezone as string | undefined);
+          if (smsDelay > 0) {
+            await supabaseAdmin.from('scheduled_actions').insert({
+              org_id: orgId,
+              lead_id: leadId ?? null,
+              template_id: templateId,
+              action_type: 'send_sms',
+              action_data: { to: (action.to as string) || ctx.lead_phone, body: action.body },
+              scheduled_for: new Date(Date.now() + smsDelay).toISOString(),
+              status: 'pending',
+            });
+            stepResult = { action: 'send_sms', success: true, message: `SMS deferred — outside sending window, scheduled for ${Math.round(smsDelay / 3600000)}h later` };
+          } else {
+            stepResult = await handleSendSms(action, ctx.lead_phone);
+          }
           break;
         }
 
@@ -718,7 +790,10 @@ export async function executeWorkflow(params: {
     console.error('[automation-engine] Failed to write activity_log:', logErr);
   }
 
-  // ---- 8. Return result ----
+  // ---- 8. Track in PostHog ----
+  trackWorkflowExecuted(orgId, templateId, overallSuccess, stepsExecuted, stepsFailed);
+
+  // ---- 9. Return result ----
   return {
     success: overallSuccess,
     stepsExecuted,

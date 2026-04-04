@@ -6,6 +6,7 @@ import { formatActivationStatus } from '@/lib/activation-state';
 import { formatChurnRisk, formatHealthStatus } from '@/lib/client-health';
 import { formatCurrencyGBP } from '@/lib/formatting';
 import { DashboardLoading } from '@/components/dashboard/dashboard-loading';
+import ROIDashboard from '@/components/roi-dashboard';
 import { AppointmentsList } from '@/components/dashboard/appointments-list';
 import { ConversationsPreview } from '@/components/dashboard/conversations-preview';
 import { LeadsTable } from '@/components/dashboard/leads-table';
@@ -588,6 +589,10 @@ export default function DashboardPage() {
       </div>
 
       <ReviewsSummary reviews={dashboardData.reviews} />
+
+      {dashboardData.businessId && (
+        <ROIDashboard orgId={dashboardData.businessId} />
+      )}
     </div>
   );
 }
