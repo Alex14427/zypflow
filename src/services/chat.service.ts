@@ -7,6 +7,7 @@ import { sendLeadNotification } from '@/lib/email';
 import { onNewLead } from '@/lib/workflow-triggers';
 import { trackLeadCreated, trackConversationStarted } from '@/lib/posthog-events';
 import { resolveModelTier, getChatModel, getMaxTokens, getTemperature } from '@/lib/model-router';
+import { getCachedAnswer, cacheAnswer, shouldCache } from '@/lib/faq-cache';
 
 export type ChatServiceInput = {
   orgId: string;
@@ -55,7 +56,27 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
 
   messages.push({ role: 'user', content: message, timestamp: new Date().toISOString() });
 
-  // 4. Call AI — model selected based on lead score, message count, channel
+  // 4a. Check FAQ cache before calling AI
+  if (shouldCache(message)) {
+    const cachedReply = await getCachedAnswer(orgId, message);
+    if (cachedReply) {
+      messages.push({ role: 'assistant', content: cachedReply, timestamp: new Date().toISOString() });
+      let convId2 = conversationId;
+      if (!convId2) {
+        const { data } = await supabaseAdmin.from('conversations')
+          .insert({ org_id: orgId, messages, channel: 'chat' })
+          .select('id').single();
+        convId2 = data?.id;
+        if (convId2) trackConversationStarted(orgId, convId2, 'chat');
+      } else {
+        await supabaseAdmin.from('conversations')
+          .update({ messages, updated_at: new Date().toISOString() }).eq('id', convId2);
+      }
+      return { reply: cachedReply, conversationId: convId2, leadId, leadExtracted: false };
+    }
+  }
+
+  // 4b. Call AI — model selected based on lead score, message count, channel
   const recentMessages = messages.slice(-20);
   let reply = '';
   const chatMessages = recentMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -111,6 +132,11 @@ export async function processChatMessage({ orgId, message, conversationId, leadI
       // Rescue flow: give a helpful human-like response that still captures intent
       reply = `I apologise — I'm experiencing a brief technical issue. Your message is important to us! You can:\n\n• Call us directly${biz.email ? `\n• Email us at ${biz.email}` : ''}${biz.booking_url ? `\n• Book online at ${biz.booking_url}` : ''}\n\nOr simply reply here and we'll get back to you shortly.`;
     }
+  }
+
+  // 4c. Cache FAQ-like answers for future cost savings
+  if (shouldCache(message) && reply && !reply.includes('<!--LEAD:')) {
+    cacheAnswer(orgId, message, reply).catch(() => {});
   }
 
   // 5. Parse lead data if extracted
