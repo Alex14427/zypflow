@@ -29,7 +29,7 @@
     },
     {
       "path": "/api/automations/execute",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 */4 * * *"
     },
     {
       "path": "/api/automations/watchdog",
