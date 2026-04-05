@@ -20,6 +20,8 @@
   --app-text-soft: #9a8d82;
   --app-shadow: 0 24px 70px rgba(62, 41, 28, 0.08);
   --app-shadow-soft: 0 10px 30px rgba(62, 41, 28, 0.06);
+  --header-bg-rgb: 255, 253, 250;
+  --header-border-rgb: 45, 36, 29;
 }
 
 .dark {
@@ -36,6 +38,8 @@
   --app-text-soft: #8f8277;
   --app-shadow: 0 26px 90px rgba(3, 5, 9, 0.54);
   --app-shadow-soft: 0 12px 35px rgba(3, 5, 9, 0.35);
+  --header-bg-rgb: 14, 18, 23;
+  --header-border-rgb: 184, 167, 154;
 }
 
 *,
