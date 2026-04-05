@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   // ── a) API health — validate Supabase connection first ───────────────────
   try {
     const { error } = await supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id', { count: 'exact', head: true })
       .limit(1);
 
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: expiringTrials } = await supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id, stripe_customer_id')
       .eq('plan', 'trial')
       .lte('trial_ends_at', threeDaysFromNow)
@@ -313,7 +313,7 @@ export async function GET(req: NextRequest) {
   // or skip logging if no system org exists. We attempt to find the first org.
   try {
     const { data: systemOrg } = await supabaseAdmin
-      .from('organisations')
+      .from('businesses')
       .select('id')
       .limit(1)
       .single();

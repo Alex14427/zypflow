@@ -30,7 +30,7 @@ function getPlanKey(plan: string): PlanKey {
 
 async function fetchOrgCredits(orgId: string): Promise<OrgCredits> {
   const { data, error } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .select('plan, scraping_credits, email_credits, ai_credits')
     .eq('id', orgId)
     .single();
@@ -84,7 +84,7 @@ export async function deductCredits(
   const newRemaining = current - amount;
 
   const { error: updateError } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .update({ [column]: newRemaining })
     .eq('id', orgId);
 
@@ -101,7 +101,7 @@ export async function resetMonthlyCredits(orgId: string): Promise<void> {
   const limits = PLAN_LIMITS[planKey];
 
   const { error: updateError } = await supabaseAdmin
-    .from('organisations')
+    .from('businesses')
     .update({
       scraping_credits: limits.scraping,
       email_credits: limits.email,
