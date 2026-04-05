@@ -1,8 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
-import { useInView } from 'framer-motion';
 
 interface TextRevealProps {
   children: string;
@@ -19,13 +18,13 @@ export function TextReveal({
   delay = 0,
   staggerChildren = 0.035,
 }: TextRevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
 
   const words = children.split(' ');
 
   return (
-    <Tag className={className} ref={ref as React.RefObject<HTMLHeadingElement>}>
+    <Tag className={className} ref={ref as React.RefObject<HTMLHeadingElement & HTMLParagraphElement & HTMLSpanElement>}>
       <motion.span
         initial="hidden"
         animate={isInView ? 'visible' : 'hidden'}

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useRef } from 'react';
 import { FadeIn } from '@/components/animations';
 
@@ -13,7 +13,6 @@ const STATS = [
 
 export function ProofStrip() {
   const ref = useRef<HTMLElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
     <section ref={ref} id="proof" className="relative py-24 sm:py-32">
