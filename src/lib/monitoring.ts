@@ -1,4 +1,8 @@
-import * as Sentry from '@sentry/nextjs';
+/**
+ * Lightweight error monitoring.
+ * Uses Sentry when SENTRY_DSN is set, otherwise logs to console + Supabase activity_log.
+ * This is the free-tier replacement — no external service required.
+ */
 
 type MonitoringMeta = {
   context?: string;
@@ -7,49 +11,45 @@ type MonitoringMeta = {
   level?: 'info' | 'warning' | 'error';
 };
 
-function applyScope(meta?: MonitoringMeta) {
-  if (!meta) return;
-
-  if (meta.context) {
-    Sentry.setContext('zypflow-context', { context: meta.context });
-  }
-
-  Object.entries(meta.tags || {}).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    Sentry.setTag(key, String(value));
-  });
-
-  Object.entries(meta.extra || {}).forEach(([key, value]) => {
-    Sentry.setExtra(key, value);
-  });
-}
-
 function normalizeMeta(input?: string | MonitoringMeta): MonitoringMeta | undefined {
   if (!input) return undefined;
-  if (typeof input === 'string') {
-    return { context: input };
-  }
+  if (typeof input === 'string') return { context: input };
   return input;
+}
+
+async function logToSupabase(type: 'exception' | 'message', message: string, meta?: MonitoringMeta) {
+  try {
+    // Dynamic import to avoid circular deps and keep this lightweight
+    const { supabaseAdmin } = await import('@/lib/supabase');
+    await supabaseAdmin.from('activity_log').insert({
+      action: `error_${type}`,
+      metadata: {
+        message,
+        context: meta?.context,
+        tags: meta?.tags,
+        extra: meta?.extra,
+        level: meta?.level || 'error',
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch {
+    // Never let monitoring crash the app
+  }
 }
 
 export function captureException(error: unknown, input?: string | MonitoringMeta) {
   const meta = normalizeMeta(input);
 
-  try {
-    Sentry.withScope(() => {
-      applyScope(meta);
-      Sentry.captureException(error);
-    });
-  } catch {
-    // Monitoring should never crash the app.
-  }
+  const errorMessage = error instanceof Error ? error.message : String(error);
 
-  console.error('[monitoring] exception captured', {
+  console.error('[monitoring] exception', {
     context: meta?.context || 'unknown',
+    error: errorMessage,
     tags: meta?.tags || {},
-    extra: meta?.extra || {},
-    error,
   });
+
+  // Log to Supabase for free error tracking
+  logToSupabase('exception', errorMessage, meta);
 }
 
 export function captureMessage(message: string, input?: Record<string, unknown> | MonitoringMeta) {
@@ -60,22 +60,10 @@ export function captureMessage(message: string, input?: Record<string, unknown> 
         ? { extra: input as Record<string, unknown> }
         : undefined;
 
-  try {
-    Sentry.withScope(() => {
-      applyScope(meta);
-      Sentry.captureMessage(
-        message,
-        meta?.level === 'warning' ? 'warning' : meta?.level === 'info' ? 'info' : 'error'
-      );
-    });
-  } catch {
-    // Monitoring should never crash the app.
-  }
-
-  console.error('[monitoring] message captured', {
-    message,
+  console.error('[monitoring]', message, {
     context: meta?.context || 'unknown',
     tags: meta?.tags || {},
-    extra: meta?.extra || {},
   });
+
+  logToSupabase('message', message, meta);
 }

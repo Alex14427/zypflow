@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useState } from 'react';
 
@@ -23,31 +23,20 @@ export function SiteHeader({
   const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_LINK || DEFAULT_BOOKING_URL;
   const { scrollY } = useScroll();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // Header becomes more opaque as user scrolls
-  const bgOpacity = useTransform(scrollY, [0, 100], [0.5, 0.88]);
-  const blur = useTransform(scrollY, [0, 100], [12, 24]);
-  const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.15]);
-  const shadow = useTransform(
-    scrollY,
-    [0, 100],
-    ['0 0 0 rgba(0,0,0,0)', '0 8px 30px rgba(0,0,0,0.06)']
-  );
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    setScrolled(latest > 50);
+  });
 
   return (
     <>
-      <motion.header
-        className="sticky top-4 z-50 mx-auto mb-8 max-w-6xl overflow-hidden rounded-full px-4 py-2.5 sm:px-5 sm:py-3"
-        style={{
-          backgroundColor: `rgba(var(--header-bg-rgb, 255, 253, 250), ${bgOpacity.get()})`,
-          backdropFilter: `blur(${blur.get()}px) saturate(180%)`,
-          borderWidth: 1,
-          borderStyle: 'solid',
-          borderColor: `rgba(var(--header-border-rgb, 45, 36, 29), ${borderOpacity.get()})`,
-          boxShadow: shadow,
-        }}
-        // Re-render on scroll with these motion values
-        initial={false}
+      <header
+        className={`sticky top-4 z-50 mx-auto mb-8 max-w-6xl overflow-hidden rounded-full px-4 py-2.5 transition-all duration-300 sm:px-5 sm:py-3 ${
+          scrolled
+            ? 'nav-glass shadow-[0_8px_30px_rgba(0,0,0,0.06)]'
+            : 'bg-[var(--app-surface)]/50 backdrop-blur-sm border border-transparent'
+        } ${scrolled ? 'border border-[var(--app-border)]' : ''}`}
       >
         <div className="flex items-center justify-between">
           <Link href="/" className="flex min-w-0 items-center gap-3">
@@ -122,24 +111,23 @@ export function SiteHeader({
               className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]"
               aria-label="Toggle menu"
             >
-              <motion.svg
+              <svg
                 className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 strokeWidth={2}
-                animate={{ rotate: mobileOpen ? 90 : 0 }}
               >
                 {mobileOpen ? (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 ) : (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 )}
-              </motion.svg>
+              </svg>
             </button>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Mobile menu dropdown */}
       {mobileOpen && (

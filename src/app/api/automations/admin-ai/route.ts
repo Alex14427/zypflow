@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
 import { getAnthropic } from '@/lib/ai-client';
 import { sendEmail } from '@/lib/email';
+import { runClientOverseer } from '@/lib/client-overseer';
 
 const ALERT_EMAIL = 'alex@zypflow.co.uk';
 
@@ -302,6 +303,18 @@ IMPROVEMENT: [one concrete, actionable suggestion]`,
     }
   }
 
+  // ── 6. Per-client AI overseer ───────────────────────────────────────────────
+
+  let overseerResult = { clientsReviewed: 0, actionsPerformed: [] as Array<{ orgId: string; action: string; detail: string }>, errors: [] as string[] };
+  try {
+    overseerResult = await runClientOverseer();
+    if (overseerResult.errors.length > 0) {
+      errors.push(...overseerResult.errors.map((e) => `overseer: ${e}`));
+    }
+  } catch (e) {
+    errors.push(`client_overseer: ${e}`);
+  }
+
   // ── Response ───────────────────────────────────────────────────────────────
 
   return NextResponse.json({
@@ -310,6 +323,10 @@ IMPROVEMENT: [one concrete, actionable suggestion]`,
     metrics,
     digest,
     fixes,
+    overseer: {
+      clientsReviewed: overseerResult.clientsReviewed,
+      actionsPerformed: overseerResult.actionsPerformed,
+    },
     errors: errors.length > 0 ? errors : undefined,
     alertSent: hasCritical,
   });
