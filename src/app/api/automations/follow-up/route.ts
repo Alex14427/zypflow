@@ -93,6 +93,15 @@ async function runFollowUps(orgId: string | null) {
     }
 
     const lastStep = existingFollowUps?.[0]?.step_number || 0;
+    const lastSentAt = existingFollowUps?.[0]?.sent_at;
+
+    // Duplicate prevention: skip if the last step was sent today
+    if (lastSentAt) {
+      const lastSentDate = new Date(lastSentAt as string).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      if (lastSentDate === today) continue;
+    }
+
     const createdAt = new Date(lead.created_at as string);
     const lastContactAt = lead.last_contact_at ? new Date(lead.last_contact_at as string) : createdAt;
     const daysSinceCreated = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));

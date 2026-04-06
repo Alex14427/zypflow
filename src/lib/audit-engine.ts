@@ -13,6 +13,8 @@ export type AuditLeak = {
   headline: string;
   impact: string;
   action: string;
+  revenueImpact: number;
+  zypflowSolution: string;
 };
 
 export type AuditReport = {
@@ -22,6 +24,7 @@ export type AuditReport = {
   generatedAt: string;
   scorecards: AuditScorecard[];
   leaks: AuditLeak[];
+  totalRevenueLeakEstimate: number;
   wins: string[];
   summary: {
     headline: string;
@@ -206,6 +209,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'No obvious booking path',
       impact: 'Visitors have to work too hard to turn interest into a consult, which leaks warm intent.',
       action: 'Add a visible book-consult CTA in the hero and repeat it throughout the page.',
+      revenueImpact: 2400,
+      zypflowSolution: 'Zypflow deploys a smart booking widget with an always-visible CTA that adapts to each page. Enquiries route straight into the automated follow-up pipeline so no lead goes cold.',
     });
   }
 
@@ -216,6 +221,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Weak call-to-action density',
       impact: 'Your page is not giving enough prompts to act, so visitors drop before they inquire.',
       action: 'Repeat one clear CTA above the fold, mid-page, and near testimonials or FAQs.',
+      revenueImpact: 1800,
+      zypflowSolution: 'Zypflow injects contextual booking CTAs across your site that adapt to visitor behaviour. Combined with instant AI chat, every page becomes a conversion point.',
     });
   }
 
@@ -226,6 +233,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Mobile visitors may hit layout friction',
       impact: 'A clinic site that does not signal mobile readiness usually bleeds conversions from paid and social traffic.',
       action: 'Add a responsive viewport tag and tighten the mobile layout around booking and contact actions.',
+      revenueImpact: 1800,
+      zypflowSolution: 'Zypflow\'s booking widget is mobile-first by default. Even if your site layout needs work, the widget ensures mobile visitors can always book or enquire instantly.',
     });
   }
 
@@ -236,6 +245,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Trust proof is too thin',
       impact: 'Without reviews, testimonials, or before-and-after proof, high-intent visitors hesitate instead of booking.',
       action: 'Bring review proof and patient outcomes closer to the first CTA.',
+      revenueImpact: 1200,
+      zypflowSolution: 'Zypflow automatically requests Google reviews after every completed appointment. Within weeks, you\'ll have a steady stream of fresh 5-star proof to display.',
     });
   }
 
@@ -246,6 +257,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Contact options are not obvious enough',
       impact: 'When contact routes are hidden, leads bounce instead of starting a conversation.',
       action: 'Expose a form or prominent phone number on every main conversion page.',
+      revenueImpact: 900,
+      zypflowSolution: 'Zypflow adds an AI-powered chat widget that captures enquiries 24/7 — even when your clinic is closed. Every conversation becomes a qualified lead automatically.',
     });
   }
 
@@ -256,6 +269,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Search and social snippets are under-optimized',
       impact: 'Weak metadata lowers click-through from search and makes your page look less trustworthy when shared.',
       action: 'Write a tighter title and meta description around the main treatment outcome and location.',
+      revenueImpact: 600,
+      zypflowSolution: 'Zypflow\'s onboarding audit identifies your highest-value search terms and we help optimise your metadata for local clinic SEO.',
     });
   }
 
@@ -266,6 +281,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'The page looks heavier than it needs to be',
       impact: 'Slow or script-heavy pages leak visitors before they ever reach the enquiry step.',
       action: 'Trim scripts, compress media, and simplify the first screen so the booking CTA appears faster.',
+      revenueImpact: 1500,
+      zypflowSolution: 'Zypflow\'s lightweight widget loads asynchronously and never slows your page. We also flag performance issues in your weekly report so you can track improvements.',
     });
   }
 
@@ -276,6 +293,8 @@ export async function generateRevenueLeakAudit(input: {
       headline: 'Questions are not being answered early enough',
       impact: 'Visitors with hesitations about treatment, downtime, or pricing may leave instead of enquiring.',
       action: 'Add a short FAQ that handles timing, aftercare, and first-visit expectations.',
+      revenueImpact: 600,
+      zypflowSolution: 'Zypflow\'s AI chat answers common patient questions instantly — treatment details, pricing, aftercare — so visitors get answers without waiting for a callback.',
     });
   }
 
@@ -283,6 +302,11 @@ export async function generateRevenueLeakAudit(input: {
     const severityRank = { high: 3, medium: 2, low: 1 };
     return severityRank[right.severity] - severityRank[left.severity];
   });
+
+  const totalRevenueLeakEstimate = orderedLeaks.reduce(
+    (sum, leak) => sum + (leak.revenueImpact || 0),
+    0
+  );
 
   const wins = [
     hasBookingLink ? 'A booking path already exists, so we can focus on converting more of the traffic you already have.' : null,
@@ -351,6 +375,7 @@ export async function generateRevenueLeakAudit(input: {
     generatedAt,
     scorecards,
     leaks: orderedLeaks.slice(0, 5),
+    totalRevenueLeakEstimate,
     wins: wins.slice(0, 4),
     summary: {
       headline:
