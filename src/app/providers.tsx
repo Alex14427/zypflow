@@ -5,6 +5,7 @@ import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast';
+import { SmoothScroll } from '@/components/animations/smooth-scroll';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -19,7 +20,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <PHProvider client={posthog}>
       <ThemeProvider>
-        <ToastProvider>{children}</ToastProvider>
+        <SmoothScroll>
+          <ToastProvider>{children}</ToastProvider>
+        </SmoothScroll>
       </ThemeProvider>
     </PHProvider>
   );

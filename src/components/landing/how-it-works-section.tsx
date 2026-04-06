@@ -64,7 +64,7 @@ export function HowItWorksSection() {
                   className="group relative overflow-hidden rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-7 transition-all duration-500"
                   whileHover={{
                     y: -4,
-                    boxShadow: '0 25px 50px rgba(0,0,0,0.08)',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
                   }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-brand-purple/[0.03] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />

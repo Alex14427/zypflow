@@ -42,13 +42,12 @@ export function CtaSection() {
                     href={BOOKING_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-brand-purple to-brand-purple-dark px-8 py-4 text-sm font-semibold text-white shadow-[0_20px_40px_rgba(210,102,69,0.3)] transition-shadow hover:shadow-[0_25px_50px_rgba(210,102,69,0.4)]"
+                    className="button-primary group gap-3 px-8 py-4"
                   >
                     <span className="relative z-10">Book Your Free Audit</span>
                     <svg className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
-                    <div className="absolute inset-0 bg-gradient-to-r from-brand-purple-dark to-brand-purple opacity-0 transition-opacity group-hover:opacity-100" />
                   </MagneticButton>
 
                   <Link

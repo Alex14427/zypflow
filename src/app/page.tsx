@@ -12,6 +12,7 @@ import { LaunchSection } from '@/components/landing/launch-section';
 import { CtaSection } from '@/components/landing/cta-section';
 import { FaqSection } from '@/components/landing/faq-section';
 import { LogoStrip } from '@/components/landing/logo-strip';
+import { TestimonialsSection } from '@/components/landing/testimonials-section';
 
 export const metadata: Metadata = {
   title: 'Zypflow | Revenue OS For Aesthetics Clinics',
@@ -99,6 +100,8 @@ export default function Home() {
           <HowItWorksSection />
 
           <DifferentiatorsSection />
+
+          <TestimonialsSection />
 
           <LaunchSection />
 
