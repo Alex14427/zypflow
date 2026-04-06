@@ -1,17 +1,34 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import Lenis from '@studio-freight/lenis';
 
 /**
- * Lightweight smooth scroll enhancer.
- * Applies a CSS-only inertia feel without adding a heavy library like Lenis.
+ * Lenis smooth scroll wrapper.
+ * Gives the page a premium buttery inertial scroll feel.
  */
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
+  const lenisRef = useRef<Lenis | null>(null);
+
   useEffect(() => {
-    // Add smooth-scroll class to html for enhanced scroll feel
-    document.documentElement.style.scrollBehavior = 'smooth';
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    lenisRef.current = lenis;
+
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
     return () => {
-      document.documentElement.style.scrollBehavior = '';
+      lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
 

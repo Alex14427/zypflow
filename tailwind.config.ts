@@ -30,6 +30,7 @@ const config: Config = {
       animation: {
         'fade-up': 'fade-up 680ms ease both',
         'float': 'soft-float 6s ease-in-out infinite',
+        'marquee': 'marquee 30s linear infinite',
       },
       keyframes: {
         'fade-up': {
@@ -39,6 +40,10 @@ const config: Config = {
         'soft-float': {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-6px)' },
+        },
+        'marquee': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
         },
       },
     },

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { FadeIn } from '@/components/animations';
+import { FadeIn, GsapReveal } from '@/components/animations';
 
 const DIFFERENTIATORS = [
   {
@@ -39,15 +39,15 @@ export function DifferentiatorsSection() {
       <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <FadeIn>
+        <GsapReveal variant="fade-up">
           <div className="text-center">
             <p className="page-eyebrow">Why Zypflow</p>
-            <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
+            <h2 className="mx-auto mt-4 max-w-3xl editorial-subheading">
               Built different.{' '}
               <span className="gradient-text">On purpose.</span>
             </h2>
           </div>
-        </FadeIn>
+        </GsapReveal>
 
         <div className="mt-16 grid gap-6 lg:grid-cols-3">
           {DIFFERENTIATORS.map((item, i) => (
