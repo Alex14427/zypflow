@@ -43,9 +43,13 @@ export async function generateMetadata({ params }: AuditPageProps): Promise<Meta
 }
 
 function severityClasses(severity: 'high' | 'medium' | 'low') {
-  if (severity === 'high') return 'bg-red-500/12 text-red-600 dark:text-red-200';
-  if (severity === 'medium') return 'bg-amber-500/12 text-amber-600 dark:text-amber-200';
-  return 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-200';
+  if (severity === 'high') return 'bg-red-500/12 text-red-400';
+  if (severity === 'medium') return 'bg-amber-500/12 text-amber-400';
+  return 'bg-emerald-500/12 text-emerald-400';
+}
+
+function formatGBP(amount: number) {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(amount);
 }
 
 function gradeLabel(score: number) {
@@ -81,6 +85,7 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
     generatedAt: audit.created_at,
     scorecards: [],
     leaks: [],
+    totalRevenueLeakEstimate: 0,
     wins: [],
     summary: {
       headline: 'Audit report unavailable',
@@ -119,13 +124,39 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
         <SiteHeader eyebrow="Clinic audit report" />
 
         <main className="mx-auto max-w-6xl space-y-8">
+          {/* Revenue leak estimate banner */}
+          {(safeReport.totalRevenueLeakEstimate ?? 0) > 0 && (
+            <section className="overflow-hidden rounded-[32px] border border-red-500/20 bg-red-500/[0.06] p-6 sm:p-8">
+              <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-red-400">Estimated monthly revenue leak</p>
+                  <p className="mt-2 text-4xl font-semibold text-[var(--app-text)] sm:text-5xl">
+                    {formatGBP(safeReport.totalRevenueLeakEstimate ?? 0)}
+                    <span className="ml-2 text-base font-medium text-[var(--app-text-muted)]">/ month</span>
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--app-text-muted)]">
+                    Based on UK aesthetics clinic benchmarks — {safeReport.leaks.length} fixable leak{safeReport.leaks.length !== 1 ? 's' : ''} detected
+                  </p>
+                </div>
+                <a
+                  href={BOOKING_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="button-primary shrink-0 px-6 py-3.5"
+                >
+                  Stop the leak — book audit call
+                </a>
+              </div>
+            </section>
+          )}
+
           <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="public-frame">
               <p className="page-eyebrow">Audit summary</p>
-              <h1 className="mt-3 text-5xl font-semibold leading-[0.95] text-slate-950 dark:text-white sm:text-6xl">
+              <h1 className="mt-3 text-5xl font-semibold leading-[0.95] text-[var(--app-text)] sm:text-6xl">
                 {businessName} is leaking revenue in places that are fixable.
               </h1>
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600 dark:text-slate-300">
+              <p className="mt-4 max-w-3xl text-lg leading-8 text-[var(--app-text-muted)]">
                 {safeReport.summary?.body || audit.ai_summary || 'We scanned the public website and highlighted the fastest conversion leaks to fix first.'}
               </p>
 
@@ -140,26 +171,26 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
             <div className="glass-panel rounded-[32px] p-6">
               <p className="page-eyebrow">Overall score</p>
               <div className="mt-4 flex items-end gap-3">
-                <h2 className="text-6xl font-semibold text-slate-950 dark:text-white">{safeReport.overallScore}</h2>
-                <p className="pb-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                <h2 className="text-6xl font-semibold text-[var(--app-text)]">{safeReport.overallScore}</h2>
+                <p className="pb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">
                   /100
                 </p>
               </div>
-              <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <p className="mt-3 text-sm leading-7 text-[var(--app-text-muted)]">
                 {gradeLabel(safeReport.overallScore)}. The fastest lift usually comes from tightening the booking path, trust proof,
                 and follow-up after an enquiry lands.
               </p>
-              <div className="mt-6 rounded-[28px] border border-slate-200/80 bg-white/80 p-5 dark:border-slate-700 dark:bg-slate-950/70">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">What Zypflow would automate first</p>
-                <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <div className="mt-6 rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-5">
+                <p className="text-sm font-semibold text-[var(--app-text)]">What Zypflow would automate first</p>
+                <ul className="mt-3 space-y-2 text-sm leading-7 text-[var(--app-text-muted)]">
                   <li>Instant lead response the moment an enquiry lands</li>
                   <li>Booking nudges until the consult is confirmed</li>
                   <li>Reminder, review, and rebooking journeys once the patient is in your system</li>
                 </ul>
               </div>
-              <div className="mt-4 rounded-[28px] border border-slate-200/80 bg-white/80 p-5 dark:border-slate-700 dark:bg-slate-950/70">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">How this report was produced</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <div className="mt-4 rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-5">
+                <p className="text-sm font-semibold text-[var(--app-text)]">How this report was produced</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">
                   This is a public-site diagnostic. We check the visible booking path, trust signals, mobile basics, contact capture, and the post-enquiry journey signals that usually affect conversion first.
                 </p>
               </div>
@@ -170,8 +201,8 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
             {safeReport.scorecards.map((card) => (
               <div key={card.key} className="kpi-tile">
                 <p className="page-eyebrow">{card.label}</p>
-                <h2 className="mt-3 text-4xl font-semibold text-slate-950 dark:text-white">{card.score}</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{card.summary}</p>
+                <h2 className="mt-3 text-4xl font-semibold text-[var(--app-text)]">{card.score}</h2>
+                <p className="mt-3 text-sm leading-7 text-[var(--app-text-muted)]">{card.summary}</p>
               </div>
             ))}
           </section>
@@ -181,16 +212,29 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
               <p className="page-eyebrow">Top revenue leaks</p>
               <div className="mt-5 space-y-4">
                 {safeReport.leaks.map((leak) => (
-                  <div key={leak.id} className="rounded-[24px] border border-[var(--app-border)] px-4 py-4">
+                  <div key={leak.id} className="rounded-[24px] border border-[var(--app-border)] px-5 py-5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-semibold text-[var(--app-text)]">{leak.headline}</p>
-                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${severityClasses(leak.severity)}`}>
-                        {leak.severity}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {leak.revenueImpact > 0 && (
+                          <span className="rounded-full bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-400">
+                            -{formatGBP(leak.revenueImpact)}/mo
+                          </span>
+                        )}
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${severityClasses(leak.severity)}`}>
+                          {leak.severity}
+                        </span>
+                      </div>
                     </div>
                     <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">{leak.impact}</p>
                     <p className="mt-3 text-sm font-medium text-[var(--app-text)]">Recommended fix</p>
                     <p className="mt-1 text-sm leading-7 text-[var(--app-text-muted)]">{leak.action}</p>
+                    {leak.zypflowSolution && (
+                      <div className="mt-3 rounded-xl border border-brand-purple/20 bg-brand-purple/[0.05] px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple">How Zypflow fixes this</p>
+                        <p className="mt-1.5 text-sm leading-7 text-[var(--app-text-muted)]">{leak.zypflowSolution}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -214,7 +258,7 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
 
               <div className="surface-panel rounded-[32px] p-6">
                 <p className="page-eyebrow">What is already working</p>
-                <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                <div className="mt-4 space-y-3 text-sm leading-7 text-[var(--app-text-muted)]">
                   {safeReport.wins.length > 0 ? (
                     safeReport.wins.map((win) => (
                       <div key={win} className="rounded-[24px] border border-[var(--app-border)] px-4 py-4">
@@ -231,10 +275,10 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
 
               <div className="glass-panel rounded-[32px] p-6">
                 <p className="page-eyebrow">Next step</p>
-                <h2 className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">
+                <h2 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">
                   Turn this report into booked consults, not just notes.
                 </h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                <p className="mt-3 text-sm leading-7 text-[var(--app-text-muted)]">
                   We use this audit to deploy the first automation pack: enquiry capture, instant follow-up, booking prompts,
                   reminders, reviews, and rebooking.
                 </p>
@@ -249,7 +293,7 @@ export default async function AuditReportPage({ params }: AuditPageProps) {
                   </a>
                   <Link
                     href="/pricing"
-                    className="rounded-full border border-slate-300/70 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-purple hover:text-brand-purple dark:border-slate-700 dark:text-slate-200"
+                    className="rounded-full border border-[var(--app-border)] px-5 py-3 text-sm font-semibold text-[var(--app-text-muted)] transition hover:border-brand-purple hover:text-brand-purple"
                   >
                     See The Founding Offer
                   </Link>
@@ -332,7 +376,7 @@ function SignalTile({ label, active }: { label: string; active: boolean }) {
   return (
     <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
       <p className="text-sm font-semibold text-[var(--app-text)]">{label}</p>
-      <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.18em] ${active ? 'text-emerald-600 dark:text-emerald-200' : 'text-amber-600 dark:text-amber-200'}`}>
+      <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.18em] ${active ? 'text-emerald-400' : 'text-amber-400'}`}>
         {active ? 'Detected' : 'Needs work'}
       </p>
     </div>
