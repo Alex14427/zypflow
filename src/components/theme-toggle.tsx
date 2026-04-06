@@ -18,7 +18,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       }`}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--app-text)] text-[var(--app-surface-strong)] dark:bg-[var(--brand-purple-soft)] dark:text-slate-900">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--app-text)] text-[var(--app-bg)]">
         {isDark ? <SunIcon /> : <MoonIcon />}
       </span>
       <span>{isDark ? 'Light mode' : 'Dark mode'}</span>

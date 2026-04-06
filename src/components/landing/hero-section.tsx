@@ -15,28 +15,36 @@ const HERO_METRICS = [
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden pb-12 pt-8 sm:pb-20 sm:pt-12">
+    <section className="relative overflow-hidden pb-16 pt-12 sm:pb-28 sm:pt-20">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         {/* Eyebrow chips */}
         <FadeIn delay={0.1}>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-purple/20 bg-brand-purple/[0.08] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brand-purple">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-purple animate-pulse" />
               Now onboarding London clinics
             </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+              3 pilot spots left
+            </span>
           </div>
         </FadeIn>
 
-        {/* Main headline */}
-        <div className="mt-8 max-w-5xl">
-          <FadeIn delay={0.2} distance={60}>
-            <h1 className="text-[clamp(2.8rem,7vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-[var(--app-text)]">
-              Your clinic&apos;s revenue system,{' '}
+        {/* Main headline — cinematic scale */}
+        <div className="mt-10 max-w-5xl sm:mt-14">
+          <FadeIn delay={0.2} distance={80}>
+            <h1 className="editorial-heading">
+              Your clinic&apos;s<br className="hidden sm:block" /> revenue system,{' '}
               <span className="gradient-text">automated.</span>
             </h1>
           </FadeIn>
 
-          <FadeIn delay={0.4} distance={30}>
+          {/* Gradient accent line */}
+          <FadeIn delay={0.35}>
+            <div className="mt-8 h-[2px] w-24 bg-gradient-to-r from-brand-purple to-brand-purple/0" />
+          </FadeIn>
+
+          <FadeIn delay={0.45} distance={30}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--app-text-muted)] sm:text-xl sm:leading-9">
               Faster first responses. Stronger booking conversion.
               Fewer no-shows. More repeat patients. All running while you
@@ -46,26 +54,25 @@ export function HeroSection() {
         </div>
 
         {/* CTA buttons */}
-        <FadeIn delay={0.55} distance={20}>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
+        <FadeIn delay={0.6} distance={20}>
+          <div className="mt-12 flex flex-wrap items-center gap-4">
             <MagneticButton
               as="a"
               href={BOOKING_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-brand-purple to-brand-purple-dark px-8 py-4 text-sm font-semibold text-white shadow-[0_20px_40px_rgba(210,102,69,0.3)] transition-shadow hover:shadow-[0_25px_50px_rgba(210,102,69,0.4)]"
+              className="button-primary group relative gap-3 overflow-hidden px-8 py-4"
             >
               <span className="relative z-10">Book Your Free Audit</span>
               <svg className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-purple-dark to-brand-purple opacity-0 transition-opacity group-hover:opacity-100" />
             </MagneticButton>
 
             <MagneticButton
               as="a"
               href="/pricing"
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-7 py-4 text-sm font-semibold text-[var(--app-text-muted)] backdrop-blur-sm transition hover:border-brand-purple/40 hover:text-[var(--app-text)]"
+              className="button-secondary px-7 py-4"
             >
               See Founding Offer
             </MagneticButton>
@@ -88,7 +95,7 @@ export function HeroSection() {
 
         {/* Dashboard preview / showcase card */}
         <FadeIn delay={0.85} distance={50}>
-          <div className="mt-16 overflow-hidden rounded-[32px] border border-[var(--app-border)] bg-[var(--app-surface)] p-1 shadow-[0_40px_80px_rgba(0,0,0,0.08)] dark:shadow-[0_40px_80px_rgba(0,0,0,0.4)]">
+          <div className="mt-16 overflow-hidden rounded-[32px] border border-[var(--app-border)] bg-[var(--app-surface)] p-1 shadow-[0_40px_80px_rgba(0,0,0,0.35)]">
             <div className="rounded-[28px] bg-gradient-to-br from-[var(--app-surface-strong)] to-[var(--app-muted)] p-6 sm:p-8">
               <div className="grid gap-4 sm:grid-cols-3">
                 {[

@@ -56,7 +56,7 @@ export function DifferentiatorsSection() {
                 className="group relative h-full overflow-hidden rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-8 transition-all duration-500"
                 whileHover={{
                   y: -8,
-                  boxShadow: '0 30px 60px rgba(0,0,0,0.08)',
+                  boxShadow: '0 30px 60px rgba(0,0,0,0.3)',
                   borderColor: 'rgba(210, 102, 69, 0.3)',
                 }}
               >

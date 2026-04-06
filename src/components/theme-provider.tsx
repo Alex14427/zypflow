@@ -15,12 +15,12 @@ const STORAGE_KEY = 'zypflow-theme';
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  root.classList.toggle('dark', theme === 'dark');
+  root.classList.toggle('light', theme === 'light');
   root.dataset.theme = theme;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
