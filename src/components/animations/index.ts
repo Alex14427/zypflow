@@ -7,3 +7,4 @@ export { SmoothScroll } from './smooth-scroll';
 export { GsapReveal } from './gsap-reveal';
 export { TextSplit } from './text-split';
 export { Parallax } from './parallax';
+export { GradientMesh } from './gradient-mesh';

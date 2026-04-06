@@ -4,6 +4,7 @@ import { AuditForm } from '@/components/public/audit-form';
 import { SiteFooter } from '@/components/public/site-footer';
 import { SiteHeader } from '@/components/public/site-header';
 import { HeroSection } from '@/components/landing/hero-section';
+import { GlobeHero } from '@/components/landing/globe-hero';
 import { ProofStrip } from '@/components/landing/proof-strip';
 import { ProductSection } from '@/components/landing/product-section';
 import { HowItWorksSection } from '@/components/landing/how-it-works-section';
@@ -13,6 +14,8 @@ import { CtaSection } from '@/components/landing/cta-section';
 import { FaqSection } from '@/components/landing/faq-section';
 import { LogoStrip } from '@/components/landing/logo-strip';
 import { TestimonialsSection } from '@/components/landing/testimonials-section';
+import { CaseStudiesSection } from '@/components/landing/case-studies-section';
+import { GradientMesh } from '@/components/animations';
 
 export const metadata: Metadata = {
   title: 'Zypflow | Revenue OS For Aesthetics Clinics',
@@ -76,17 +79,16 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_SCHEMA) }}
       />
 
-      {/* Ambient background effects */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-[200px] -top-[100px] h-[600px] w-[600px] rounded-full bg-brand-purple/[0.07] blur-[120px]" />
-        <div className="absolute -right-[150px] top-[300px] h-[500px] w-[500px] rounded-full bg-teal-500/[0.05] blur-[100px]" />
-        <div className="absolute bottom-[200px] left-[30%] h-[400px] w-[400px] rounded-full bg-brand-purple/[0.04] blur-[100px]" />
-      </div>
+      {/* Animated gradient mesh background */}
+      <GradientMesh className="fixed inset-0 z-0" />
 
       <div className="relative z-10">
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
           <SiteHeader eyebrow="Revenue OS for aesthetics clinics" />
         </div>
+
+        {/* Globe scroll-to-enter experience */}
+        <GlobeHero />
 
         <main>
           <HeroSection />
@@ -100,6 +102,8 @@ export default function Home() {
           <HowItWorksSection />
 
           <DifferentiatorsSection />
+
+          <CaseStudiesSection />
 
           <TestimonialsSection />
 

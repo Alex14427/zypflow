@@ -31,6 +31,9 @@ const config: Config = {
         'fade-up': 'fade-up 680ms ease both',
         'float': 'soft-float 6s ease-in-out infinite',
         'marquee': 'marquee 30s linear infinite',
+        'mesh-1': 'mesh-drift-1 20s ease-in-out infinite',
+        'mesh-2': 'mesh-drift-2 25s ease-in-out infinite',
+        'mesh-3': 'mesh-drift-3 22s ease-in-out infinite',
       },
       keyframes: {
         'fade-up': {
@@ -44,6 +47,21 @@ const config: Config = {
         'marquee': {
           from: { transform: 'translateX(0)' },
           to: { transform: 'translateX(-50%)' },
+        },
+        'mesh-drift-1': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(5%, 8%) scale(1.1)' },
+          '66%': { transform: 'translate(-3%, 4%) scale(0.95)' },
+        },
+        'mesh-drift-2': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(-6%, -4%) scale(1.05)' },
+          '66%': { transform: 'translate(4%, -6%) scale(1.1)' },
+        },
+        'mesh-drift-3': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(3%, -5%) scale(1.08)' },
+          '66%': { transform: 'translate(-5%, 3%) scale(0.97)' },
         },
       },
     },
