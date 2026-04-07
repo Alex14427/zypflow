@@ -21,7 +21,8 @@ type CaseStudy = {
   color: string;
 };
 
-const CASE_STUDIES: CaseStudy[] = [
+// Hardcoded pilot data — replaced by Sanity CMS data when available
+const FALLBACK_STUDIES: CaseStudy[] = [
   {
     clinicName: 'Glow Aesthetics',
     location: 'Chelsea, London',
@@ -47,10 +48,10 @@ const CASE_STUDIES: CaseStudy[] = [
     location: 'Mayfair, London',
     headline: 'No-show rate cut from 18% to under 5%',
     excerpt:
-      'Skin & Co had a persistent no-show problem costing them over £4,000/month in lost revenue. Zypflow deployed a 3-layer reminder system that practically eliminated it.',
+      'Skin & Co had a persistent no-show problem costing them over \u00a34,000/month in lost revenue. Zypflow deployed a 3-layer reminder system that practically eliminated it.',
     metrics: [
       { label: 'No-show rate', before: '18%', after: '4.5%', improvement: '-75%' },
-      { label: 'Revenue recovered', before: '£0', after: '£3,800/mo', improvement: 'New' },
+      { label: 'Revenue recovered', before: '\u00a30', after: '\u00a33,800/mo', improvement: 'New' },
       { label: 'Patient satisfaction', before: '3.8/5', after: '4.7/5', improvement: '+24%' },
       { label: 'Rebookings/month', before: '8', after: '23', improvement: '+188%' },
     ],
@@ -64,7 +65,9 @@ const CASE_STUDIES: CaseStudy[] = [
   },
 ];
 
-export function CaseStudiesSection() {
+export function CaseStudiesSection({ studies }: { studies?: CaseStudy[] }) {
+  const data = studies && studies.length > 0 ? studies : FALLBACK_STUDIES;
+
   return (
     <section id="case-studies" className="relative py-24 sm:py-32">
       <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
@@ -84,11 +87,10 @@ export function CaseStudiesSection() {
         </GsapReveal>
 
         <div className="mt-16 space-y-12">
-          {CASE_STUDIES.map((study, i) => (
+          {data.map((study, i) => (
             <FadeIn key={study.clinicName} delay={0.15 * i} distance={50}>
               <div className={`overflow-hidden rounded-[32px] border p-1 ${study.color}`}>
                 <div className="rounded-[28px] bg-[var(--app-surface-strong)] p-8 sm:p-10">
-                  {/* Header */}
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-purple">
@@ -103,13 +105,11 @@ export function CaseStudiesSection() {
                     </div>
                   </div>
 
-                  {/* Metrics grid */}
                   <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {study.metrics.map((metric) => (
-                      <motion.div
+                      <div
                         key={metric.label}
-                        className="rounded-[20px] border border-[var(--app-border)] bg-[var(--app-muted)] p-5"
-                        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                        className="rounded-[20px] border border-[var(--app-border)] bg-[var(--app-muted)] p-5 transition-transform duration-200 hover:-translate-y-1"
                       >
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">
                           {metric.label}
@@ -125,11 +125,10 @@ export function CaseStudiesSection() {
                         <span className="mt-1 inline-block text-xs font-semibold text-emerald-400">
                           {metric.improvement}
                         </span>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
 
-                  {/* Quote + services */}
                   <div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
                     <div className="rounded-[20px] border border-[var(--app-border)] bg-[var(--app-muted)] p-6">
                       <svg
