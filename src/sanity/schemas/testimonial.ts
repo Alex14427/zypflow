@@ -1,52 +1,38 @@
-import { defineField, defineType } from 'sanity';
+// Sanity schema definition for testimonials.
+// Plain objects — add `sanity` package and wrap with defineType/defineField
+// when the Sanity project is configured.
 
-export const testimonial = defineType({
+export const testimonial = {
   name: 'testimonial',
   title: 'Testimonial',
   type: 'document',
   fields: [
-    defineField({
+    {
       name: 'name',
       title: 'Person Name',
       type: 'string',
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'role',
-      title: 'Role',
-      type: 'string',
-    }),
-    defineField({
-      name: 'clinicName',
-      title: 'Clinic Name',
-      type: 'string',
-    }),
-    defineField({
-      name: 'location',
-      title: 'Location',
-      type: 'string',
-    }),
-    defineField({
-      name: 'photo',
-      title: 'Photo',
-      type: 'image',
-      options: { hotspot: true },
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    { name: 'role', title: 'Role', type: 'string' },
+    { name: 'clinicName', title: 'Clinic Name', type: 'string' },
+    { name: 'location', title: 'Location', type: 'string' },
+    { name: 'photo', title: 'Photo', type: 'image', options: { hotspot: true } },
+    {
       name: 'quote',
       title: 'Quote',
       type: 'text',
       rows: 4,
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    {
       name: 'rating',
       title: 'Rating (1-5)',
       type: 'number',
-      validation: (Rule) => Rule.min(1).max(5),
+      validation: (Rule: { min: (n: number) => { max: (n: number) => unknown } }) =>
+        Rule.min(1).max(5),
       initialValue: 5,
-    }),
-    defineField({
+    },
+    {
       name: 'colorTheme',
       title: 'Card Color Theme',
       type: 'string',
@@ -60,15 +46,10 @@ export const testimonial = defineType({
         ],
       },
       initialValue: 'sage',
-    }),
-    defineField({
-      name: 'featured',
-      title: 'Show on Homepage',
-      type: 'boolean',
-      initialValue: false,
-    }),
+    },
+    { name: 'featured', title: 'Show on Homepage', type: 'boolean', initialValue: false },
   ],
   preview: {
     select: { title: 'name', subtitle: 'clinicName', media: 'photo' },
   },
-});
+};

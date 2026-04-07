@@ -4,7 +4,9 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface GsapRevealProps {
   children: React.ReactNode;
@@ -56,9 +58,9 @@ export function GsapReveal({
     });
 
     return () => {
-      ScrollTrigger.getAll().forEach((t) => {
-        if (t.trigger === el) t.kill();
-      });
+      ScrollTrigger.getAll()
+        .filter((t) => t.trigger === el)
+        .forEach((t) => t.kill());
     };
   }, [variant, delay, duration, start]);
 

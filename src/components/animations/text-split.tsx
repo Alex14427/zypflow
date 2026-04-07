@@ -4,7 +4,9 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface TextSplitProps {
   children: string;
@@ -71,9 +73,9 @@ export function TextSplit({
     });
 
     return () => {
-      ScrollTrigger.getAll().forEach((t) => {
-        if (t.trigger === el) t.kill();
-      });
+      ScrollTrigger.getAll()
+        .filter((t) => t.trigger === el)
+        .forEach((t) => t.kill());
     };
   }, [children, splitBy, stagger, variant]);
 
