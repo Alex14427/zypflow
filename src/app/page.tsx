@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { AuditForm } from '@/components/public/audit-form';
 import { SiteFooter } from '@/components/public/site-footer';
 import { SiteHeader } from '@/components/public/site-header';
-import { HeroSection } from '@/components/landing/hero-section';
 import { GlobeHero } from '@/components/landing/globe-hero';
 import { ProofStrip } from '@/components/landing/proof-strip';
 import { ProductSection } from '@/components/landing/product-section';
@@ -15,7 +14,6 @@ import { FaqSection } from '@/components/landing/faq-section';
 import { LogoStrip } from '@/components/landing/logo-strip';
 import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { CaseStudiesSection } from '@/components/landing/case-studies-section';
-import { GradientMesh } from '@/components/animations';
 
 export const metadata: Metadata = {
   title: 'Zypflow | Revenue OS For Aesthetics Clinics',
@@ -79,20 +77,15 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_SCHEMA) }}
       />
 
-      {/* Animated gradient mesh background */}
-      <GradientMesh className="fixed inset-0 z-0" />
-
-      <div className="relative z-10">
+      <div className="relative">
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
           <SiteHeader eyebrow="Revenue OS for aesthetics clinics" />
         </div>
 
-        {/* Globe scroll-to-enter experience */}
+        {/* Globe hero — single cohesive scroll experience */}
         <GlobeHero />
 
         <main>
-          <HeroSection />
-
           <LogoStrip />
 
           <ProofStrip />

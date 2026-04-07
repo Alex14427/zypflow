@@ -1,29 +1,27 @@
-import { defineField, defineType } from 'sanity';
+// Sanity schema definition for case studies.
+// Plain objects — add `sanity` package and wrap with defineType/defineField
+// when the Sanity project is configured.
 
-export const caseStudy = defineType({
+export const caseStudy = {
   name: 'caseStudy',
   title: 'Case Study',
   type: 'document',
   fields: [
-    defineField({
+    {
       name: 'clinicName',
       title: 'Clinic Name',
       type: 'string',
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    {
       name: 'slug',
       title: 'Slug',
       type: 'slug',
       options: { source: 'clinicName', maxLength: 96 },
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'location',
-      title: 'Location',
-      type: 'string',
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    { name: 'location', title: 'Location', type: 'string' },
+    {
       name: 'clinicType',
       title: 'Clinic Type',
       type: 'string',
@@ -36,31 +34,17 @@ export const caseStudy = defineType({
           { title: 'Wellness', value: 'wellness' },
         ],
       },
-    }),
-    defineField({
-      name: 'logo',
-      title: 'Clinic Logo',
-      type: 'image',
-    }),
-    defineField({
-      name: 'heroImage',
-      title: 'Hero Image',
-      type: 'image',
-      options: { hotspot: true },
-    }),
-    defineField({
+    },
+    { name: 'logo', title: 'Clinic Logo', type: 'image' },
+    { name: 'heroImage', title: 'Hero Image', type: 'image', options: { hotspot: true } },
+    {
       name: 'headline',
       title: 'Headline',
       type: 'string',
       description: 'e.g. "From 2 bookings/week to 14 — in 30 days"',
-    }),
-    defineField({
-      name: 'excerpt',
-      title: 'Short Summary',
-      type: 'text',
-      rows: 3,
-    }),
-    defineField({
+    },
+    { name: 'excerpt', title: 'Short Summary', type: 'text', rows: 3 },
+    {
       name: 'metrics',
       title: 'Before / After Metrics',
       type: 'array',
@@ -75,8 +59,8 @@ export const caseStudy = defineType({
           ],
         },
       ],
-    }),
-    defineField({
+    },
+    {
       name: 'quote',
       title: 'Client Quote',
       type: 'object',
@@ -85,17 +69,14 @@ export const caseStudy = defineType({
         { name: 'author', title: 'Author Name', type: 'string' },
         { name: 'role', title: 'Author Role', type: 'string' },
       ],
-    }),
-    defineField({
+    },
+    {
       name: 'body',
       title: 'Full Story',
       type: 'array',
-      of: [
-        { type: 'block' },
-        { type: 'image', options: { hotspot: true } },
-      ],
-    }),
-    defineField({
+      of: [{ type: 'block' }, { type: 'image', options: { hotspot: true } }],
+    },
+    {
       name: 'servicesUsed',
       title: 'Zypflow Features Used',
       type: 'array',
@@ -110,23 +91,14 @@ export const caseStudy = defineType({
           { title: 'Revenue Leak Audit', value: 'audit' },
         ],
       },
-    }),
-    defineField({
-      name: 'publishedAt',
-      title: 'Published At',
-      type: 'datetime',
-    }),
-    defineField({
-      name: 'featured',
-      title: 'Featured on Homepage',
-      type: 'boolean',
-      initialValue: false,
-    }),
+    },
+    { name: 'publishedAt', title: 'Published At', type: 'datetime' },
+    { name: 'featured', title: 'Featured on Homepage', type: 'boolean', initialValue: false },
   ],
   preview: {
     select: { title: 'clinicName', media: 'logo', headline: 'headline' },
-    prepare({ title, media, headline }) {
+    prepare({ title, media, headline }: { title: string; media: unknown; headline: string }) {
       return { title, media, subtitle: headline };
     },
   },
-});
+};

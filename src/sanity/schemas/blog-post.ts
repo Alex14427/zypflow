@@ -1,45 +1,39 @@
-import { defineField, defineType } from 'sanity';
+// Sanity schema definition for blog posts.
+// These are plain objects — add `sanity` package and use defineType/defineField
+// when the Sanity project is configured.
 
-export const blogPost = defineType({
+export const blogPost = {
   name: 'blogPost',
   title: 'Blog Post',
   type: 'document',
   fields: [
-    defineField({
+    {
       name: 'title',
       title: 'Title',
       type: 'string',
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    {
       name: 'slug',
       title: 'Slug',
       type: 'slug',
       options: { source: 'title', maxLength: 96 },
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'excerpt',
-      title: 'Excerpt',
-      type: 'text',
-      rows: 3,
-    }),
-    defineField({
+      validation: (Rule: { required: () => unknown }) => Rule.required(),
+    },
+    { name: 'excerpt', title: 'Excerpt', type: 'text', rows: 3 },
+    {
       name: 'coverImage',
       title: 'Cover Image',
       type: 'image',
       options: { hotspot: true },
-    }),
-    defineField({
+    },
+    {
       name: 'body',
       title: 'Body',
       type: 'array',
-      of: [
-        { type: 'block' },
-        { type: 'image', options: { hotspot: true } },
-      ],
-    }),
-    defineField({
+      of: [{ type: 'block' }, { type: 'image', options: { hotspot: true } }],
+    },
+    {
       name: 'category',
       title: 'Category',
       type: 'string',
@@ -51,13 +45,9 @@ export const blogPost = defineType({
           { title: 'Industry Insights', value: 'industry-insights' },
         ],
       },
-    }),
-    defineField({
-      name: 'publishedAt',
-      title: 'Published At',
-      type: 'datetime',
-    }),
-    defineField({
+    },
+    { name: 'publishedAt', title: 'Published At', type: 'datetime' },
+    {
       name: 'seo',
       title: 'SEO',
       type: 'object',
@@ -65,7 +55,7 @@ export const blogPost = defineType({
         { name: 'metaTitle', title: 'Meta Title', type: 'string' },
         { name: 'metaDescription', title: 'Meta Description', type: 'text', rows: 2 },
       ],
-    }),
+    },
   ],
   orderings: [
     {
@@ -76,7 +66,7 @@ export const blogPost = defineType({
   ],
   preview: {
     select: { title: 'title', media: 'coverImage', date: 'publishedAt' },
-    prepare({ title, media, date }) {
+    prepare({ title, media, date }: { title: string; media: unknown; date: string }) {
       return {
         title,
         media,
@@ -84,4 +74,4 @@ export const blogPost = defineType({
       };
     },
   },
-});
+};

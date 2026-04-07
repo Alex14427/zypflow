@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-
 /**
  * Animated gradient mesh background.
- * Uses CSS animation for performant, always-moving gradient blobs.
+ * CSS-only — no JS runtime cost.
  */
 export function GradientMesh({ className }: { className?: string }) {
   return (
