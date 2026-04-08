@@ -115,7 +115,7 @@ export default function Home() {
           <LaunchSection />
 
           {/* Audit CTA section */}
-          <section className="relative overflow-hidden py-24 sm:py-32">
+          <section className="relative overflow-hidden py-28 sm:py-36">
             <div className="mx-auto max-w-7xl px-5 sm:px-8">
               <div className="mx-auto max-w-2xl">
                 <div className="public-frame">

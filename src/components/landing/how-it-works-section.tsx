@@ -38,7 +38,7 @@ const SURFACES = [
 
 export function HowItWorksSection() {
   return (
-    <section id="product" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="product" className="relative overflow-hidden py-28 sm:py-36">
       {/* Ambient accent */}
       <div className="pointer-events-none absolute right-0 top-1/2 h-[500px] w-[500px] -translate-y-1/2 translate-x-1/2 rounded-full bg-teal-500/[0.04] blur-[100px]" />
 

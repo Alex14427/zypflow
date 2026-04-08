@@ -29,21 +29,7 @@ function getBarColor(pct: number): string {
   if (pct >= 100) return 'bg-red-500';
   if (pct > 85) return 'bg-red-400';
   if (pct > 60) return 'bg-amber-400';
-  return 'bg-green-500';
-}
-
-function getTrackColor(pct: number): string {
-  if (pct >= 100) return 'bg-red-100';
-  if (pct > 85) return 'bg-red-50';
-  if (pct > 60) return 'bg-amber-50';
-  return 'bg-green-50';
-}
-
-function getTextColor(pct: number): string {
-  if (pct >= 100) return 'text-red-600';
-  if (pct > 85) return 'text-red-500';
-  if (pct > 60) return 'text-amber-600';
-  return 'text-gray-500';
+  return 'bg-emerald-500';
 }
 
 export function CreditUsageBar({ label, used, limit, type }: CreditUsageBarProps) {
@@ -52,20 +38,18 @@ export function CreditUsageBar({ label, used, limit, type }: CreditUsageBarProps
   const isWarning = pct > 85 && !isAtLimit;
 
   const barColor = getBarColor(pct);
-  const trackColor = getTrackColor(pct);
-  const textColor = getTextColor(pct);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {/* Label row */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-gray-600 min-w-0">
+        <div className="flex items-center gap-1.5 text-[var(--app-text-muted)] min-w-0">
           <span className="flex-shrink-0">{TYPE_ICONS[type]}</span>
           <span className="text-xs font-medium truncate">{label}</span>
         </div>
-        <div className={`flex items-center gap-1 flex-shrink-0 ${textColor}`}>
+        <div className="flex items-center gap-1 flex-shrink-0">
           {(isWarning || isAtLimit) && (
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -74,16 +58,16 @@ export function CreditUsageBar({ label, used, limit, type }: CreditUsageBarProps
               />
             </svg>
           )}
-          <span className="text-[11px] font-medium">
-            {isAtLimit ? 'Limit reached' : `${used.toLocaleString()}/${limit.toLocaleString()} used`}
+          <span className={`text-[11px] font-medium ${isAtLimit ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-[var(--app-text-soft)]'}`}>
+            {isAtLimit ? 'Limit reached' : `${used.toLocaleString()}/${limit.toLocaleString()}`}
           </span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className={`h-1.5 w-full rounded-full ${trackColor} overflow-hidden`}>
+      <div className="h-1.5 w-full rounded-full bg-[var(--app-surface-hover)] overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>

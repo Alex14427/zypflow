@@ -69,7 +69,7 @@ export function CaseStudiesSection({ studies }: { studies?: CaseStudy[] }) {
   const data = studies && studies.length > 0 ? studies : FALLBACK_STUDIES;
 
   return (
-    <section id="case-studies" className="relative py-24 sm:py-32">
+    <section id="case-studies" className="relative py-28 sm:py-36">
       <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">

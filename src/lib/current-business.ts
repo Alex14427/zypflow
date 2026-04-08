@@ -19,6 +19,9 @@ export interface CurrentBusiness {
   system_prompt?: string | null;
   settings?: Record<string, unknown> | null;
   role?: string | null;
+  scraping_credits?: number | null;
+  email_credits?: number | null;
+  ai_credits?: number | null;
 }
 
 export async function resolveCurrentBusiness() {
@@ -43,7 +46,7 @@ export async function resolveCurrentBusiness() {
     const { data: business, error: businessError } = await supabase
       .from('businesses')
       .select(
-        'id, name, plan, trial_ends_at, email, phone, industry, website, booking_url, google_review_link, widget_color, avg_job_value, services, knowledge_base, ai_personality, system_prompt, settings'
+        'id, name, plan, trial_ends_at, email, phone, industry, website, booking_url, google_review_link, widget_color, avg_job_value, services, knowledge_base, ai_personality, system_prompt, settings, scraping_credits, email_credits, ai_credits'
       )
       .eq('id', membership.org_id)
       .maybeSingle();
@@ -58,7 +61,7 @@ export async function resolveCurrentBusiness() {
   const { data: ownedBusiness, error: fallbackError } = await supabase
     .from('businesses')
     .select(
-      'id, name, plan, trial_ends_at, email, phone, industry, website, booking_url, google_review_link, widget_color, avg_job_value, services, knowledge_base, ai_personality, system_prompt, settings'
+      'id, name, plan, trial_ends_at, email, phone, industry, website, booking_url, google_review_link, widget_color, avg_job_value, services, knowledge_base, ai_personality, system_prompt, settings, scraping_credits, email_credits, ai_credits'
     )
     .or(`owner_id.eq.${user.id},email.eq.${user.email ?? ''}`)
     .limit(1)

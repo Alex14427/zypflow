@@ -28,7 +28,7 @@ const STEPS = [
 
 export function LaunchSection() {
   return (
-    <section className="relative overflow-hidden py-24 sm:py-32">
+    <section className="relative overflow-hidden py-28 sm:py-36">
       <div className="pointer-events-none absolute left-0 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/[0.04] blur-[100px]" />
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">

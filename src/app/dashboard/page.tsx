@@ -12,6 +12,7 @@ import { ConversationsPreview } from '@/components/dashboard/conversations-previ
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import { PortalEmptyState } from '@/components/dashboard/portal-primitives';
 import { ReviewsSummary } from '@/components/dashboard/reviews-summary';
+import { CreditUsageBar } from '@/components/credit-usage-bar';
 import { fetchDashboardData } from '@/services/dashboard.service';
 import { DashboardData, DashboardNextAction } from '@/types/dashboard';
 
@@ -187,6 +188,51 @@ export default function DashboardPage() {
           detail="Hot leads, launch blockers, and activation alerts combined into one number."
         />
       </section>
+
+      {/* Usage meters — Zapier-style plan limits */}
+      {dashboardData.credits && (
+        <section className="surface-panel rounded-[32px] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="page-eyebrow">Plan usage</p>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--app-text)]">Monthly credit consumption</h2>
+            </div>
+            <Link
+              href="/dashboard/settings"
+              className="rounded-full border border-[var(--app-border)] px-4 py-2 text-xs font-semibold text-[var(--app-text-muted)] transition hover:border-brand-purple hover:text-brand-purple"
+            >
+              Manage plan
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-5 sm:grid-cols-3">
+            <CreditUsageBar
+              label="Lead scraping"
+              used={dashboardData.credits.scraping.used}
+              limit={dashboardData.credits.scraping.limit}
+              type="scraping"
+            />
+            <CreditUsageBar
+              label="Email sends"
+              used={dashboardData.credits.email.used}
+              limit={dashboardData.credits.email.limit}
+              type="email"
+            />
+            <CreditUsageBar
+              label="AI actions"
+              used={dashboardData.credits.ai.used}
+              limit={dashboardData.credits.ai.limit}
+              type="ai"
+            />
+          </div>
+          {(dashboardData.credits.scraping.used / dashboardData.credits.scraping.limit > 0.85 ||
+            dashboardData.credits.email.used / dashboardData.credits.email.limit > 0.85 ||
+            dashboardData.credits.ai.used / dashboardData.credits.ai.limit > 0.85) && (
+            <div className="mt-4 rounded-[18px] border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-600 dark:text-amber-300">
+              You&apos;re approaching your plan limit. <Link href="/pricing" className="font-semibold underline hover:text-brand-purple">Upgrade</Link> to keep automations running smoothly.
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="surface-panel rounded-[32px] p-6">
