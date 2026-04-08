@@ -106,7 +106,7 @@ export function CtaSection() {
             {/* Trust line */}
             <FadeIn delay={0.3}>
               <p className="mt-8 text-center text-xs text-[var(--app-text-soft)]">
-                14-day free trial &middot; No credit card required &middot; Cancel anytime
+                No long-term contracts &middot; Cancel anytime &middot; Results in the first week
               </p>
             </FadeIn>
           </div>

@@ -44,7 +44,7 @@ const TRACKS = [
 
 export function ProductSection() {
   return (
-    <section id="how-it-works" className="relative py-28 sm:py-36">
+    <section id="product" className="relative py-28 sm:py-36">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/[0.03] blur-[120px]" />
 

@@ -73,7 +73,7 @@ export function GlobeHero() {
                 Now onboarding UK businesses
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-                3 pilot spots left
+                Limited pilot intake
               </span>
             </div>
 

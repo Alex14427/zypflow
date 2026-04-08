@@ -10,7 +10,7 @@ const FOOTER_LINKS = [
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#product', label: 'Product' },
   { href: '/#proof', label: 'Proof layer' },
-  { href: '/pricing', label: 'Founding offer' },
+  { href: '/pricing', label: 'Pricing' },
   { href: '/login', label: 'Client login' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
@@ -24,7 +24,7 @@ export function SiteFooter() {
       {/* Top divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
 
-      <div className="mx-auto max-w-6xl py-16">
+      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr]">
           {/* Left — brand + CTA */}
           <FadeIn>
@@ -68,7 +68,7 @@ export function SiteFooter() {
                   href="/pricing"
                   className="inline-flex items-center rounded-full border border-[var(--app-border)] px-6 py-3 text-sm font-semibold text-[var(--app-text-muted)] transition hover:border-brand-purple/30 hover:text-[var(--app-text)]"
                 >
-                  Review offer
+                  See pricing
                 </Link>
               </div>
             </div>

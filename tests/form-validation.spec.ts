@@ -23,8 +23,8 @@ test('homepage renders the core commercial sections', async ({ page }) => {
 test('public navigation takes buyers through the main conversion path', async ({ page }) => {
   await page.goto('/');
 
-  // Nav link to pricing (exact match to avoid "Review offer" / "Founding offer")
-  await page.getByRole('link', { name: 'Offer', exact: true }).click();
+  // Nav link to pricing
+  await page.getByRole('link', { name: 'Pricing', exact: true }).first().click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(page.getByText(/£297/)).toBeVisible();
 
