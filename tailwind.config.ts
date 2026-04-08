@@ -20,7 +20,7 @@ const config: Config = {
         glow: '#fff1ea',
       },
       fontFamily: {
-        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        serif: ['Georgia', 'Cambria', 'Times New Roman', 'serif'],
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {

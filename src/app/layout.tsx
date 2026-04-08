@@ -1,17 +1,22 @@
 import type { Metadata } from 'next';
-import { Fraunces, Manrope } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from './providers';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { CookieConsent } from '@/components/cookie-consent';
 import './globals.css';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zypflow.co.uk';
-const sans = Manrope({ subsets: ['latin'], variable: '--font-sans' });
-const serif = Fraunces({ subsets: ['latin'], variable: '--font-serif' });
+
+const sans = localFont({
+  src: [{ path: '../fonts/manrope-variable.woff2', style: 'normal' }],
+  variable: '--font-sans',
+  display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+});
 
 export const metadata: Metadata = {
   title: {
-    default: 'Zypflow | Clinic Revenue OS',
+    default: 'Zypflow | Revenue OS For Service Businesses',
     template: '%s | Zypflow',
   },
   description:
@@ -22,8 +27,8 @@ export const metadata: Metadata = {
   },
   applicationName: 'Zypflow',
   openGraph: {
-    title: 'Zypflow | Clinic Revenue OS',
-    description: 'The automated revenue operating system for London aesthetics clinics.',
+    title: 'Zypflow | Revenue OS For Service Businesses',
+    description: 'The automated revenue operating system for service businesses. Faster lead response, stronger booking conversion, fewer no-shows.',
     url: APP_URL,
     siteName: 'Zypflow',
     locale: 'en_GB',
@@ -31,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Zypflow | Clinic Revenue OS',
-    description: 'Automated enquiry conversion, appointment protection, and patient reactivation for clinics.',
+    title: 'Zypflow | Revenue OS For Service Businesses',
+    description: 'Automated enquiry conversion, appointment protection, and patient reactivation.',
   },
   robots: {
     index: true,
@@ -51,7 +56,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${sans.variable} ${serif.variable}`}>
+      <body className={`${sans.variable} font-sans`}>
         <Providers>
           {children}
           <ChatWidget />
