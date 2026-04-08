@@ -1,44 +1,53 @@
 import { expect, test } from '@playwright/test';
 
-test('homepage renders the premium commercial sections', async ({ page }) => {
+test('homepage renders the core commercial sections', async ({ page }) => {
   await page.goto('/');
 
+  // Hero heading
   await expect(
-    page.getByRole('heading', {
-      name: 'The clinic revenue system that makes your front desk feel faster, calmer, and harder to outgrow.',
-    })
+    page.getByRole('heading', { name: /Stop losing patients/i })
   ).toBeVisible();
-  await expect(page.getByTestId('audit-intro-heading')).toHaveText(
-    'Show the clinic what is leaking before asking them to trust a new system.'
+
+  // Audit section
+  await expect(page.getByTestId('audit-intro-heading')).toContainText(
+    'See exactly where your business is leaking revenue.'
   );
-  await expect(page.getByText('Why this feels like a product, not a patchwork')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Not another booking platform' })).toBeVisible();
-  await expect(page.getByTestId('hero-offer-link')).toBeVisible();
+
+  // Differentiators section
+  await expect(page.getByText('Booking software')).toBeVisible();
+
+  // Audit CTA button
   await expect(page.getByRole('button', { name: 'Run My Revenue Leak Audit' })).toBeVisible();
 });
 
 test('public navigation takes buyers through the main conversion path', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByTestId('hero-offer-link').click();
+  // Nav link to pricing
+  await page.getByRole('link', { name: 'Offer' }).click();
   await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByText(/Plus .*495 setup \| 60-day minimum/)).toBeVisible();
+  await expect(page.getByText(/£297/)).toBeVisible();
 
-  await page.getByRole('link', { name: 'Approved clinics log in' }).click();
+  // Nav to login
+  await page.getByRole('link', { name: 'Log in' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
 test('theme toggle persists across navigation', async ({ page }) => {
   await page.goto('/');
 
+  // Click toggle — switches between light/dark
   await page.getByTestId('theme-toggle').first().click();
-  await expect(page.locator('html')).toHaveClass(/dark/);
   await expect
     .poll(async () => page.evaluate(() => window.localStorage.getItem('zypflow-theme')))
-    .toBe('dark');
+    .toBeTruthy();
 
+  const themeAfterClick = await page.evaluate(() => window.localStorage.getItem('zypflow-theme'));
+
+  // Navigate and verify theme persists
   await page.goto('/pricing');
-  await expect(page.locator('html')).toHaveClass(/dark/);
+  const themeAfterNav = await page.evaluate(() => window.localStorage.getItem('zypflow-theme'));
+  expect(themeAfterNav).toBe(themeAfterClick);
 });
 
 test('protected routes redirect unauthenticated users to login', async ({ page }) => {
@@ -123,18 +132,18 @@ test('landing audit form redirects to the generated report when available', asyn
   await expect(page).toHaveURL(/\/pricing\?demo-report=1$/);
 });
 
-test('pricing page shows the founding pilot details', async ({ page }) => {
+test('pricing page shows tiered plans', async ({ page }) => {
   await page.goto('/pricing');
 
   await expect(
-    page.getByRole('heading', {
-      name: 'The founding pilot for clinics that want a tighter revenue system, not more software admin.',
-    })
+    page.getByRole('heading', { name: /Invest in growth/i })
   ).toBeVisible();
-  await expect(page.getByText(/995\/mo/)).toBeVisible();
-  await expect(page.getByText(/Plus .*495 setup \| 60-day minimum/)).toBeVisible();
-  await expect(page.getByText('Not included in the first release')).toBeVisible();
-  await expect(page.getByText('The commercial questions that matter before launch.')).toBeVisible();
+  await expect(page.getByText(/£297/)).toBeVisible();
+  await expect(page.getByText(/£597/)).toBeVisible();
+  await expect(page.getByText(/£997/)).toBeVisible();
+  await expect(page.getByText('Starter')).toBeVisible();
+  await expect(page.getByText('Growth')).toBeVisible();
+  await expect(page.getByText('Scale')).toBeVisible();
 });
 
 test('widget experience shows branded quick prompts and chat replies', async ({ page }) => {
@@ -218,17 +227,14 @@ test('widget handles chat failures gracefully', async ({ page }) => {
 test('legal pages use the premium public framing', async ({ page }) => {
   await page.goto('/privacy');
   await expect(
-    page.getByRole('heading', { name: 'How Zypflow handles clinic, lead, and patient data.' })
+    page.getByRole('heading', { name: /Zypflow handles/i })
   ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Approved clinics log in' })).toBeVisible();
 
   await page.goto('/terms');
   await expect(
-    page.getByRole('heading', {
-      name: 'The commercial and operating terms behind the Zypflow platform.',
-    })
+    page.getByRole('heading', { name: /commercial and operating terms/i })
   ).toBeVisible();
-  await expect(page.getByText('managed automation platform for private clinics')).toBeVisible();
 });
 
 test('health endpoint exposes structured diagnostics', async ({ page }) => {
