@@ -415,9 +415,9 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="mt-5 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-muted)] px-4 py-4">
-              <p className="text-sm font-semibold text-[var(--app-text)]">Owner view</p>
+              <p className="text-sm font-semibold text-[var(--app-text)]">Live coverage</p>
               <p className="mt-2 text-sm leading-7 text-[var(--app-text-muted)]">
-              You should be able to glance at this page, see what happened, and know exactly when a human follow-up still matters.
+              These automations are handling enquiries, reminders, and follow-ups for you right now.
               </p>
           </div>
         </div>
@@ -616,7 +616,7 @@ export default function DashboardPage() {
                     : 'bg-[var(--app-muted)] text-[var(--app-text-muted)]'
                 }`}
               >
-                {item.complete ? 'OK' : 'TO'}
+                {item.complete ? '✓' : '—'}
               </span>
               <div>
                 <p className="text-sm font-semibold text-[var(--app-text)]">{item.label}</p>

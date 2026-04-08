@@ -875,7 +875,7 @@ function OnboardingShell({ step, title, subtitle, statusMessage, children }: {
                             : 'bg-[var(--app-muted)] text-[var(--app-text-soft)]'
                       }`}
                     >
-                      {isComplete ? 'OK' : currentStep}
+                      {isComplete ? '✓' : currentStep}
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-[var(--app-text)]">{item.title}</p>

@@ -73,7 +73,7 @@ export function LeadsTable({ leads }: { leads: DashboardLead[] }) {
                   </td>
                   <td className={`px-5 py-4 font-semibold ${scoreColor(lead.score)}`}>{lead.score}</td>
                   <td className="px-5 py-4 capitalize text-[var(--app-text-muted)]">{lead.source || 'chat'}</td>
-                  <td className="px-5 py-4 text-[var(--app-text-muted)]">{new Date(lead.createdAt).toLocaleDateString()}</td>
+                  <td className="px-5 py-4 text-[var(--app-text-muted)]">{new Date(lead.createdAt).toLocaleDateString('en-GB')}</td>
                 </tr>
               ))}
             </tbody>

@@ -202,7 +202,7 @@ export default function SettingsPage() {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'starter', orgId: business?.id, email: business?.email }),
+        body: JSON.stringify({ plan: business?.plan || 'starter', orgId: business?.id, email: business?.email }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.url) throw new Error(payload.error || 'Unable to start checkout.');
@@ -310,8 +310,8 @@ export default function SettingsPage() {
           <div className="surface-panel rounded-[32px] p-6">
             <p className="page-eyebrow">Managed pilot terms</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <MetricTile label="Pilot fee" value={`${formatCurrencyGBP(995)}/mo`} />
-              <MetricTile label="Setup fee" value={formatCurrencyGBP(495)} />
+              <MetricTile label="Plan" value={formatPlanLabel(business?.plan)} />
+              <MetricTile label="Status" value={business?.stripe_customer_id ? 'Active' : 'Trial'} />
               <MetricTile label="Term" value="60 days" />
               <MetricTile label="Scope" value="1 clinic, 1 pack" />
             </div>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
         <section className="grid gap-6 xl:grid-cols-2">
           <div className="surface-panel rounded-[32px] p-6 space-y-4">
             <Field label="WhatsApp Phone Number ID" value={waPhoneNumberId} onChange={setWaPhoneNumberId} />
-            <Field label="WhatsApp Access Token" value={waAccessToken} onChange={setWaAccessToken} />
+            <Field label="WhatsApp Access Token" value={waAccessToken} onChange={setWaAccessToken} sensitive />
             <button onClick={saveWhatsapp} className="rounded-full bg-brand-purple px-5 py-3 text-sm font-semibold text-white">Save WhatsApp config</button>
           </div>
           <div className="space-y-4">
@@ -369,14 +369,22 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-            <div className="surface-panel rounded-[32px] p-6 text-sm text-[var(--app-text-muted)]">
-              Stripe, Twilio, Resend, Sentry, and workflow jobs are all surfaced here so the clinic setup stays commercially clean.
+            <div className="surface-panel rounded-[32px] p-6">
+              <p className="page-eyebrow">Connected services</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <MetricTile label="Payments" value="Stripe" />
+                <MetricTile label="SMS" value="Twilio" />
+                <MetricTile label="Email" value="Resend" />
+                <MetricTile label="Errors" value="Sentry" />
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {message && <p className="text-sm text-[var(--app-text-muted)]">{message}</p>}
+      {message && (
+        <p className={`text-sm ${message.toLowerCase().includes('saved') || message.toLowerCase().includes('success') ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{message}</p>
+      )}
     </div>
   );
 }
@@ -389,11 +397,11 @@ function formatPlanLabel(plan: string | null | undefined) {
   return plan.replace(/_/g, ' ');
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function Field({ label, value, onChange, sensitive }: { label: string; value: string; onChange: (value: string) => void; sensitive?: boolean }) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">{label}</label>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-[18px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] px-4 py-3 text-sm text-[var(--app-text)] outline-none" />
+      <input type={sensitive ? 'password' : 'text'} autoComplete={sensitive ? 'off' : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-[18px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] px-4 py-3 text-sm text-[var(--app-text)] outline-none" />
     </div>
   );
 }

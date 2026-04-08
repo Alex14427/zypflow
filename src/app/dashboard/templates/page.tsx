@@ -500,7 +500,7 @@ export default function TemplatesPage() {
                       : 'bg-slate-500/12 text-[var(--app-text-muted)]'
                   }`}
                 >
-                  {item.complete ? 'OK' : 'TO'}
+                  {item.complete ? '✓' : '—'}
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-[var(--app-text)]">{item.label}</p>
