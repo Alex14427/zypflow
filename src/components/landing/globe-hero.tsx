@@ -198,18 +198,19 @@ function HeroContent() {
 
       <div className="mt-10 max-w-5xl sm:mt-14">
         <h1 className="editorial-heading">
-          Your clinic&apos;s{' '}
+          Stop losing patients{' '}
           <br className="hidden sm:block" />
-          revenue system,{' '}
-          <span className="gradient-text">automated.</span>
+          to slow replies.{' '}
+          <span className="gradient-text">Automate growth.</span>
         </h1>
 
         <div className="mt-8 h-[2px] w-24 bg-gradient-to-r from-brand-purple to-brand-purple/0" />
 
         <p className="mt-6 max-w-2xl editorial-body">
-          Faster first responses. Stronger booking conversion.
-          Fewer no-shows. More repeat patients. All running while you
-          focus on what you do best.
+          Zypflow replies to enquiries in under 5 minutes, protects every
+          booking with smart reminders, and brings patients back automatically.
+          Built for service businesses that are too busy delivering great
+          work to chase leads manually.
         </p>
       </div>
     </>

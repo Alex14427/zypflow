@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { AuditForm } from '@/components/public/audit-form';
 import { SiteFooter } from '@/components/public/site-footer';
 import { SiteHeader } from '@/components/public/site-header';
@@ -14,11 +13,12 @@ import { FaqSection } from '@/components/landing/faq-section';
 import { LogoStrip } from '@/components/landing/logo-strip';
 import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { CaseStudiesSection } from '@/components/landing/case-studies-section';
+import { StorySection } from '@/components/landing/story-section';
 
 export const metadata: Metadata = {
-  title: 'Zypflow | Revenue OS For Aesthetics Clinics',
+  title: 'Zypflow | Revenue OS For Service Businesses',
   description:
-    'The automated revenue operating system for London aesthetics clinics: faster lead response, stronger booking conversion, fewer no-shows, and more repeat revenue.',
+    'The automated revenue operating system for service businesses: faster lead response, stronger booking conversion, fewer no-shows, and more repeat revenue. Starting with UK aesthetics clinics.',
 };
 
 const FAQS = [
@@ -28,14 +28,24 @@ const FAQS = [
       'Because clinics care about where revenue is leaking, not a feature tour. The audit makes the problem concrete before we talk about deployment.',
   },
   {
-    question: 'Do clinics need to replace their booking software?',
+    question: 'Do we need to replace our booking software?',
     answer:
-      'No. Zypflow is built as an overlay. It works alongside the tools clinics already use and fixes the conversion and retention gaps around them.',
+      'No. Zypflow is built as an overlay. It works alongside the tools you already use — Fresha, Phorest, Cliniko, Calendly — and fixes the conversion and retention gaps around them.',
   },
   {
-    question: 'What happens after the clinic buys?',
+    question: 'What happens after we sign up?',
     answer:
-      'They land in a guided setup path, get one branded workflow deployed, and then see proof, health, and next actions in the client dashboard rather than a generic settings maze.',
+      'You land in a guided setup path, get one branded workflow deployed within 14 days, and then see proof, health, and next actions in your dashboard rather than a generic settings maze.',
+  },
+  {
+    question: 'Is this just for aesthetics clinics?',
+    answer:
+      'We started with aesthetics because that is where we saw the biggest revenue leaks. But the system works for any appointment-based service business — dental, physio, wellness, beauty, and more.',
+  },
+  {
+    question: 'How quickly will I see results?',
+    answer:
+      'Most clients see measurable improvement in lead response times and booking rates within the first two weeks. We report on progress weekly so you always know exactly what Zypflow is delivering.',
   },
 ];
 
@@ -47,16 +57,16 @@ const HOME_SCHEMA = {
       name: 'Zypflow',
       url: 'https://zypflow.co.uk',
       description:
-        'Automated revenue operating system for aesthetics clinics: enquiry conversion, appointment protection, reviews, and repeat revenue.',
+        'Automated revenue operating system for service businesses: enquiry conversion, appointment protection, reviews, and repeat revenue.',
     },
     {
       '@type': 'Service',
-      name: 'Zypflow Founding Pilot',
+      name: 'Zypflow Revenue OS',
       provider: { '@type': 'Organization', name: 'Zypflow' },
-      areaServed: 'London',
-      audience: { '@type': 'Audience', audienceType: 'Aesthetics clinics' },
+      areaServed: 'United Kingdom',
+      audience: { '@type': 'Audience', audienceType: 'Service businesses and aesthetics clinics' },
       description:
-        'Founder-led launch for clinics that want faster lead response, stronger booking conversion, fewer no-shows, and better patient return.',
+        'Automated lead response, booking protection, review generation, and patient reactivation for appointment-based businesses.',
     },
     {
       '@type': 'FAQPage',
@@ -79,7 +89,7 @@ export default function Home() {
 
       <div className="relative">
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
-          <SiteHeader eyebrow="Revenue OS for aesthetics clinics" />
+          <SiteHeader eyebrow="Revenue OS for service businesses" />
         </div>
 
         {/* Globe hero — single cohesive scroll experience */}
@@ -89,6 +99,8 @@ export default function Home() {
           <LogoStrip />
 
           <ProofStrip />
+
+          <StorySection />
 
           <ProductSection />
 
@@ -113,7 +125,7 @@ export default function Home() {
                       className="mt-4 text-3xl font-semibold text-[var(--app-text)] sm:text-4xl"
                       data-testid="audit-intro-heading"
                     >
-                      See exactly where your clinic is leaking revenue.
+                      See exactly where your business is leaking revenue.
                     </h2>
                     <p className="mt-3 text-sm leading-7 text-[var(--app-text-muted)]">
                       We scan your public pages and show you the fastest conversion leaks to fix first.

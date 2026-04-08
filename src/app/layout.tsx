@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Fraunces, Manrope } from 'next/font/google';
 import { Providers } from './providers';
 import { ChatWidget } from '@/components/chat/chat-widget';
+import { CookieConsent } from '@/components/cookie-consent';
 import './globals.css';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zypflow.co.uk';
@@ -54,6 +55,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <ChatWidget />
+          <CookieConsent />
         </Providers>
       </body>
     </html>
