@@ -117,20 +117,20 @@ function SignupContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50/30 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-        <div className="text-center mb-8">
-          <Link href="/" className="text-3xl font-bold inline-block hover:opacity-80 transition">
-            <span className="text-brand-purple">Zyp</span>flow
+    <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-4">
+      <div className="w-full max-w-md rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-8 shadow-xl">
+        <div className="mb-8 text-center">
+          <Link href="/" className="inline-block text-3xl font-bold transition hover:opacity-80">
+            <span className="text-brand-purple">Zyp</span><span className="text-[var(--app-text)]">flow</span>
           </Link>
-          <p className="text-gray-500 mt-2">Create your clinic workspace</p>
+          <p className="mt-2 text-[var(--app-text-muted)]">Create your clinic workspace</p>
           {preselectedPlan && (
-            <p className="text-xs text-brand-purple mt-1 font-medium uppercase">{preselectedPlan} plan selected</p>
+            <p className="mt-1 text-xs font-medium uppercase text-brand-purple">{preselectedPlan} plan selected</p>
           )}
         </div>
 
         {/* Social proof */}
-        <div className="flex items-center justify-center gap-2 mb-6 text-xs text-gray-400">
+        <div className="mb-6 flex items-center justify-center gap-2 text-xs text-[var(--app-text-soft)]">
           <span>Approval-led setup</span>
           <span>&middot;</span>
           <span>Launch in minutes</span>
@@ -140,36 +140,36 @@ function SignupContent() {
 
         <form onSubmit={handleSignup} noValidate className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">Business Name</label>
             <input
               type="text"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               placeholder="e.g. Bright Smile Dental"
-              className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+              className="w-full rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2.5 text-[var(--app-text)] placeholder:text-[var(--app-text-soft)] focus:outline-none focus:ring-2 focus:ring-brand-purple"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@yourbusiness.com"
-              className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+              className="w-full rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2.5 text-[var(--app-text)] placeholder:text-[var(--app-text-soft)] focus:outline-none focus:ring-2 focus:ring-brand-purple"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--app-text)]">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={8}
               placeholder="Minimum 8 characters"
-              className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+              className="w-full rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2.5 text-[var(--app-text)] placeholder:text-[var(--app-text-soft)] focus:outline-none focus:ring-2 focus:ring-brand-purple"
               required
             />
             {password.length > 0 && (
@@ -179,15 +179,15 @@ function SignupContent() {
                     <div
                       key={i}
                       className={`h-1.5 flex-1 rounded-full transition-colors ${
-                        i <= pwStrength.score ? pwStrength.color : 'bg-gray-200'
+                        i <= pwStrength.score ? pwStrength.color : 'bg-[var(--app-muted)]'
                       }`}
                     />
                   ))}
                 </div>
-                <p className={`text-xs mt-1 ${
+                <p className={`mt-1 text-xs ${
                   pwStrength.score <= 1 ? 'text-red-500' :
                   pwStrength.score <= 2 ? 'text-orange-500' :
-                  pwStrength.score <= 3 ? 'text-yellow-600' : 'text-green-600'
+                  pwStrength.score <= 3 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
                 }`}>
                   {pwStrength.label}
                 </p>
@@ -195,7 +195,7 @@ function SignupContent() {
             )}
           </div>
 
-          <label className="flex items-start gap-2 text-sm text-gray-600">
+          <label className="flex items-start gap-2 text-sm text-[var(--app-text-muted)]">
             <input
               type="checkbox"
               checked={acceptedTerms}
@@ -215,20 +215,20 @@ function SignupContent() {
             </span>
           </label>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-sm text-red-500 dark:text-red-300">{error}</p>}
 
           <button
             type="submit"
             disabled={loading || !acceptedTerms}
-            className="w-full bg-brand-purple hover:bg-brand-purple-dark text-white py-2.5 rounded-lg font-semibold transition disabled:opacity-50"
+            className="w-full rounded-[14px] bg-brand-purple py-2.5 font-semibold text-white transition hover:bg-brand-purple-dark disabled:opacity-50"
           >
             {loading ? 'Creating workspace...' : 'Create Clinic Workspace'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="mt-6 text-center text-sm text-[var(--app-text-muted)]">
           Already have an account?{' '}
-          <Link href="/login" className="text-brand-purple hover:underline font-medium">
+          <Link href="/login" className="font-medium text-brand-purple hover:underline">
             Log in
           </Link>
         </p>

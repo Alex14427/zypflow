@@ -12,7 +12,8 @@ export default function GlobalError({
   useEffect(() => {
     // Log to Sentry if available
     if (typeof window !== 'undefined' && 'Sentry' in window) {
-      (window as Record<string, unknown>).Sentry;
+      const sentry = (window as Record<string, unknown>).Sentry as { captureException?: (err: Error) => void } | undefined;
+      sentry?.captureException?.(error);
     }
     console.error('Global error:', error);
   }, [error]);

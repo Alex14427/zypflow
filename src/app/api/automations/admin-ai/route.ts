@@ -4,8 +4,7 @@ import { verifyAutomationAuth } from '@/lib/auth-automation';
 import { getAnthropic } from '@/lib/ai-client';
 import { sendEmail } from '@/lib/email';
 import { runClientOverseer } from '@/lib/client-overseer';
-
-const ALERT_EMAIL = 'alex@zypflow.co.uk';
+import { ALERT_EMAIL } from '@/lib/admin-users';
 
 interface Metrics {
   activeBusinesses: number;

@@ -14,6 +14,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { getAnthropic } from '@/lib/ai-client';
 import { sendEmail } from '@/lib/email';
+import { ALERT_EMAIL } from '@/lib/admin-users';
 
 interface ClientHealth {
   orgId: string;
@@ -39,8 +40,6 @@ interface OverseerAction {
   action: string;
   detail: string;
 }
-
-const ALERT_EMAIL = 'alex@zypflow.co.uk';
 
 export async function runClientOverseer(): Promise<{
   clientsReviewed: number;

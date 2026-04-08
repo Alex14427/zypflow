@@ -439,7 +439,8 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .reveal-up, .float-soft, .hover-lift, .pulse-glow {
+  .reveal-up, .float-soft, .hover-lift, .pulse-glow,
+  .animate-marquee, .animate-marquee-reverse {
     animation: none !important;
     transition: none !important;
     transform: none !important;

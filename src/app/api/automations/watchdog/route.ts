@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
 import { sendEmail } from '@/lib/email';
-
-const ALERT_EMAIL = 'alex@zypflow.co.uk';
+import { ALERT_EMAIL } from '@/lib/admin-users';
 
 interface HealthCheck {
   name: string;

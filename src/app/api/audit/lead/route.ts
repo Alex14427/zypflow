@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { z } from 'zod'
 import { sendEmail } from '@/lib/email'
+import { ALERT_EMAIL } from '@/lib/admin-users'
 
 const LeadFromAuditSchema = z.object({
   auditId: z.string().uuid('auditId must be a valid UUID'),
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await sendEmail({
-      to: 'alex@zypflow.co.uk',
+      to: ALERT_EMAIL,
       subject: `New Audit Lead: ${audit.email}`,
       html: `<h2 style="color:#1f2937">New Audit Lead</h2>
         <div style="background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0">

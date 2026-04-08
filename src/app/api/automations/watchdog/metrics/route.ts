@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAutomationAuth } from '@/lib/auth-automation';
-
-const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
+import { ADMIN_EMAILS } from '@/lib/admin-users';
 
 // Admin metrics endpoint — returns current system-wide metrics for a dashboard
 export async function GET(req: NextRequest) {

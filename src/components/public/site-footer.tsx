@@ -10,7 +10,7 @@ const FOOTER_LINKS = [
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#product', label: 'Product' },
   { href: '/#proof', label: 'Proof layer' },
-  { href: '/pricing', label: 'Founding offer' },
+  { href: '/pricing', label: 'Pricing' },
   { href: '/login', label: 'Client login' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
@@ -24,7 +24,7 @@ export function SiteFooter() {
       {/* Top divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
 
-      <div className="mx-auto max-w-6xl py-16">
+      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr]">
           {/* Left — brand + CTA */}
           <FadeIn>
@@ -68,7 +68,7 @@ export function SiteFooter() {
                   href="/pricing"
                   className="inline-flex items-center rounded-full border border-[var(--app-border)] px-6 py-3 text-sm font-semibold text-[var(--app-text-muted)] transition hover:border-brand-purple/30 hover:text-[var(--app-text)]"
                 >
-                  Review offer
+                  See pricing
                 </Link>
               </div>
             </div>
@@ -103,13 +103,16 @@ export function SiteFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex items-center justify-between border-t border-[var(--app-border)] pt-8">
-          <p className="text-xs text-[var(--app-text-soft)]">
-            &copy; {new Date().getFullYear()} Zypflow. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 text-xs text-[var(--app-text-soft)]">
-            <Link href="/privacy" className="transition hover:text-[var(--app-text)]">Privacy</Link>
-            <Link href="/terms" className="transition hover:text-[var(--app-text)]">Terms</Link>
+        <div className="mt-12 border-t border-[var(--app-border)] pt-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1 text-xs text-[var(--app-text-soft)]">
+              <p>&copy; {new Date().getFullYear()} Zypflow Ltd. All rights reserved.</p>
+              <p>London, United Kingdom &middot; <a href="mailto:hello@zypflow.co.uk" className="transition hover:text-[var(--app-text)]">hello@zypflow.co.uk</a></p>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[var(--app-text-soft)]">
+              <Link href="/privacy" className="transition hover:text-[var(--app-text)]">Privacy</Link>
+              <Link href="/terms" className="transition hover:text-[var(--app-text)]">Terms</Link>
+            </div>
           </div>
         </div>
       </div>
