@@ -142,12 +142,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <span className="rounded-full bg-[var(--app-surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
                     {business?.role || 'owner'}
                   </span>
-                  <span
-                    className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
-                    style={{ backgroundColor: brandAssets.brandColor }}
-                  >
-                    Brand ready
-                  </span>
+                  {brandAssets.brandColor && brandAssets.brandColor !== '#d26645' && (
+                    <span
+                      className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
+                      style={{ backgroundColor: brandAssets.brandColor }}
+                    >
+                      Branded
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

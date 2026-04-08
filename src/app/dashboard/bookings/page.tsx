@@ -78,12 +78,23 @@ export default function BookingsPage() {
   );
 
   async function updateStatus(appointmentId: string, newStatus: string) {
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId);
+    const prev = appointments.find((a) => a.id === appointmentId);
     setAppointments((current) =>
       current.map((appointment) =>
         appointment.id === appointmentId ? { ...appointment, status: newStatus } : appointment
       )
     );
+    const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId);
+    if (error) {
+      // Revert on failure
+      if (prev) {
+        setAppointments((current) =>
+          current.map((appointment) =>
+            appointment.id === appointmentId ? { ...appointment, status: prev.status } : appointment
+          )
+        );
+      }
+    }
   }
 
   if (loading) {

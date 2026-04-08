@@ -116,11 +116,11 @@ export function PortalPanel({ title, description, action, children, className = 
   );
 }
 
-export function PortalEmptyState({ title, description, action }: PortalEmptyStateProps) {
+export function PortalEmptyState({ title, description, action, badge }: PortalEmptyStateProps & { badge?: string }) {
   return (
     <div className="flex flex-col items-start gap-4 px-5 py-10 text-sm text-[var(--app-text-muted)]">
       <div className="rounded-2xl border border-dashed border-[var(--app-card-border)] bg-[var(--app-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--app-text-soft)]">
-        Waiting on live activity
+        {badge || 'No data yet'}
       </div>
       <div>
         <p className="text-base font-semibold text-[var(--app-text)]">{title}</p>

@@ -49,7 +49,7 @@ export function AppointmentsList({ appointments }: { appointments: DashboardAppo
                 <p className="text-xs text-[var(--app-text-muted)]">{appointment.service}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-[var(--app-text)]">{new Date(appointment.datetime).toLocaleDateString()}</p>
+                <p className="text-sm text-[var(--app-text)]">{new Date(appointment.datetime).toLocaleDateString('en-GB')}</p>
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${appointmentStatusClass(appointment.status)}`}
                 >

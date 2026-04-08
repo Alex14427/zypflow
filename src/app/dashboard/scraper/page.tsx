@@ -225,35 +225,35 @@ export default function ScraperPage() {
       {/* Page header + credits */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Lead Scraper</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Find potential clients from Google Maps</p>
+          <p className="page-eyebrow">Lead scraper</p>
+          <h1 className="mt-3 text-3xl font-semibold text-[var(--app-text)]">Find potential clients from Google Maps</h1>
         </div>
 
         {/* Credits badge */}
         {scrapingCredits !== null && (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium ${
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium ${
             lowCredits
-              ? 'bg-red-50 border-red-200 text-red-700'
-              : 'bg-purple-50 border-purple-200 text-purple-700'
+              ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+              : 'border-brand-purple/30 bg-brand-purple/10 text-brand-purple'
           }`}>
             <ZapIcon className="w-4 h-4" />
-            Scraping Credits: {scrapingCredits} remaining
-            {lowCredits && <span className="ml-1 text-xs font-normal">(low!)</span>}
+            {scrapingCredits} credits remaining
+            {lowCredits && <span className="ml-1 text-xs font-normal">(low)</span>}
           </div>
         )}
       </div>
 
       {/* Configuration form */}
-      <div className="bg-white rounded-xl border shadow-sm p-6 mb-6">
-        <h2 className="text-base font-semibold mb-4">Configure Scrape</h2>
+      <div className="surface-panel rounded-[28px] p-6 mb-6">
+        <h2 className="text-base font-semibold text-[var(--app-text)] mb-4">Configure Scrape</h2>
         <form onSubmit={handleScrape} className="flex flex-wrap gap-4 items-end">
           <div className="flex flex-col gap-1.5 min-w-[160px]">
-            <label className="text-xs font-medium text-gray-600">Industry</label>
+            <label className="text-xs font-medium text-[var(--app-text-soft)]">Industry</label>
             <select
               value={industry}
               onChange={e => setIndustry(e.target.value)}
               disabled={scraping}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
+              className="border border-[var(--app-border)] rounded-[12px] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
             >
               {INDUSTRIES.map(ind => (
                 <option key={ind.value} value={ind.value}>{ind.label}</option>
@@ -262,7 +262,7 @@ export default function ScraperPage() {
           </div>
 
           <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-            <label className="text-xs font-medium text-gray-600">City / Location</label>
+            <label className="text-xs font-medium text-[var(--app-text-soft)]">City / Location</label>
             <input
               type="text"
               placeholder="e.g. London, Manchester"
@@ -270,12 +270,12 @@ export default function ScraperPage() {
               onChange={e => setCity(e.target.value)}
               disabled={scraping}
               required
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
+              className="border border-[var(--app-border)] rounded-[12px] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
             />
           </div>
 
           <div className="flex flex-col gap-1.5 w-32">
-            <label className="text-xs font-medium text-gray-600">Max Results</label>
+            <label className="text-xs font-medium text-[var(--app-text-soft)]">Max Results</label>
             <input
               type="number"
               min={1}
@@ -283,7 +283,7 @@ export default function ScraperPage() {
               value={maxResults}
               onChange={e => setMaxResults(Math.min(200, Math.max(1, Number(e.target.value))))}
               disabled={scraping}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
+              className="border border-[var(--app-border)] rounded-[12px] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-brand-purple disabled:opacity-50"
             />
           </div>
 
@@ -314,7 +314,7 @@ export default function ScraperPage() {
           </div>
         )}
         {scrapeSuccess !== null && !scraping && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+          <div className="mt-4 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-[12px] px-4 py-2.5">
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -322,7 +322,7 @@ export default function ScraperPage() {
           </div>
         )}
         {scrapeError && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+          <div className="mt-4 flex items-center gap-2 text-sm text-red-700 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-[12px] px-4 py-2.5">
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -339,32 +339,42 @@ export default function ScraperPage() {
           { label: 'Audited', value: auditedCount },
           { label: 'Avg Google Rating', value: avgRating },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border shadow-sm px-5 py-4">
-            <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{prospectsLoading ? '—' : stat.value}</p>
+          <div key={stat.label} className="surface-panel rounded-[20px] px-5 py-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--app-text-soft)] mb-1">{stat.label}</p>
+            <p className="text-2xl font-semibold text-[var(--app-text)]">{prospectsLoading ? '—' : stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Results table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div className="surface-panel rounded-[28px] overflow-hidden">
         {/* Table toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b">
-          <h2 className="text-base font-semibold">Prospects</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-[var(--app-border)]">
+          <h2 className="text-base font-semibold text-[var(--app-text)]">Prospects</h2>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--app-text-soft)]" />
               <input
                 type="text"
                 placeholder="Search by business name..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
-                className="border rounded-lg pl-9 pr-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                className="border border-[var(--app-border)] bg-[var(--app-bg)] rounded-[12px] pl-9 pr-3 py-2 text-sm text-[var(--app-text)] w-56 focus:outline-none focus:ring-2 focus:ring-brand-purple placeholder:text-[var(--app-text-soft)]"
               />
             </div>
             <button
-              className="flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
-              title="Export CSV (placeholder)"
+              onClick={() => {
+                const csv = ['Business,Website,Phone,Email,Rating,Reviews,City,Scraped', ...filtered.map(p =>
+                  [p.business_name, p.website || '', p.phone || '', p.email || '', p.google_rating ?? '', p.review_count ?? '', p.city || '', p.scraped_at].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+                )].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `prospects-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              disabled={filtered.length === 0}
+              className="flex items-center gap-1.5 border border-[var(--app-border)] rounded-[12px] px-3 py-2 text-sm text-[var(--app-text-muted)] hover:bg-[var(--app-muted)] transition disabled:opacity-40"
             >
               <DownloadIcon className="w-4 h-4" />
               Export
@@ -374,7 +384,7 @@ export default function ScraperPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
+            <thead className="bg-[var(--app-muted)] text-[var(--app-text-soft)] text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Business</th>
                 <th className="px-4 py-3 font-medium">Website</th>
@@ -391,7 +401,7 @@ export default function ScraperPage() {
               {prospectsLoading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
-                    <div className="flex items-center justify-center gap-2 text-gray-400">
+                    <div className="flex items-center justify-center gap-2 text-[var(--app-text-soft)]">
                       <span className="animate-spin w-5 h-5 border-2 border-brand-purple border-t-transparent rounded-full" />
                       Loading prospects...
                     </div>
@@ -399,7 +409,7 @@ export default function ScraperPage() {
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-12 text-center text-[var(--app-text-soft)]">
                     {search
                       ? 'No prospects match your search.'
                       : 'No prospects yet. Run a scrape above to find potential clients.'}
@@ -407,14 +417,14 @@ export default function ScraperPage() {
                 </tr>
               ) : (
                 paginated.map(prospect => (
-                  <tr key={prospect.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900 max-w-[180px] truncate">
+                  <tr key={prospect.id} className="border-t border-[var(--app-border)] hover:bg-[var(--app-muted)] transition">
+                    <td className="px-4 py-3 font-medium text-[var(--app-text)] max-w-[180px] truncate">
                       {prospect.business_name || '—'}
                       {prospect.audited && (
                         <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 font-semibold">Audited</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[140px] truncate">
+                    <td className="px-4 py-3 text-[var(--app-text-muted)] max-w-[140px] truncate">
                       {prospect.website ? (
                         <a
                           href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`}
@@ -427,7 +437,7 @@ export default function ScraperPage() {
                         </a>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{prospect.phone || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--app-text-muted)]">{prospect.phone || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{prospect.email || '—'}</td>
                     <td className="px-4 py-3">
                       {prospect.google_rating !== null && prospect.google_rating !== undefined ? (
@@ -440,9 +450,9 @@ export default function ScraperPage() {
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{prospect.review_count ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">{prospect.city || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-[var(--app-text-muted)]">{prospect.review_count ?? '—'}</td>
+                    <td className="px-4 py-3 text-[var(--app-text-muted)]">{prospect.city || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--app-text-soft)] whitespace-nowrap">
                       {new Date(prospect.scraped_at).toLocaleDateString('en-GB')}
                     </td>
                     <td className="px-4 py-3">
@@ -463,7 +473,7 @@ export default function ScraperPage() {
                         <button
                           onClick={() => handleAddToPipeline(prospect)}
                           disabled={addingIds.has(prospect.id)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--app-muted)] text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                           {addingIds.has(prospect.id) ? (
                             <span className="animate-spin w-3 h-3 border border-gray-600 border-t-transparent rounded-full" />
@@ -485,7 +495,7 @@ export default function ScraperPage() {
 
         {/* Pagination */}
         {!prospectsLoading && filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between px-5 py-3 border-t bg-gray-50 text-sm text-gray-500">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--app-border)] bg-[var(--app-muted)] text-sm text-[var(--app-text-muted)]">
             <span>
               Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
             </span>
@@ -493,7 +503,7 @@ export default function ScraperPage() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] hover:bg-[var(--app-surface-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Prev
               </button>
@@ -512,7 +522,7 @@ export default function ScraperPage() {
                     className={`w-8 h-8 rounded-lg border text-xs font-medium transition ${
                       page === pageNum
                         ? 'bg-brand-purple text-white border-brand-purple'
-                        : 'bg-white hover:bg-gray-100'
+                        : 'bg-[var(--app-surface)] border-[var(--app-border)] hover:bg-[var(--app-surface-hover)]'
                     }`}
                   >
                     {pageNum}
@@ -522,7 +532,7 @@ export default function ScraperPage() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] hover:bg-[var(--app-surface-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next →
               </button>

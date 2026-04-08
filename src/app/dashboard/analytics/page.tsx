@@ -89,7 +89,11 @@ export default function AnalyticsPage() {
           enterprise: 1500,
         };
         const monthlyCost = planCosts[business.plan] || 995;
-        const avgServiceValue = 150;
+        // Use average service price from business services, fallback to £150
+        const services = (business.services || []) as { price?: number }[];
+        const avgServiceValue = services.length
+          ? Math.round(services.reduce((sum, s) => sum + (s.price || 0), 0) / services.length) || 150
+          : 150;
         const bookedCount = bookedLeads.length;
         const estimatedRevenue = bookedCount * avgServiceValue;
         const costPerLead = allLeads.length > 0 ? Math.round(monthlyCost / allLeads.length) : 0;

@@ -744,7 +744,7 @@ function ChecklistRow({ done, title, detail }: { done: boolean; title: string; d
           done ? 'bg-emerald-500 text-white' : 'bg-[var(--app-muted)] text-[var(--app-text-muted)]'
         }`}
       >
-        {done ? 'OK' : 'TO'}
+        {done ? '✓' : '—'}
       </span>
       <div>
         <p className="text-sm font-semibold text-[var(--app-text)]">{title}</p>
