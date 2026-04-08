@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         .select('id, messages')
         .eq('org_id', business.id)
         .eq('lead_id', leadId)
-        .eq('channel', 'sms')
+        .eq('channel', 'whatsapp')
         .maybeSingle();
 
       const newMessage = {
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
           .insert({
             org_id: business.id,
             lead_id: leadId,
-            channel: 'sms',
+            channel: 'whatsapp',
             messages: [newMessage],
           });
       }

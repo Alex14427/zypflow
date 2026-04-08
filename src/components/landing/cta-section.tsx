@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import posthog from 'posthog-js';
 import { FadeIn, MagneticButton } from '@/components/animations';
 
 const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min';
@@ -81,6 +82,7 @@ export function CtaSection() {
                   href={BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => posthog.capture('cta_clicked', { cta: 'cta_book_audit', location: 'cta_section' })}
                   className="button-primary group gap-3 px-8 py-4"
                 >
                   <span className="relative z-10">Book Your Free Audit</span>

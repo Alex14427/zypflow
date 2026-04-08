@@ -77,11 +77,11 @@ export function CaseStudiesSection({ studies }: { studies?: CaseStudy[] }) {
           <div className="text-center">
             <p className="page-eyebrow">Case studies</p>
             <h2 className="mx-auto mt-4 max-w-3xl editorial-subheading">
-              Real clinics.{' '}
-              <span className="gradient-text">Real numbers.</span>
+              Pilot results.{' '}
+              <span className="gradient-text">Early numbers.</span>
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[var(--app-text-muted)]">
-              These are pilot results from London aesthetics clinics using Zypflow.
+              Results from early pilot clinics in London. Names changed for privacy.
             </p>
           </div>
         </GsapReveal>

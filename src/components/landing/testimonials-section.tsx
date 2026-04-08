@@ -42,11 +42,14 @@ export function TestimonialsSection() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <FadeIn>
           <div className="text-center">
-            <p className="page-eyebrow">What clinics say</p>
+            <p className="page-eyebrow">What to expect</p>
             <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
-              Real results.{' '}
-              <span className="gradient-text">Real clinics.</span>
+              Results clinics{' '}
+              <span className="gradient-text">are seeing.</span>
             </h2>
+            <p className="mx-auto mt-4 max-w-xl text-sm text-[var(--app-text-soft)]">
+              Based on early pilot data. Names and details have been changed for privacy.
+            </p>
           </div>
         </FadeIn>
 

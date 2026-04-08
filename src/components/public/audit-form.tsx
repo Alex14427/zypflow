@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { auditRequestSchema } from '@/lib/validators';
 
 type AuditFormProps = {
@@ -51,6 +52,7 @@ export function AuditForm({ compact = false }: AuditFormProps) {
         return;
       }
 
+      posthog.capture('audit_form_submitted', { website: parsed.data.website });
       setSubmitted(true);
       setForm(INITIAL_STATE);
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import posthog from 'posthog-js';
 import { FadeIn, MagneticButton } from '@/components/animations';
 import { FaqSection } from '@/components/landing/faq-section';
 
@@ -170,6 +171,7 @@ export function PricingContent({ faqs }: PricingContentProps) {
                     href={BOOKING_URL}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => posthog.capture('cta_clicked', { cta: 'pricing_plan_cta', location: 'pricing', plan: plan.name })}
                     className={`mt-8 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold transition ${
                       plan.highlight
                         ? 'bg-gradient-to-r from-brand-purple to-brand-purple-dark text-white shadow-[0_12px_24px_rgba(210,102,69,0.25)]'

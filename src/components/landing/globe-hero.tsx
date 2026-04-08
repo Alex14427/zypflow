@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import posthog from 'posthog-js';
 import { MagneticButton } from '@/components/animations';
 
 const GlobeScene = dynamic(
@@ -108,6 +109,7 @@ export function GlobeHero() {
                 href={BOOKING_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => posthog.capture('cta_clicked', { cta: 'hero_book_audit', location: 'hero' })}
                 className="button-primary group gap-3 px-8 py-4"
               >
                 <span className="relative z-10">Book Your Free Audit</span>
@@ -115,7 +117,7 @@ export function GlobeHero() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </MagneticButton>
-              <MagneticButton as="a" href="/pricing" className="button-secondary px-7 py-4">
+              <MagneticButton as="a" href="/pricing" onClick={() => posthog.capture('cta_clicked', { cta: 'hero_see_pricing', location: 'hero' })} className="button-secondary px-7 py-4">
                 See Pricing
               </MagneticButton>
             </div>

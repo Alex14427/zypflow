@@ -103,13 +103,16 @@ export function SiteFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex items-center justify-between border-t border-[var(--app-border)] pt-8">
-          <p className="text-xs text-[var(--app-text-soft)]">
-            &copy; {new Date().getFullYear()} Zypflow. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 text-xs text-[var(--app-text-soft)]">
-            <Link href="/privacy" className="transition hover:text-[var(--app-text)]">Privacy</Link>
-            <Link href="/terms" className="transition hover:text-[var(--app-text)]">Terms</Link>
+        <div className="mt-12 border-t border-[var(--app-border)] pt-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1 text-xs text-[var(--app-text-soft)]">
+              <p>&copy; {new Date().getFullYear()} Zypflow Ltd. All rights reserved.</p>
+              <p>London, United Kingdom &middot; <a href="mailto:hello@zypflow.co.uk" className="transition hover:text-[var(--app-text)]">hello@zypflow.co.uk</a></p>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[var(--app-text-soft)]">
+              <Link href="/privacy" className="transition hover:text-[var(--app-text)]">Privacy</Link>
+              <Link href="/terms" className="transition hover:text-[var(--app-text)]">Terms</Link>
+            </div>
           </div>
         </div>
       </div>

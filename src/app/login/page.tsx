@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { loginFormSchema } from '@/lib/validators';
 import Link from 'next/link';
-
-const ADMIN_EMAILS = ['alex@zypflow.co.uk'];
+import { ADMIN_EMAILS } from '@/lib/admin-users';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
