@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isLocalSmokeMode } from '@/lib/local-mode';
 
 /**
  * Verifies that automation endpoint requests come from authorized sources:
@@ -34,6 +35,10 @@ export function verifyAutomationAuthWithOptions(
   }
 
   if (options.allowDevelopmentFallback !== false && process.env.NODE_ENV === 'development') {
+    return null;
+  }
+
+  if (isLocalSmokeMode()) {
     return null;
   }
 

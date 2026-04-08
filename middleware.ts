@@ -42,9 +42,14 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Supabase unreachable (placeholder URL, network issue, etc.)
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url));

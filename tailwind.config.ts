@@ -30,7 +30,8 @@ const config: Config = {
       animation: {
         'fade-up': 'fade-up 680ms ease both',
         'float': 'soft-float 6s ease-in-out infinite',
-        'marquee': 'marquee 30s linear infinite',
+        'marquee': 'marquee 35s linear infinite',
+        'marquee-reverse': 'marquee-reverse 40s linear infinite',
         'mesh-1': 'mesh-drift-1 20s ease-in-out infinite',
         'mesh-2': 'mesh-drift-2 25s ease-in-out infinite',
         'mesh-3': 'mesh-drift-3 22s ease-in-out infinite',
@@ -47,6 +48,10 @@ const config: Config = {
         'marquee': {
           from: { transform: 'translateX(0)' },
           to: { transform: 'translateX(-50%)' },
+        },
+        'marquee-reverse': {
+          from: { transform: 'translateX(-50%)' },
+          to: { transform: 'translateX(0)' },
         },
         'mesh-drift-1': {
           '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
