@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Message = {
@@ -17,6 +18,7 @@ const INITIAL_MESSAGE: Message = {
 };
 
 export function ChatWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
@@ -91,6 +93,9 @@ export function ChatWidget() {
       setIsLoading(false);
     }
   }, [input, isLoading, messages]);
+
+  // Widget pages have their own chat — skip the floating bubble
+  if (pathname.startsWith('/widget')) return null;
 
   return (
     <>

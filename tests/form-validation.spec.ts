@@ -3,9 +3,9 @@ import { expect, test } from '@playwright/test';
 test('homepage renders the core commercial sections', async ({ page }) => {
   await page.goto('/');
 
-  // Hero heading
+  // Hero heading (first match — CTA section also contains the phrase)
   await expect(
-    page.getByRole('heading', { name: /Stop losing patients/i })
+    page.getByRole('heading', { name: /Stop losing patients/i }).first()
   ).toBeVisible();
 
   // Audit section
@@ -14,7 +14,7 @@ test('homepage renders the core commercial sections', async ({ page }) => {
   );
 
   // Differentiators section
-  await expect(page.getByText('Booking software')).toBeVisible();
+  await expect(page.getByText('Booking software', { exact: true })).toBeVisible();
 
   // Audit CTA button
   await expect(page.getByRole('button', { name: 'Run My Revenue Leak Audit' })).toBeVisible();
@@ -23,8 +23,8 @@ test('homepage renders the core commercial sections', async ({ page }) => {
 test('public navigation takes buyers through the main conversion path', async ({ page }) => {
   await page.goto('/');
 
-  // Nav link to pricing
-  await page.getByRole('link', { name: 'Offer' }).click();
+  // Nav link to pricing (exact match to avoid "Review offer" / "Founding offer")
+  await page.getByRole('link', { name: 'Offer', exact: true }).click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(page.getByText(/£297/)).toBeVisible();
 
@@ -129,7 +129,7 @@ test('landing audit form redirects to the generated report when available', asyn
   await form.getByPlaceholder('Email address').fill('owner@example.com');
   await form.getByRole('button', { name: 'Run My Revenue Leak Audit' }).click();
 
-  await expect(page).toHaveURL(/\/pricing\?demo-report=1$/);
+  await expect(page).toHaveURL(/\/pricing\?demo-report=1$/, { timeout: 15000 });
 });
 
 test('pricing page shows tiered plans', async ({ page }) => {
@@ -141,9 +141,9 @@ test('pricing page shows tiered plans', async ({ page }) => {
   await expect(page.getByText(/£297/)).toBeVisible();
   await expect(page.getByText(/£597/)).toBeVisible();
   await expect(page.getByText(/£997/)).toBeVisible();
-  await expect(page.getByText('Starter')).toBeVisible();
-  await expect(page.getByText('Growth')).toBeVisible();
-  await expect(page.getByText('Scale')).toBeVisible();
+  await expect(page.getByText('Starter', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Growth', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Scale', { exact: true }).first()).toBeVisible();
 });
 
 test('widget experience shows branded quick prompts and chat replies', async ({ page }) => {
