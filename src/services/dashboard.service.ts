@@ -448,6 +448,26 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     })),
   });
 
+  // Fetch credit usage (client-side safe via RLS)
+  const PLAN_LIMITS: Record<string, { scraping: number; email: number; ai: number }> = {
+    trial: { scraping: 100, email: 500, ai: 20 },
+    starter: { scraping: 100, email: 500, ai: 20 },
+    growth: { scraping: 500, email: 5000, ai: 100 },
+    enterprise: { scraping: 99999, email: 99999, ai: 99999 },
+  };
+
+  const planKey = business.plan && business.plan in PLAN_LIMITS ? business.plan : 'starter';
+  const limits = PLAN_LIMITS[planKey];
+  const scrapingRemaining = business.scraping_credits ?? limits.scraping;
+  const emailRemaining = business.email_credits ?? limits.email;
+  const aiRemaining = business.ai_credits ?? limits.ai;
+
+  const credits = {
+    scraping: { used: limits.scraping - scrapingRemaining, limit: limits.scraping },
+    email: { used: limits.email - emailRemaining, limit: limits.email },
+    ai: { used: limits.ai - aiRemaining, limit: limits.ai },
+  };
+
   return {
     businessId: business.id,
     businessName: business.name || 'Your clinic',
@@ -467,5 +487,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     checklist,
     nextActions,
     activityFeed,
+    credits,
   };
 }

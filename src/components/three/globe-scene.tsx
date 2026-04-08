@@ -1,30 +1,27 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-const CLINIC_LOCATIONS = [
-  { name: 'Chelsea', lat: 51.4875, lng: -0.1687, type: 'london' as const },
-  { name: 'Mayfair', lat: 51.5074, lng: -0.1478, type: 'london' as const },
-  { name: 'Shoreditch', lat: 51.5265, lng: -0.0799, type: 'london' as const },
-  { name: 'Notting Hill', lat: 51.5139, lng: -0.2057, type: 'london' as const },
-  { name: 'Knightsbridge', lat: 51.5015, lng: -0.1607, type: 'london' as const },
-  { name: 'Harley Street', lat: 51.5194, lng: -0.1468, type: 'london' as const },
-  { name: 'Canary Wharf', lat: 51.5054, lng: -0.0235, type: 'london' as const },
-  { name: 'Kensington', lat: 51.4990, lng: -0.1938, type: 'london' as const },
-  { name: 'Manchester', lat: 53.4808, lng: -2.2426, type: 'regional' as const },
-  { name: 'Birmingham', lat: 52.4862, lng: -1.8904, type: 'regional' as const },
-  { name: 'Edinburgh', lat: 55.9533, lng: -3.1883, type: 'regional' as const },
-  { name: 'Bristol', lat: 51.4545, lng: -2.5879, type: 'regional' as const },
-  { name: 'Leeds', lat: 53.8008, lng: -1.5491, type: 'regional' as const },
-  { name: 'Glasgow', lat: 55.8642, lng: -4.2518, type: 'regional' as const },
+// Clinic locations with linked articles
+const MARKERS = [
+  { name: 'London', lat: 51.5074, lng: -0.1478, size: 0.028, color: '#d26645', article: { title: 'Why 73% of Clinic Enquiries Go Unanswered', slug: '/blog/why-clinic-enquiries-go-unanswered' } },
+  { name: 'Manchester', lat: 53.4808, lng: -2.2426, size: 0.018, color: '#a855f7', article: { title: 'The Real Cost of No-Shows', slug: '/blog/cost-of-no-shows-smart-reminders' } },
+  { name: 'Birmingham', lat: 52.4862, lng: -1.8904, size: 0.016, color: '#a855f7', article: { title: '5 Revenue Leaks to Audit This Month', slug: '/blog/five-revenue-leaks-to-audit' } },
+  { name: 'Edinburgh', lat: 55.9533, lng: -3.1883, size: 0.016, color: '#a855f7', article: { title: 'When to Automate Your Patient Journey', slug: '/blog/when-to-automate-patient-journey' } },
+  { name: 'Bristol', lat: 51.4545, lng: -2.5879, size: 0.014, color: '#a855f7', article: { title: 'Google Reviews: The Automated Approach', slug: '/blog/automated-google-reviews-clinics' } },
+  { name: 'Leeds', lat: 53.8008, lng: -1.5491, size: 0.014, color: '#a855f7', article: { title: 'Booking Software vs Revenue OS', slug: '/blog/booking-software-vs-revenue-os' } },
+  { name: 'Glasgow', lat: 55.8642, lng: -4.2518, size: 0.014, color: '#a855f7' },
+  { name: 'Liverpool', lat: 53.4084, lng: -2.9916, size: 0.013, color: '#a855f7' },
+  { name: 'Newcastle', lat: 54.9783, lng: -1.6178, size: 0.013, color: '#a855f7' },
+  { name: 'Cardiff', lat: 51.4816, lng: -3.1791, size: 0.013, color: '#a855f7' },
 ];
 
-const ARC_CONNECTIONS = [
-  [0, 8], [1, 10], [5, 9], [2, 11], [3, 12], [6, 13],
-  [0, 5], [1, 7], [2, 6], [4, 3],
+const ARC_PAIRS: [number, number][] = [
+  [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6],
+  [1, 3], [2, 5], [3, 6],
 ];
 
 const GLOBE_RADIUS = 1.6;
@@ -63,206 +60,154 @@ function generateGlobePoints(count: number, radius: number): Float32Array {
   return positions;
 }
 
-function GlobeField({ isLight }: { isLight: boolean }) {
+// ─── All globe visuals in ONE group (no individual rotation) ────
+function GlobeContents({
+  isLight,
+  onMarkerClick,
+  activeMarker,
+}: {
+  isLight: boolean;
+  onMarkerClick: (idx: number) => void;
+  activeMarker: number | null;
+}) {
   const pointsRef = useRef<THREE.Points>(null);
+  const pulseMats = useRef<THREE.MeshBasicMaterial[]>([]);
+  const ringRef = useRef<THREE.Mesh>(null);
   const positions = useMemo(() => generateGlobePoints(2500, GLOBE_RADIUS), []);
 
-  useFrame((state) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.03;
-    }
-  });
+  const markerPositions = useMemo(
+    () => MARKERS.map((m) => latLngToVec3(m.lat, m.lng, GLOBE_RADIUS + 0.01)),
+    [],
+  );
 
-  const geometry = useMemo(() => {
+  const arcGeos = useMemo(() => {
+    return ARC_PAIRS.map(([a, b]) => {
+      const start = latLngToVec3(MARKERS[a].lat, MARKERS[a].lng, GLOBE_RADIUS);
+      const end = latLngToVec3(MARKERS[b].lat, MARKERS[b].lng, GLOBE_RADIUS);
+      const dist = start.distanceTo(end);
+      const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+      mid.normalize().multiplyScalar(GLOBE_RADIUS + dist * 0.25);
+      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+      return new THREE.TubeGeometry(curve, 32, 0.003, 4, false);
+    });
+  }, []);
+
+  const ptGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     return geo;
   }, [positions]);
 
-  const material = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        color: isLight ? '#1a1a2e' : '#d26645',
-        size: 0.006,
-        sizeAttenuation: true,
-        transparent: true,
-        opacity: isLight ? 0.35 : 0.45,
-        depthWrite: false,
-      }),
+  const ptMat = useMemo(
+    () => new THREE.PointsMaterial({
+      color: isLight ? '#1a1a2e' : '#d26645',
+      size: 0.006,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: isLight ? 0.35 : 0.45,
+      depthWrite: false,
+    }),
     [isLight],
   );
 
-  return <points ref={pointsRef} geometry={geometry} material={material} />;
-}
-
-function ClinicMarkers({ onHover, isLight }: { onHover: (name: string | null, x: number, y: number) => void; isLight: boolean }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const pulseMaterials = useRef<THREE.MeshBasicMaterial[]>([]);
-  const { camera, gl } = useThree();
-
-  const markerData = useMemo(
-    () =>
-      CLINIC_LOCATIONS.map((loc) => ({
-        position: latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.008),
-        isLondon: loc.type === 'london',
-        name: loc.name,
-      })),
-    [],
-  );
-
   useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.elapsedTime * 0.03;
+    if (ringRef.current) {
+      ringRef.current.rotation.x = Math.PI / 2.1 + Math.sin(state.clock.elapsedTime * 0.15) * 0.03;
     }
-    pulseMaterials.current.forEach((mat, i) => {
+    pulseMats.current.forEach((mat, i) => {
       const phase = state.clock.elapsedTime * 1.5 + i * 0.4;
-      mat.opacity = 0.5 + Math.sin(phase) * 0.3;
+      mat.opacity = 0.4 + Math.sin(phase) * 0.35;
     });
   });
 
-  const londonColor = isLight ? '#b84f31' : '#d26645';
-  const regionColor = isLight ? '#7c3aed' : '#a855f7';
-
   return (
-    <group ref={groupRef}>
-      {markerData.map((marker, i) => {
-        if (!pulseMaterials.current[i]) {
-          pulseMaterials.current[i] = new THREE.MeshBasicMaterial({
-            color: marker.isLondon ? londonColor : regionColor,
+    <>
+      {/* Particle field */}
+      <points ref={pointsRef} geometry={ptGeo} material={ptMat} />
+
+      {/* Atmosphere ring */}
+      <mesh ref={ringRef}>
+        <torusGeometry args={[GLOBE_RADIUS + 0.25, 0.002, 16, 120]} />
+        <meshBasicMaterial color={isLight ? '#b84f31' : '#d26645'} transparent opacity={0.12} />
+      </mesh>
+
+      {/* Data arcs */}
+      {arcGeos.map((geo, i) => (
+        <mesh key={`arc-${i}`} geometry={geo}>
+          <meshBasicMaterial color={isLight ? '#7c3aed' : '#a855f7'} transparent opacity={0.2} />
+        </mesh>
+      ))}
+
+      {/* Clickable city markers */}
+      {MARKERS.map((marker, i) => {
+        if (!pulseMats.current[i]) {
+          pulseMats.current[i] = new THREE.MeshBasicMaterial({
+            color: marker.color,
             transparent: true,
             opacity: 0.7,
             depthWrite: false,
           });
         }
+        const isActive = activeMarker === i;
 
         return (
-          <mesh
-            key={i}
-            position={marker.position}
-            material={pulseMaterials.current[i]}
-            onPointerOver={(e) => {
-              e.stopPropagation();
-              gl.domElement.style.cursor = 'pointer';
-              const projected = marker.position.clone().project(camera);
-              const x = (projected.x * 0.5 + 0.5) * gl.domElement.clientWidth;
-              const y = (-projected.y * 0.5 + 0.5) * gl.domElement.clientHeight;
-              onHover(marker.name, x, y);
-            }}
-            onPointerOut={() => {
-              gl.domElement.style.cursor = 'grab';
-              onHover(null, 0, 0);
-            }}
-          >
-            <sphereGeometry args={[marker.isLondon ? 0.022 : 0.014, 12, 12]} />
-          </mesh>
+          <group key={i} position={markerPositions[i]}>
+            <mesh
+              material={pulseMats.current[i]}
+              onClick={(e: ThreeEvent<MouseEvent>) => {
+                e.stopPropagation();
+                onMarkerClick(i);
+              }}
+              onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'pointer';
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = 'auto';
+              }}
+            >
+              <sphereGeometry args={[marker.size, 16, 16]} />
+            </mesh>
+
+            {/* Outer pulse ring for active marker */}
+            {isActive && (
+              <mesh>
+                <ringGeometry args={[marker.size + 0.01, marker.size + 0.025, 32]} />
+                <meshBasicMaterial color={marker.color} transparent opacity={0.4} side={THREE.DoubleSide} />
+              </mesh>
+            )}
+
+            {/* HTML tooltip on click — shows article link */}
+            {isActive && (
+              <Html distanceFactor={6} center style={{ pointerEvents: 'auto' }}>
+                <div
+                  className="w-56 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 shadow-xl backdrop-blur-xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-xs font-bold text-brand-purple">{marker.name}</p>
+                  {marker.article ? (
+                    <a
+                      href={marker.article.slug}
+                      className="mt-1.5 block text-xs leading-snug text-[var(--app-text-muted)] hover:text-brand-purple transition"
+                    >
+                      {marker.article.title} &rarr;
+                    </a>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-[var(--app-text-soft)]">Coverage area</p>
+                  )}
+                </div>
+              </Html>
+            )}
+          </group>
         );
       })}
-    </group>
+    </>
   );
-}
-
-function DataArcs({ isLight }: { isLight: boolean }) {
-  const groupRef = useRef<THREE.Group>(null);
-
-  const arcGeometries = useMemo(() => {
-    return ARC_CONNECTIONS.map(([fromIdx, toIdx]) => {
-      const from = CLINIC_LOCATIONS[fromIdx];
-      const to = CLINIC_LOCATIONS[toIdx];
-      const start = latLngToVec3(from.lat, from.lng, GLOBE_RADIUS);
-      const end = latLngToVec3(to.lat, to.lng, GLOBE_RADIUS);
-      const distance = start.distanceTo(end);
-      const arcHeight = GLOBE_RADIUS + distance * 0.25;
-      const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-      mid.normalize().multiplyScalar(arcHeight);
-      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const isInternal = fromIdx < 8 && toIdx < 8;
-      return {
-        geometry: new THREE.TubeGeometry(curve, 32, 0.003, 4, false),
-        isInternal,
-      };
-    });
-  }, []);
-
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.elapsedTime * 0.03;
-    }
-  });
-
-  const primaryColor = isLight ? '#b84f31' : '#d26645';
-  const accentColor = isLight ? '#7c3aed' : '#a855f7';
-
-  return (
-    <group ref={groupRef}>
-      {arcGeometries.map(({ geometry, isInternal }, i) => (
-        <mesh key={i} geometry={geometry}>
-          <meshBasicMaterial
-            color={isInternal ? primaryColor : accentColor}
-            transparent
-            opacity={isInternal ? 0.35 : 0.2}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function AtmosphereRing({ isLight }: { isLight: boolean }) {
-  const ringRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (ringRef.current) {
-      ringRef.current.rotation.x = Math.PI / 2.1 + Math.sin(state.clock.elapsedTime * 0.15) * 0.03;
-      ringRef.current.rotation.z = state.clock.elapsedTime * 0.01;
-    }
-  });
-
-  return (
-    <mesh ref={ringRef}>
-      <torusGeometry args={[GLOBE_RADIUS + 0.25, 0.002, 16, 120]} />
-      <meshBasicMaterial color={isLight ? '#b84f31' : '#d26645'} transparent opacity={isLight ? 0.15 : 0.1} />
-    </mesh>
-  );
-}
-
-function ScrollCamera() {
-  const { camera } = useThree();
-  const progressRef = useRef(0);
-
-  useEffect(() => {
-    camera.position.set(0, 0.3, 4.2);
-    function onScroll() {
-      const section = document.getElementById('globe-section');
-      if (!section) return;
-      const rect = section.getBoundingClientRect();
-      const sectionHeight = section.offsetHeight - window.innerHeight;
-      const rawProgress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
-      progressRef.current = rawProgress;
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [camera]);
-
-  useFrame(() => {
-    const p = progressRef.current;
-    const zoomProgress = Math.min(p / 0.65, 1);
-    const eased = 1 - Math.pow(1 - zoomProgress, 3);
-    camera.position.z = 4.2 - eased * 3.6;
-    camera.position.y = 0.3 + eased * 0.15;
-    camera.position.x = eased * -0.2;
-
-    const canvasEl = document.getElementById('globe-canvas');
-    if (canvasEl) {
-      canvasEl.style.opacity = p > 0.65 ? String(Math.max(0, 1 - (p - 0.65) / 0.3)) : '1';
-    }
-  });
-
-  return null;
 }
 
 export function GlobeScene() {
-  const [tooltip, setTooltip] = useState<{ name: string; x: number; y: number } | null>(null);
   const [isLight, setIsLight] = useState(false);
+  const [activeMarker, setActiveMarker] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsLight(document.documentElement.classList.contains('light'));
@@ -272,42 +217,40 @@ export function GlobeScene() {
     return () => observer.disconnect();
   }, []);
 
-  const handleHover = useCallback((name: string | null, x: number, y: number) => {
-    setTooltip(name ? { name, x, y } : null);
+  const handleMarkerClick = useCallback((idx: number) => {
+    setActiveMarker((prev) => (prev === idx ? null : idx));
   }, []);
 
   return (
     <div id="globe-canvas" className="h-full w-full relative">
       <Canvas
-        camera={{ position: [0, 0.3, 4.2], fov: 45 }}
+        camera={{ position: [0, 0.4, 3.8], fov: 45 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
-        style={{ background: 'transparent', cursor: 'grab' }}
+        style={{ background: 'transparent' }}
+        onPointerMissed={() => setActiveMarker(null)}
       >
         <ambientLight intensity={isLight ? 0.6 : 0.4} />
-        <GlobeField isLight={isLight} />
-        <ClinicMarkers onHover={handleHover} isLight={isLight} />
-        <DataArcs isLight={isLight} />
-        <AtmosphereRing isLight={isLight} />
-        <ScrollCamera />
+        <GlobeContents
+          isLight={isLight}
+          onMarkerClick={handleMarkerClick}
+          activeMarker={activeMarker}
+        />
         <OrbitControls
           enableZoom={false}
           enablePan={false}
-          rotateSpeed={0.4}
+          rotateSpeed={0.5}
           autoRotate
-          autoRotateSpeed={0.3}
+          autoRotateSpeed={0.5}
+          minPolarAngle={Math.PI * 0.25}
+          maxPolarAngle={Math.PI * 0.75}
         />
       </Canvas>
 
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-50 rounded-lg border border-brand-purple/30 bg-[var(--app-bg)]/90 px-3 py-1.5 text-xs font-semibold text-brand-purple backdrop-blur-sm shadow-lg transition-opacity"
-          style={{ left: tooltip.x, top: tooltip.y - 36, transform: 'translateX(-50%)' }}
-        >
-          {tooltip.name}
-          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-brand-purple/30" />
-        </div>
-      )}
+      {/* Instructions hint */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-[var(--app-border)] bg-[var(--app-bg)]/80 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[var(--app-text-soft)] backdrop-blur-sm">
+        Drag to explore &middot; Click a city to read
+      </div>
     </div>
   );
 }

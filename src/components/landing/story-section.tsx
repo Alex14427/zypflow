@@ -35,7 +35,7 @@ export function StorySection() {
   const lineHeight = useTransform(scrollYProgress, [0.1, 0.8], ['0%', '100%']);
 
   return (
-    <section className="relative overflow-hidden py-24 sm:py-32" ref={containerRef}>
+    <section className="relative overflow-hidden py-28 sm:py-36" ref={containerRef}>
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <FadeIn>
           <p className="page-eyebrow">Our story</p>

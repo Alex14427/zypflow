@@ -15,7 +15,7 @@ export function ProofStrip() {
   const ref = useRef<HTMLElement>(null);
 
   return (
-    <section ref={ref} id="proof" className="relative py-24 sm:py-32">
+    <section ref={ref} id="proof" className="relative py-28 sm:py-36">
       {/* Subtle divider gradient */}
       <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
 

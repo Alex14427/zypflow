@@ -139,4 +139,9 @@ export interface DashboardData {
   checklist: DashboardChecklistItem[];
   nextActions: DashboardNextAction[];
   activityFeed: DashboardActivityItem[];
+  credits?: {
+    scraping: { used: number; limit: number };
+    email: { used: number; limit: number };
+    ai: { used: number; limit: number };
+  };
 }
