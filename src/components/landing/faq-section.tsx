@@ -19,7 +19,7 @@ export function FaqSection({ faqs }: FaqSectionProps) {
         <div className="grid items-start gap-16 lg:grid-cols-[1fr_1.2fr]">
           <FadeIn>
             <div className="lg:sticky lg:top-32">
-              <p className="page-eyebrow">FAQ</p>
+              <p className="page-eyebrow">07/ FAQ</p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
                 Questions we hear{' '}
                 <span className="text-[var(--app-text-muted)]">most often.</span>
@@ -28,48 +28,72 @@ export function FaqSection({ faqs }: FaqSectionProps) {
           </FadeIn>
 
           <div className="space-y-3">
-            {faqs.map((faq, i) => (
-              <FadeIn key={faq.question} delay={0.1 * i}>
-                <div
-                  className="overflow-hidden rounded-[20px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] transition-all duration-300 hover:border-brand-purple/20"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                    className="flex w-full items-center justify-between gap-4 p-6 text-left"
+            {faqs.map((faq, i) => {
+              const isOpen = openIndex === i;
+              const num = String(i + 1).padStart(2, '0');
+
+              return (
+                <FadeIn key={faq.question} delay={0.1 * i}>
+                  <div
+                    className={`overflow-hidden rounded-[20px] border bg-[var(--app-surface-strong)] transition-all duration-300 ${
+                      isOpen
+                        ? 'border-brand-purple/30 shadow-[0_0_30px_rgba(210,102,69,0.06)]'
+                        : 'border-[var(--app-border)] hover:border-brand-purple/20'
+                    }`}
                   >
-                    <h3 className="text-lg font-semibold text-[var(--app-text)]">
-                      {faq.question}
-                    </h3>
-                    <motion.div
-                      animate={{ rotate: openIndex === i ? 45 : 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--app-muted)] text-[var(--app-text-muted)]"
+                    <button
+                      type="button"
+                      onClick={() => setOpenIndex(isOpen ? null : i)}
+                      className="flex w-full items-center gap-4 p-6 text-left"
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                    </motion.div>
-                  </button>
-                  <AnimatePresence>
-                    {openIndex === i && (
+                      {/* Number */}
+                      <span className={`shrink-0 text-xs font-semibold tabular-nums transition-colors duration-300 ${
+                        isOpen ? 'text-brand-purple' : 'text-[var(--app-text-soft)]'
+                      }`}>
+                        {num}/
+                      </span>
+
+                      <h3 className="flex-1 text-lg font-semibold text-[var(--app-text)]">
+                        {faq.question}
+                      </h3>
+
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        animate={{ rotate: isOpen ? 45 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
+                          isOpen
+                            ? 'bg-brand-purple/10 text-brand-purple'
+                            : 'bg-[var(--app-muted)] text-[var(--app-text-muted)]'
+                        }`}
                       >
-                        <div className="px-6 pb-6">
-                          <p className="text-sm leading-7 text-[var(--app-text-muted)]">
-                            {faq.answer}
-                          </p>
-                        </div>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </FadeIn>
-            ))}
+                    </button>
+
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        >
+                          <div className="border-t border-brand-purple/10 px-6 pb-6 pt-4">
+                            <div className="pl-8">
+                              <p className="text-sm leading-7 text-[var(--app-text-muted)]">
+                                {faq.answer}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </FadeIn>
+              );
+            })}
           </div>
         </div>
       </div>
