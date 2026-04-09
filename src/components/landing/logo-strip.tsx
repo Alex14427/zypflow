@@ -1,73 +1,61 @@
 'use client';
 
-import { FadeIn } from '@/components/animations';
+import { FadeIn, AnimatedCounter, StaggerGroup } from '@/components/animations';
 
 const INTEGRATIONS = [
-  { name: 'Fresha', icon: 'F' },
-  { name: 'Phorest', icon: 'P' },
-  { name: 'Vagaro', icon: 'V' },
-  { name: 'Stripe', icon: 'S' },
-  { name: 'WhatsApp', icon: 'W' },
-  { name: 'Calendly', icon: 'C' },
-  { name: 'Google', icon: 'G' },
-  { name: 'Cal.com', icon: 'Ca' },
-  { name: 'Twilio', icon: 'T' },
-  { name: 'Resend', icon: 'R' },
-  { name: 'Make.com', icon: 'M' },
-  { name: 'Cliniko', icon: 'Cl' },
-  { name: 'Instagram', icon: 'I' },
-  { name: 'Mailchimp', icon: 'Mc' },
-  { name: 'Zenoti', icon: 'Z' },
-  { name: 'HubSpot', icon: 'H' },
+  'Fresha', 'Phorest', 'Vagaro', 'Cliniko', 'Stripe', 'WhatsApp',
+  'Calendly', 'Google', 'Cal.com', 'Twilio', 'HubSpot', 'Resend',
+  'Make.com', 'Instagram', 'Mailchimp', 'Zenoti',
 ];
 
-function IntegrationPill({ name, icon }: { name: string; icon: string }) {
-  return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 transition-all duration-300 hover:border-brand-purple/30 hover:bg-brand-purple/[0.06]">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-purple/10 text-[10px] font-bold text-brand-purple">
-        {icon}
-      </span>
-      <span className="text-sm font-semibold text-[var(--app-text-muted)] whitespace-nowrap">
-        {name}
-      </span>
-    </div>
-  );
-}
+const STATS = [
+  { value: 5, prefix: '<', suffix: ' min', label: 'Average first reply' },
+  { value: 95, suffix: '%', label: 'Reminder coverage' },
+  { value: 3, suffix: '.2x', label: 'More reviews collected' },
+  { value: 14, suffix: ' days', label: 'Audit to live' },
+];
 
 export function LogoStrip() {
-  const row1 = INTEGRATIONS.slice(0, 8);
-  const row2 = INTEGRATIONS.slice(8);
-
   return (
-    <section className="relative overflow-hidden border-y border-[var(--app-border)] py-10">
+    <section className="relative py-16 sm:py-24">
+      <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
+
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        {/* Integration text ticker */}
         <FadeIn>
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.25em] text-[var(--app-text-soft)]">
-            Works alongside the tools your clinic already uses
+          <p className="page-eyebrow text-center">02/ Integrations</p>
+          <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-7 text-[var(--app-text-muted)]">
+            Works alongside the tools you already use:{' '}
+            {INTEGRATIONS.map((name, i) => (
+              <span key={name}>
+                <span className="font-semibold text-[var(--app-text)]">{name}</span>
+                {i < INTEGRATIONS.length - 1 ? <span className="text-[var(--app-text-soft)]"> · </span> : null}
+              </span>
+            ))}
+            <span className="text-[var(--app-text-soft)]"> and more.</span>
           </p>
         </FadeIn>
-      </div>
 
-      {/* Row 1 - scrolls left */}
-      <div className="relative mt-6 overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-[var(--app-bg)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-[var(--app-bg)] to-transparent" />
-        <div className="flex animate-marquee items-center gap-4">
-          {[...row1, ...row1, ...row1].map((item, i) => (
-            <IntegrationPill key={`r1-${i}`} name={item.name} icon={item.icon} />
+        {/* Stats grid */}
+        <StaggerGroup className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" staggerDelay={0.12}>
+          {STATS.map((stat) => (
+            <article
+              key={stat.label}
+              className="group rounded-[28px] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand-purple/30 hover:shadow-[0_20px_50px_rgba(210,102,69,0.08)]"
+            >
+              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--app-text)]">
+                <AnimatedCounter
+                  value={stat.value}
+                  prefix={stat.prefix}
+                  suffix={stat.suffix}
+                />
+              </p>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-soft)]">
+                {stat.label}
+              </p>
+            </article>
           ))}
-        </div>
-      </div>
-
-      {/* Row 2 - scrolls right */}
-      <div className="relative mt-3 overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-[var(--app-bg)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-[var(--app-bg)] to-transparent" />
-        <div className="flex animate-marquee-reverse items-center gap-4">
-          {[...row2, ...row2, ...row2, ...row2].map((item, i) => (
-            <IntegrationPill key={`r2-${i}`} name={item.name} icon={item.icon} />
-          ))}
-        </div>
+        </StaggerGroup>
       </div>
     </section>
   );

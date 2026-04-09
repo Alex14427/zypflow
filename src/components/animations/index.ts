@@ -8,3 +8,7 @@ export { GsapReveal } from './gsap-reveal';
 export { TextSplit } from './text-split';
 export { Parallax } from './parallax';
 export { GradientMesh } from './gradient-mesh';
+export { InteractiveParticles } from './interactive-particles';
+export { CustomCursor } from './custom-cursor';
+export { TiltCard } from './tilt-card';
+export { HorizontalCarousel } from './horizontal-carousel';

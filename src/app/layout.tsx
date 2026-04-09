@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { Providers } from './providers';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { CookieConsent } from '@/components/cookie-consent';
+import { CustomCursor } from '@/components/animations';
 import './globals.css';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zypflow.co.uk';
@@ -61,6 +62,7 @@ export default function RootLayout({
           {children}
           <ChatWidget />
           <CookieConsent />
+          <CustomCursor />
         </Providers>
       </body>
     </html>

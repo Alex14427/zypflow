@@ -3,14 +3,33 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import posthog from 'posthog-js';
-import { FadeIn, MagneticButton } from '@/components/animations';
+import { FadeIn, MagneticButton, StaggerGroup } from '@/components/animations';
 
 const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_LINK || 'https://calendly.com/alex-zypflow/30min';
 
 const PLANS_PREVIEW = [
-  { name: 'Starter', price: '£297', suffix: '/mo', note: 'For solo practitioners' },
-  { name: 'Growth', price: '£597', suffix: '/mo', note: 'Most popular', highlighted: true },
-  { name: 'Scale', price: '£997', suffix: '/mo', note: 'Multi-location' },
+  {
+    name: 'Starter',
+    price: '£297',
+    suffix: '/mo',
+    note: 'For solo practitioners',
+    features: ['AI lead response', 'Appointment reminders', 'Basic reporting'],
+  },
+  {
+    name: 'Growth',
+    price: '£597',
+    suffix: '/mo',
+    note: 'Most popular',
+    highlighted: true,
+    features: ['Everything in Starter', 'Review automation', 'Rebooking nudges', 'Multi-channel (SMS + WhatsApp)'],
+  },
+  {
+    name: 'Scale',
+    price: '£997',
+    suffix: '/mo',
+    note: 'Multi-location',
+    features: ['Everything in Growth', 'Multi-location support', 'Priority onboarding', 'Dedicated account manager'],
+  },
 ];
 
 export function CtaSection() {
@@ -31,7 +50,7 @@ export function CtaSection() {
           <div className="relative">
             <div className="text-center">
               <FadeIn>
-                <p className="page-eyebrow">Start growing</p>
+                <p className="page-eyebrow">06/ Pricing</p>
                 <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-[var(--app-text)] sm:text-5xl">
                   Ready to stop losing patients to{' '}
                   <span className="gradient-text">slow follow-up?</span>
@@ -43,36 +62,46 @@ export function CtaSection() {
             </div>
 
             {/* Plan preview cards */}
-            <FadeIn delay={0.15}>
-              <div className="mx-auto mt-12 grid max-w-3xl gap-4 sm:grid-cols-3">
-                {PLANS_PREVIEW.map((plan) => (
-                  <div
-                    key={plan.name}
-                    className={`relative rounded-[20px] border p-5 text-center transition-all duration-300 ${
-                      plan.highlighted
-                        ? 'border-brand-purple/30 bg-brand-purple/[0.06] shadow-[0_0_30px_rgba(210,102,69,0.1)]'
-                        : 'border-[var(--app-border)] bg-[var(--app-surface)]'
-                    }`}
-                  >
-                    {plan.highlighted && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-purple px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
-                        Popular
-                      </span>
-                    )}
-                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--app-text-soft)]">
-                      {plan.name}
-                    </p>
-                    <div className="mt-2 flex items-baseline justify-center gap-1">
-                      <span className="text-3xl font-semibold tabular-nums text-[var(--app-text)]">
-                        {plan.price}
-                      </span>
-                      <span className="text-sm text-[var(--app-text-soft)]">{plan.suffix}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--app-text-muted)]">{plan.note}</p>
+            <StaggerGroup className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-3" staggerDelay={0.1}>
+              {PLANS_PREVIEW.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`group relative rounded-[24px] border p-6 transition-all duration-500 ${
+                    plan.highlighted
+                      ? 'border-brand-purple/30 bg-brand-purple/[0.06] shadow-[0_0_40px_rgba(210,102,69,0.12)] hover:shadow-[0_0_60px_rgba(210,102,69,0.18)]'
+                      : 'border-[var(--app-border)] bg-[var(--app-surface)] hover:border-brand-purple/20'
+                  }`}
+                >
+                  {plan.highlighted && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-purple px-4 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
+                      Popular
+                    </span>
+                  )}
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--app-text-soft)]">
+                    {plan.name}
+                  </p>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-3xl font-semibold tabular-nums text-[var(--app-text)]">
+                      {plan.price}
+                    </span>
+                    <span className="text-sm text-[var(--app-text-soft)]">{plan.suffix}</span>
                   </div>
-                ))}
-              </div>
-            </FadeIn>
+                  <p className="mt-1 text-xs text-[var(--app-text-muted)]">{plan.note}</p>
+
+                  {/* Feature list */}
+                  <ul className="mt-4 space-y-2 border-t border-[var(--app-border)] pt-4">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-xs text-[var(--app-text-muted)]">
+                        <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </StaggerGroup>
 
             {/* CTAs */}
             <FadeIn delay={0.25}>
@@ -93,6 +122,7 @@ export function CtaSection() {
 
                 <Link
                   href="/pricing"
+                  onClick={() => posthog.capture('cta_clicked', { cta: 'cta_compare_plans', location: 'cta_section' })}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--app-text-muted)] transition hover:text-brand-purple"
                 >
                   Compare all plans

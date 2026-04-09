@@ -3,17 +3,12 @@ import { AuditForm } from '@/components/public/audit-form';
 import { SiteFooter } from '@/components/public/site-footer';
 import { SiteHeader } from '@/components/public/site-header';
 import { GlobeHero } from '@/components/landing/globe-hero';
-import { ProofStrip } from '@/components/landing/proof-strip';
+import { LogoStrip } from '@/components/landing/logo-strip';
 import { ProductSection } from '@/components/landing/product-section';
-import { HowItWorksSection } from '@/components/landing/how-it-works-section';
 import { DifferentiatorsSection } from '@/components/landing/differentiators-section';
-import { LaunchSection } from '@/components/landing/launch-section';
+import { ResultsSection } from '@/components/landing/results-section';
 import { CtaSection } from '@/components/landing/cta-section';
 import { FaqSection } from '@/components/landing/faq-section';
-import { LogoStrip } from '@/components/landing/logo-strip';
-import { TestimonialsSection } from '@/components/landing/testimonials-section';
-import { CaseStudiesSection } from '@/components/landing/case-studies-section';
-import { StorySection } from '@/components/landing/story-section';
 
 export const metadata: Metadata = {
   title: 'Zypflow | Revenue OS For Service Businesses',
@@ -92,30 +87,28 @@ export default function Home() {
           <SiteHeader eyebrow="Revenue OS for service businesses" />
         </div>
 
-        {/* Globe hero — single cohesive scroll experience */}
+        {/* 01/ Hero — particles + text reveal */}
         <GlobeHero />
 
         <main>
+          {/* 02/ Integrations + Stats */}
           <LogoStrip />
 
-          <ProofStrip />
-
-          <StorySection />
-
+          {/* 03/ Product Showcase — 3 interactive tabs */}
           <ProductSection />
 
-          <HowItWorksSection />
-
+          {/* 04/ Differentiators — hover reveal comparison */}
           <DifferentiatorsSection />
 
-          <CaseStudiesSection />
+          {/* 05/ Results — horizontal carousel */}
+          <ResultsSection />
 
-          <TestimonialsSection />
+          {/* 06/ Pricing Preview */}
+          <CtaSection />
 
-          <LaunchSection />
-
-          {/* Audit CTA section */}
-          <section className="relative overflow-hidden py-28 sm:py-36">
+          {/* Audit Form */}
+          <section id="audit" className="relative overflow-hidden py-28 sm:py-36">
+            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-card-border)] to-transparent" />
             <div className="mx-auto max-w-7xl px-5 sm:px-8">
               <div className="mx-auto max-w-2xl">
                 <div className="public-frame">
@@ -134,14 +127,20 @@ export default function Home() {
                   <div className="mt-6">
                     <AuditForm />
                   </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[10px] uppercase tracking-[0.15em] text-[var(--app-text-soft)]">
+                    <span>No spam</span>
+                    <span className="h-1 w-1 rounded-full bg-[var(--app-text-soft)]" />
+                    <span>Results in 60 seconds</span>
+                    <span className="h-1 w-1 rounded-full bg-[var(--app-text-soft)]" />
+                    <span>Public pages only</span>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
+          {/* 07/ FAQ */}
           <FaqSection faqs={FAQS} />
-
-          <CtaSection />
         </main>
 
         <div className="mx-auto max-w-7xl px-5 pb-20 sm:px-8">
